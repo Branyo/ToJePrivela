@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ToJePrivela.Ai/ToJePrivela.Ai.csproj" />
+    <Project Path="src/ToJePrivela.Api/ToJePrivela.Api.csproj" />
+    <Project Path="src/ToJePrivela.Application/ToJePrivela.Application.csproj" />
+    <Project Path="src/ToJePrivela.Domain/ToJePrivela.Domain.csproj" />
+    <Project Path="src/ToJePrivela.Infrastructure/ToJePrivela.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ToJePrivela.Ai.Tests/ToJePrivela.Ai.Tests.csproj" />
+    <Project Path="tests/ToJePrivela.Api.Tests/ToJePrivela.Api.Tests.csproj" />
+    <Project Path="tests/ToJePrivela.Application.Tests/ToJePrivela.Application.Tests.csproj" />
+    <Project Path="tests/ToJePrivela.Domain.Tests/ToJePrivela.Domain.Tests.csproj" />
+    <Project Path="tests/ToJePrivela.Infrastructure.Tests/ToJePrivela.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

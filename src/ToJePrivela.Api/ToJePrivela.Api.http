@@ -1,0 +1,33 @@
+@host = http://localhost:5178
+
+### Players
+GET {{host}}/api/players
+Accept: application/json
+
+###
+POST {{host}}/api/players
+Content-Type: application/json
+
+{ "name": "Jozo" }
+
+### Question categories
+GET {{host}}/api/question-categories
+Accept: application/json
+
+### Questions
+GET {{host}}/api/questions?category=Sport&difficulty=3
+Accept: application/json
+
+### AI generated questions (needs OpenAi:ApiKey)
+GET {{host}}/api/questions/ai?category=Sport&count=5
+Accept: application/json
+
+### Games
+POST {{host}}/api/games
+Content-Type: application/json
+
+{ "playerIds": [ 1, 2 ] }
+
+###
+GET {{host}}/api/games/1/details
+Accept: application/json
