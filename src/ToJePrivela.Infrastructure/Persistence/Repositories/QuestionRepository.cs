@@ -39,6 +39,35 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
             .Select(q => q.Text)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<int>> GetLeastViewedIdsAsync(
+        IReadOnlyCollection<int> categoryIds,
+        CancellationToken cancellationToken = default)
+    {
+        var query = categoryIds.Count == 0 ? Set : Set.Where(q => categoryIds.Contains(q.CategoryId));
+
+        var fewestViews = await query.MinAsync(q => (int?)q.ViewCount, cancellationToken);
+
+        if (fewestViews is null)
+        {
+            return [];
+        }
+
+        return await query
+            .Where(q => q.ViewCount == fewestViews)
+            .OrderBy(q => q.Id)
+            .Select(q => q.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> ReloadAsync(Question question, CancellationToken cancellationToken = default)
+    {
+        var entry = Context.Entry(question);
+        await entry.ReloadAsync(cancellationToken);
+
+        // ReloadAsync detaches an entity whose row is gone.
+        return entry.State != EntityState.Detached;
+    }
+
     public async Task AddRangeAsync(IEnumerable<Question> questions, CancellationToken cancellationToken = default) =>
         await Set.AddRangeAsync(questions, cancellationToken);
 

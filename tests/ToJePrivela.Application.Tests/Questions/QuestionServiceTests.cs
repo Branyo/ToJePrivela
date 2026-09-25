@@ -20,20 +20,176 @@ public class QuestionServiceTests
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly IQuestionCategoryRepository _categories = Substitute.For<IQuestionCategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly FixedQuestionPicker _questionPicker = new();
     private readonly QuestionService _sut;
 
     public QuestionServiceTests()
     {
         _categories.GetByIdAsync(3, Arg.Any<CancellationToken>()).Returns(_history);
         _categories.GetByIdAsync(2, Arg.Any<CancellationToken>()).Returns(_sport);
+        _categories.GetMissingIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<IReadOnlyCollection<int>>().Where(id => id is not (2 or 3)).ToList());
 
         _sut = new QuestionService(
             _questions,
             _categories,
             new FixedBadPointsPicker(PickedBadPoints),
+            _questionPicker,
             new FixedTimeProvider(Now),
             _unitOfWork);
     }
+
+    [Fact]
+    public async Task GetRandomAsync_PicksAmongTheLeastViewedQuestionsOfTheSelectedCategories()
+    {
+        _questions.GetLeastViewedIdsAsync(
+                Arg.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 3, 2 })),
+                Arg.Any<CancellationToken>())
+            .Returns([4, 8]);
+        _questions.GetByIdAsync(8, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(8, ValidText, "2022", _history));
+
+        var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3, 2, 3] });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(8, result.Value.Id);
+        Assert.Equal([4, 8], _questionPicker.Offered);
+    }
+
+    [Fact]
+    public async Task GetRandomAsync_DoesNotCountAView()
+    {
+        var question = TestEntities.Question(8, ValidText, "2022", _history);
+        _questions.GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns([8]);
+        _questions.GetByIdAsync(8, Arg.Any<CancellationToken>()).Returns(question);
+
+        await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3] });
+
+        Assert.Equal(0, question.ViewCount);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetRandomAsync_WithoutCategoriesChoosesFromAllOfThem()
+    {
+        _questions.GetLeastViewedIdsAsync(Arg.Is<IReadOnlyCollection<int>>(ids => ids.Count == 0), Arg.Any<CancellationToken>())
+            .Returns([5]);
+        _questions.GetByIdAsync(5, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(5, ValidText, "2022", _sport));
+
+        var result = await _sut.GetRandomAsync(new RandomQuestionFilter());
+
+        Assert.Equal(5, result.Value.Id);
+        await _categories.DidNotReceive().GetMissingIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetRandomAsync_RejectsNonPositiveCategoryIds()
+    {
+        var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3, 0, -1] });
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Question.InvalidCategoryIds", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task GetRandomAsync_RejectsUnknownCategories()
+    {
+        var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3, 99, 98] });
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Question.UnknownCategories", result.Error.Code);
+        Assert.Contains("99", result.Error.Message);
+        Assert.Contains("98", result.Error.Message);
+        await _questions.DidNotReceive().GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetRandomAsync_ReturnsNotFoundWhenTheCategoriesHaveNoQuestions()
+    {
+        _questions.GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns([]);
+
+        var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [2] });
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.NotFound, result.Error.Type);
+        Assert.Equal("Question.NoneAvailable", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RecordViewAsync_CountsTheViewAndSaves()
+    {
+        var question = TestEntities.Question(1, ValidText, "2022", _history);
+        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
+
+        var result = await _sut.RecordViewAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, result.Value.ViewCount);
+        Assert.Equal(Now.UtcDateTime, result.Value.LastViewedAt);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordViewAsync_ReturnsNotFoundForUnknownQuestion()
+    {
+        _questions.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Question?)null);
+
+        var result = await _sut.RecordViewAsync(7);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.NotFound, result.Error.Type);
+    }
+
+    [Fact]
+    public async Task RecordViewAsync_RereadsAndRetriesAfterAConcurrentChange()
+    {
+        var question = TestEntities.Question(1, ValidText, "2022", _history);
+        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
+        _questions.ReloadAsync(question, Arg.Any<CancellationToken>()).Returns(true);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(_ => throw Conflict(), _ => throw Conflict(), _ => Task.FromResult(1));
+
+        var result = await _sut.RecordViewAsync(1);
+
+        Assert.True(result.IsSuccess);
+        await _questions.Received(2).ReloadAsync(question, Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(3).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordViewAsync_GivesUpWithAConflictAfterTheLastAttempt()
+    {
+        var question = TestEntities.Question(1, ValidText, "2022", _history);
+        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
+        _questions.ReloadAsync(question, Arg.Any<CancellationToken>()).Returns(true);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        var result = await _sut.RecordViewAsync(1);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        await _unitOfWork.Received(QuestionService.MaxViewAttempts).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordViewAsync_ReturnsNotFoundWhenTheQuestionWasDeletedMeanwhile()
+    {
+        var question = TestEntities.Question(1, ValidText, "2022", _history);
+        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
+        _questions.ReloadAsync(question, Arg.Any<CancellationToken>()).Returns(false);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        var result = await _sut.RecordViewAsync(1);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.NotFound, result.Error.Type);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    private static ConcurrencyConflictException Conflict() => new("A row changed since it was read.", new Exception());
 
     [Fact]
     public async Task GetAsync_PassesTheFilterToTheRepository()

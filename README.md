@@ -85,6 +85,8 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET | `/api/games/{id}/details` | Includes player names and bad points |
 | POST | `/api/games` | 2–10 known, distinct players |
 | GET | `/api/questions?categoryId=&source=` | Both filters optional; `source` is `Manual` or `Ai` |
+| GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none); 400 for unknown ids, 404 when they hold no questions; does not count a view |
+| POST | `/api/questions/{id}/views` | Records that the question was shown; returns it with the new `viewCount` |
 | GET/DELETE | `/api/questions/{id}` | |
 | PUT | `/api/questions/{id}` | Omitted `badPoints` are kept; an edited AI question becomes `Manual` |
 | POST | `/api/questions` | `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
@@ -134,6 +136,13 @@ Every generated question gets random bad points (1–5), `Source = Ai` and a `Cr
   so duplicates are rejected by the database as well as by the use case. A duplicate that slips past
   the check (two concurrent creates) surfaces as `UniqueConstraintException` and becomes a 409.
 - **Questions belong to a category.** `Questions.CategoryId` is a foreign key with `ON DELETE CASCADE`.
+- **Least-viewed rotation.** `GET /api/questions/random` picks at random among the questions with the
+  lowest `ViewCount` in the selected categories, so no question repeats until every one in the
+  selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`.
+- **Optimistic concurrency on questions.** `Question.Version` is a row version the entity bumps on every
+  change (SQLite has no native rowversion) and EF checks as a concurrency token. A lost race surfaces as
+  `ConcurrencyConflictException`; recording a view rereads the row and retries (up to 5 attempts, then
+  409), and any other conflicting change becomes a 409 through `ConcurrencyConflictExceptionHandler`.
 
 ## Frontend readiness
 
@@ -146,7 +155,7 @@ The frontend is not written yet; the API is prepared for it:
 
 ## Tests
 
-`dotnet test ToJePrivela.slnx` runs 293 tests: domain invariants, every use case with substituted
+`dotnet test ToJePrivela.slnx` runs 327 tests: domain invariants, every use case with substituted
 ports, the generation orchestration (batching, throttling, duplicates, top-ups, call budget), mappers,
 repositories and the data-preserving migration against in-memory SQLite, the AI prompt/parse/HTTP
 units, result-to-HTTP mapping, and endpoint tests that host the real API with the AI provider stubbed.

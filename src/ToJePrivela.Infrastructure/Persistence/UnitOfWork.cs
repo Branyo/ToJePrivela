@@ -22,6 +22,10 @@ public sealed class UnitOfWork : IUnitOfWork
         {
             return await _context.SaveChangesAsync(cancellationToken);
         }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            throw new ConcurrencyConflictException("A row changed since it was read.", exception);
+        }
         catch (DbUpdateException exception) when (
             exception.InnerException is SqliteException { SqliteExtendedErrorCode: SqliteUniqueConstraintViolation })
         {

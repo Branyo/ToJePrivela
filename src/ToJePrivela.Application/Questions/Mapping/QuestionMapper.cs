@@ -14,7 +14,9 @@ public static class QuestionMapper
         question.Category?.Name ?? string.Empty,
         question.BadPoints,
         question.Source.ToString(),
-        question.CreatedAt);
+        question.CreatedAt,
+        question.ViewCount,
+        question.LastViewedAt);
 
     public static IReadOnlyList<QuestionDto> ToDtos(IEnumerable<Question> questions) =>
         questions.Select(ToDto).ToList();

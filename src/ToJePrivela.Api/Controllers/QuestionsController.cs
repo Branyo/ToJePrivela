@@ -24,6 +24,27 @@ public sealed class QuestionsController : ControllerBase
         CancellationToken cancellationToken) =>
         (await _questions.GetAsync(filter, cancellationToken)).ToActionResult();
 
+    /// <summary>
+    /// A random question among the least viewed ones in the given categories (every category when none
+    /// are given). Does not count as a view — POST to <c>{id}/views</c> once the question is shown.
+    /// </summary>
+    [HttpGet("random")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuestionDto>> GetRandomQuestion(
+        [FromQuery] RandomQuestionFilter filter,
+        CancellationToken cancellationToken) =>
+        (await _questions.GetRandomAsync(filter, cancellationToken)).ToActionResult();
+
+    /// <summary>Records that the question was shown; returns it with the updated view count.</summary>
+    [HttpPost("{id:int}/views")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<QuestionDto>> RecordQuestionView(int id, CancellationToken cancellationToken) =>
+        (await _questions.RecordViewAsync(id, cancellationToken)).ToActionResult();
+
     [HttpGet("{id:int}", Name = nameof(GetQuestion))]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

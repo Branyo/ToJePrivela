@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence;
 using ToJePrivela.Infrastructure.Persistence.Repositories;
@@ -110,6 +111,98 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLeastViewedIdsAsync_ReturnsOnlyTheQuestionsWithTheFewestViews()
+    {
+        await MarkViewedAsync("2022");
+
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+
+        var ids = await sut.GetLeastViewedIdsAsync([HistoryId]);
+
+        Assert.Equal([await IdOfAsync(context, "1989")], ids);
+    }
+
+    [Fact]
+    public async Task GetLeastViewedIdsAsync_ConsidersEverySelectedCategory()
+    {
+        await MarkViewedAsync("2022");
+        await MarkViewedAsync("1989");
+
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+
+        var ids = await sut.GetLeastViewedIdsAsync([HistoryId, SportId]);
+
+        Assert.Equal([await IdOfAsync(context, "11")], ids);
+    }
+
+    [Fact]
+    public async Task GetLeastViewedIdsAsync_WithoutCategoriesConsidersAllQuestions()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+
+        Assert.Equal(3, (await sut.GetLeastViewedIdsAsync([])).Count);
+    }
+
+    [Fact]
+    public async Task GetLeastViewedIdsAsync_ReturnsNothingForCategoriesWithoutQuestions()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+
+        Assert.Empty(await sut.GetLeastViewedIdsAsync([CarsId]));
+    }
+
+    [Fact]
+    public async Task SavingAStaleQuestionIsAConcurrencyConflict()
+    {
+        await using var stale = _database.CreateContext();
+        var staleQuestion = await stale.Questions.FirstAsync(q => q.Answer == "11");
+
+        await MarkViewedAsync("11");
+
+        staleQuestion.MarkViewed(CreatedAt);
+        await Assert.ThrowsAsync<ConcurrencyConflictException>(() => new UnitOfWork(stale).SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task ReloadAsync_ReadsTheCurrentValuesSoTheNextSaveSucceeds()
+    {
+        await using var stale = _database.CreateContext();
+        var sut = new QuestionRepository(stale);
+        var question = await stale.Questions.FirstAsync(q => q.Answer == "11");
+
+        await MarkViewedAsync("11");
+        question.MarkViewed(CreatedAt);
+
+        Assert.True(await sut.ReloadAsync(question));
+        Assert.Equal(1, question.ViewCount);
+
+        question.MarkViewed(CreatedAt);
+        await new UnitOfWork(stale).SaveChangesAsync();
+
+        await using var verification = _database.CreateContext();
+        Assert.Equal(2, (await verification.Questions.FirstAsync(q => q.Answer == "11")).ViewCount);
+    }
+
+    [Fact]
+    public async Task ReloadAsync_ReportsADeletedQuestion()
+    {
+        await using var stale = _database.CreateContext();
+        var sut = new QuestionRepository(stale);
+        var question = await stale.Questions.FirstAsync(q => q.Answer == "11");
+
+        await using (var other = _database.CreateContext())
+        {
+            await other.Questions.Where(q => q.Answer == "11").ExecuteDeleteAsync();
+        }
+
+        Assert.False(await sut.ReloadAsync(question));
+    }
+
+    [Fact]
     public async Task AddRangeAsync_StoresEveryQuestion()
     {
         await using var context = _database.CreateContext();
@@ -176,6 +269,17 @@ public class QuestionRepositoryTests : IDisposable
         var remaining = await verification.Questions.ToListAsync();
         Assert.Equal("11", Assert.Single(remaining).Answer);
     }
+
+    /// <summary>Views the question in a separate context, as another request would.</summary>
+    private async Task MarkViewedAsync(string answer)
+    {
+        await using var context = _database.CreateContext();
+        (await context.Questions.FirstAsync(q => q.Answer == answer)).MarkViewed(CreatedAt);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task<int> IdOfAsync(ToJePrivelaDbContext context, string answer) =>
+        (await context.Questions.FirstAsync(q => q.Answer == answer)).Id;
 
     public void Dispose() => _database.Dispose();
 }
