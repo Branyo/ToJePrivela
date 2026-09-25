@@ -1,9 +1,11 @@
-using ToJePrivela.Application.Abstractions.Ai;
 using ToJePrivela.Application.Games.Mapping;
 using ToJePrivela.Application.Players.Dtos;
 using ToJePrivela.Application.Players.Mapping;
 using ToJePrivela.Application.QuestionCategories.Dtos;
 using ToJePrivela.Application.QuestionCategories.Mapping;
+using ToJePrivela.Application.QuestionGeneration;
+using ToJePrivela.Application.QuestionGeneration.Dtos;
+using ToJePrivela.Application.QuestionGeneration.Mapping;
 using ToJePrivela.Application.Questions.Dtos;
 using ToJePrivela.Application.Questions.Mapping;
 using ToJePrivela.Application.Tests.Common;
@@ -91,41 +93,62 @@ public class MapperTests
     }
 
     [Fact]
-    public void QuestionMapper_CopiesEveryFieldAndDerivesBadPoints()
+    public void QuestionCategoryMapper_ToCreatedDto_IncludesTheGenerationSummary()
     {
-        var question = TestEntities.Question(9, "Which year was ChatGPT publicly released?", "2022", "History", 4);
+        var category = TestEntities.Category(4, "Music");
+
+        var dto = QuestionCategoryMapper.ToCreatedDto(category, new QuestionGenerationResult([], 10, 3));
+
+        Assert.Equal(4, dto.Id);
+        Assert.Equal("Music", dto.Name);
+        Assert.Equal(new QuestionGenerationSummaryDto(10, 0, 3), dto.QuestionGeneration);
+    }
+
+    [Fact]
+    public void QuestionMapper_CopiesEveryField()
+    {
+        var question = TestEntities.Question(
+            9, "Which year was ChatGPT publicly released?", "2022", TestEntities.Category(3, "History"), 4, QuestionSource.Ai);
 
         var dto = QuestionMapper.ToDto(question);
 
         Assert.Equal(9, dto.Id);
         Assert.Equal("Which year was ChatGPT publicly released?", dto.Text);
         Assert.Equal("2022", dto.Answer);
-        Assert.Equal("History", dto.Category);
-        Assert.Equal(4, dto.Difficulty);
-        Assert.Equal(2, dto.BadPoints);
+        Assert.Equal(3, dto.CategoryId);
+        Assert.Equal("History", dto.CategoryName);
+        Assert.Equal(4, dto.BadPoints);
+        Assert.Equal("Ai", dto.Source);
+        Assert.Equal(TestEntities.CreatedAt, dto.CreatedAt);
     }
 
     [Fact]
-    public void QuestionMapper_MapsGeneratedQuestionWithSameBadPointsRule()
+    public void QuestionMapper_BuildsAManualEntityFromRequest()
     {
-        var dto = QuestionMapper.ToDto(new GeneratedQuestion("Some generated question?", "7", "Sport", 5));
+        var category = TestEntities.Category(3, "History");
 
-        Assert.Equal("7", dto.Answer);
-        Assert.Equal(1, dto.BadPoints);
-    }
-
-    [Fact]
-    public void QuestionMapper_BuildsEntityFromRequest()
-    {
-        var question = QuestionMapper.ToEntity(new CreateQuestionRequest
-        {
-            Text = "Which year was ChatGPT publicly released?",
-            Answer = "2022",
-            Category = "History",
-            Difficulty = 3
-        });
+        var question = QuestionMapper.ToEntity(
+            new CreateQuestionRequest { Text = "Which year was ChatGPT publicly released?", Answer = "2022", CategoryId = 3 },
+            category,
+            badPoints: 2,
+            createdAt: Start);
 
         Assert.Equal("2022", question.Answer);
-        Assert.Equal(3, question.BadPoints);
+        Assert.Same(category, question.Category);
+        Assert.Equal(3, question.CategoryId);
+        Assert.Equal(2, question.BadPoints);
+        Assert.Equal(QuestionSource.Manual, question.Source);
+        Assert.Equal(Start, question.CreatedAt);
+    }
+
+    [Fact]
+    public void QuestionGenerationMapper_CopiesTheCounts()
+    {
+        var category = TestEntities.Category(3, "History");
+        var question = TestEntities.Question(1, "Which year was ChatGPT publicly released?", "2022", category);
+
+        var summary = QuestionGenerationMapper.ToSummaryDto(new QuestionGenerationResult([question], 5, 2));
+
+        Assert.Equal(new QuestionGenerationSummaryDto(5, 1, 2), summary);
     }
 }

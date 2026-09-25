@@ -61,7 +61,10 @@ public sealed class OpenAiChatCompletionClient : IChatCompletionClient
 
             return completion?.Choices?.FirstOrDefault()?.Message?.Content;
         }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        // A timeout surfaces as TaskCanceledException too; only the caller's own cancellation propagates.
+        catch (Exception exception) when (
+            (exception is HttpRequestException or TaskCanceledException or JsonException)
+            && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(exception, "Chat completion request could not be completed.");
             return null;

@@ -56,18 +56,6 @@ public class QuestionCategoryRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetRandomAsync_ReturnsOneOfTheSeededCategories()
-    {
-        await using var context = _database.CreateContext();
-        var sut = new QuestionCategoryRepository(context);
-
-        var category = await sut.GetRandomAsync();
-
-        Assert.NotNull(category);
-        Assert.Contains(category!.Name, new[] { "Cars", "Sport", "History" });
-    }
-
-    [Fact]
     public async Task AddAsync_StoresACategoryWithoutAuthor()
     {
         await using var context = _database.CreateContext();

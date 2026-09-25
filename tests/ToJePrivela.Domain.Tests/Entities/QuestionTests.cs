@@ -7,15 +7,21 @@ public class QuestionTests
 {
     private const string ValidText = "Which year was ChatGPT publicly released?";
 
-    [Theory]
-    [InlineData(1, 5)]
-    [InlineData(3, 3)]
-    [InlineData(5, 1)]
-    public void BadPoints_AreInverseToDifficulty(int difficulty, int expectedBadPoints)
-    {
-        var question = new Question(ValidText, "2022", "History", difficulty);
+    private static readonly DateTime CreatedAt = new(2026, 9, 24, 10, 0, 0, DateTimeKind.Utc);
+    private static readonly QuestionCategory History = new("History");
+    private static readonly QuestionCategory Sport = new("Sport");
 
-        Assert.Equal(expectedBadPoints, question.BadPoints);
+    [Fact]
+    public void Constructor_KeepsEveryValue()
+    {
+        var question = new Question(ValidText, "2022", History, 4, QuestionSource.Ai, CreatedAt);
+
+        Assert.Equal(ValidText, question.Text);
+        Assert.Equal("2022", question.Answer);
+        Assert.Same(History, question.Category);
+        Assert.Equal(4, question.BadPoints);
+        Assert.Equal(QuestionSource.Ai, question.Source);
+        Assert.Equal(CreatedAt, question.CreatedAt);
     }
 
     [Theory]
@@ -25,7 +31,7 @@ public class QuestionTests
     [InlineData(" 42 ")]
     public void Constructor_AcceptsNumericAnswers(string answer)
     {
-        var question = new Question(ValidText, answer, "History", 3);
+        var question = Create(answer: answer);
 
         Assert.Equal(answer.Trim(), question.Answer);
     }
@@ -36,57 +42,92 @@ public class QuestionTests
     [InlineData("")]
     public void Constructor_RejectsNonNumericAnswers(string answer)
     {
-        Assert.Throws<DomainException>(() => new Question(ValidText, answer, "History", 3));
+        Assert.Throws<DomainException>(() => Create(answer: answer));
+    }
+
+    [Theory]
+    [InlineData(Question.MinBadPoints)]
+    [InlineData(Question.MaxBadPoints)]
+    public void Constructor_AcceptsBadPointsWithinRange(int badPoints)
+    {
+        Assert.Equal(badPoints, Create(badPoints: badPoints).BadPoints);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(6)]
-    public void Constructor_RejectsDifficultyOutOfRange(int difficulty)
+    public void Constructor_RejectsBadPointsOutOfRange(int badPoints)
     {
-        Assert.Throws<DomainException>(() => new Question(ValidText, "2022", "History", difficulty));
+        Assert.Throws<DomainException>(() => Create(badPoints: badPoints));
     }
 
     [Fact]
     public void Constructor_RejectsTooShortText()
     {
-        Assert.Throws<DomainException>(() => new Question("Short", "2022", "History", 3));
+        Assert.Throws<DomainException>(() => Create(text: "Short"));
     }
 
     [Fact]
     public void Constructor_RejectsTooLongText()
     {
-        var text = new string('x', Question.TextMaxLength + 1);
-
-        Assert.Throws<DomainException>(() => new Question(text, "2022", "History", 3));
+        Assert.Throws<DomainException>(() => Create(text: new string('x', Question.TextMaxLength + 1)));
     }
 
     [Fact]
-    public void Constructor_RejectsInvalidCategory()
+    public void Constructor_RequiresACategory()
     {
-        Assert.Throws<DomainException>(() => new Question(ValidText, "2022", "H", 3));
+        Assert.Throws<ArgumentNullException>(
+            () => new Question(ValidText, "2022", null!, 3, QuestionSource.Manual, CreatedAt));
     }
 
     [Fact]
-    public void Update_ReplacesEveryValue()
+    public void Update_ReplacesEveryEditableValue()
     {
-        var question = new Question(ValidText, "2022", "History", 3);
+        var question = Create();
 
-        question.Update("How many players are on a football pitch?", "11", "Sport", 1);
+        question.Update("How many players are on a football pitch?", "11", Sport, 1);
 
         Assert.Equal("How many players are on a football pitch?", question.Text);
         Assert.Equal("11", question.Answer);
-        Assert.Equal("Sport", question.Category);
-        Assert.Equal(1, question.Difficulty);
-        Assert.Equal(5, question.BadPoints);
+        Assert.Same(Sport, question.Category);
+        Assert.Equal(1, question.BadPoints);
+        Assert.Equal(CreatedAt, question.CreatedAt);
+    }
+
+    [Fact]
+    public void Update_TurnsAnAiQuestionIntoAManualOne()
+    {
+        var question = Create(source: QuestionSource.Ai);
+
+        question.Update(ValidText, "2022", History, 3);
+
+        Assert.Equal(QuestionSource.Manual, question.Source);
     }
 
     [Fact]
     public void Update_KeepsOriginalValuesWhenRejected()
     {
-        var question = new Question(ValidText, "2022", "History", 3);
+        var question = Create(source: QuestionSource.Ai);
 
-        Assert.Throws<DomainException>(() => question.Update(ValidText, "not a number", "History", 3));
+        Assert.Throws<DomainException>(() => question.Update(ValidText, "not a number", Sport, 3));
         Assert.Equal("2022", question.Answer);
+        Assert.Same(History, question.Category);
+        Assert.Equal(QuestionSource.Ai, question.Source);
     }
+
+    [Fact]
+    public void Update_RejectsBadPointsOutOfRange()
+    {
+        var question = Create();
+
+        Assert.Throws<DomainException>(() => question.Update(ValidText, "2022", History, 9));
+        Assert.Equal(3, question.BadPoints);
+    }
+
+    private static Question Create(
+        string text = ValidText,
+        string answer = "2022",
+        int badPoints = 3,
+        QuestionSource source = QuestionSource.Manual) =>
+        new(text, answer, History, badPoints, source, CreatedAt);
 }

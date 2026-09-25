@@ -5,8 +5,8 @@ namespace ToJePrivela.Application.Questions.Dtos;
 
 public sealed class QuestionFilter
 {
-    public string? Category { get; init; }
+    [Range(1, int.MaxValue, ErrorMessage = "Category id should be positive.")]
+    public int? CategoryId { get; init; }
 
-    [Range(Question.MinDifficulty, Question.MaxDifficulty, ErrorMessage = "Difficulty should be between 1 and 5.")]
-    public int? Difficulty { get; init; }
+    public QuestionSource? Source { get; init; }
 }

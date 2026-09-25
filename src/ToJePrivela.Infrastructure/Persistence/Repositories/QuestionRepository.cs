@@ -10,24 +10,37 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
     {
     }
 
-    public async Task<IReadOnlyList<Question>> FindAsync(string? category, int? difficulty, CancellationToken cancellationToken = default)
-    {
-        var query = Set.AsQueryable();
+    public override async Task<Question?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
+        await Set.Include(q => q.Category).FirstOrDefaultAsync(q => q.Id == id, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(category))
+    public override async Task<IReadOnlyList<Question>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await Set.Include(q => q.Category).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Question>> FindAsync(int? categoryId, QuestionSource? source, CancellationToken cancellationToken = default)
+    {
+        var query = Set.Include(q => q.Category).AsQueryable();
+
+        if (categoryId is int id)
         {
-            var trimmed = category.Trim();
-            query = query.Where(q => q.Category == trimmed);
+            query = query.Where(q => q.CategoryId == id);
         }
 
-        if (difficulty is int value)
+        if (source is QuestionSource value)
         {
-            query = query.Where(q => q.Difficulty == value);
+            query = query.Where(q => q.Source == value);
         }
 
         return await query.ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<string>> GetTextsAsync(int categoryId, CancellationToken cancellationToken = default) =>
+        await Set.Where(q => q.CategoryId == categoryId)
+            .OrderByDescending(q => q.Id)
+            .Select(q => q.Text)
+            .ToListAsync(cancellationToken);
+
     public async Task AddRangeAsync(IEnumerable<Question> questions, CancellationToken cancellationToken = default) =>
         await Set.AddRangeAsync(questions, cancellationToken);
+
+    public void RemoveRange(IEnumerable<Question> questions) => Set.RemoveRange(questions);
 }

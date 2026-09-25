@@ -1,4 +1,3 @@
-using ToJePrivela.Application.Abstractions.Ai;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Questions.Dtos;
@@ -10,24 +9,27 @@ public sealed class QuestionService : IQuestionService
 {
     private readonly IQuestionRepository _questions;
     private readonly IQuestionCategoryRepository _categories;
-    private readonly IQuestionGenerator _questionGenerator;
+    private readonly IBadPointsPicker _badPoints;
+    private readonly TimeProvider _timeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public QuestionService(
         IQuestionRepository questions,
         IQuestionCategoryRepository categories,
-        IQuestionGenerator questionGenerator,
+        IBadPointsPicker badPoints,
+        TimeProvider timeProvider,
         IUnitOfWork unitOfWork)
     {
         _questions = questions;
         _categories = categories;
-        _questionGenerator = questionGenerator;
+        _badPoints = badPoints;
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<IReadOnlyList<QuestionDto>>> GetAsync(QuestionFilter filter, CancellationToken cancellationToken = default)
     {
-        var questions = await _questions.FindAsync(filter.Category, filter.Difficulty, cancellationToken);
+        var questions = await _questions.FindAsync(filter.CategoryId, filter.Source, cancellationToken);
         return Result.Success(QuestionMapper.ToDtos(questions));
     }
 
@@ -42,7 +44,18 @@ public sealed class QuestionService : IQuestionService
 
     public async Task<Result<QuestionDto>> CreateAsync(CreateQuestionRequest request, CancellationToken cancellationToken = default)
     {
-        var question = QuestionMapper.ToEntity(request);
+        var category = await _categories.GetByIdAsync(request.CategoryId, cancellationToken);
+
+        if (category is null)
+        {
+            return Result.Failure<QuestionDto>(QuestionErrors.UnknownCategory(request.CategoryId));
+        }
+
+        var question = QuestionMapper.ToEntity(
+            request,
+            category,
+            request.BadPoints ?? _badPoints.Pick(),
+            _timeProvider.GetUtcNow().UtcDateTime);
 
         await _questions.AddAsync(question, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -59,7 +72,14 @@ public sealed class QuestionService : IQuestionService
             return Result.Failure(QuestionErrors.NotFound(id));
         }
 
-        question.Update(request.Text, request.Answer, request.Category, request.Difficulty);
+        var category = await _categories.GetByIdAsync(request.CategoryId, cancellationToken);
+
+        if (category is null)
+        {
+            return Result.Failure(QuestionErrors.UnknownCategory(request.CategoryId));
+        }
+
+        question.Update(request.Text, request.Answer, category, request.BadPoints ?? question.BadPoints);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
@@ -78,33 +98,5 @@ public sealed class QuestionService : IQuestionService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
-    }
-
-    public async Task<Result<IReadOnlyList<GeneratedQuestionDto>>> GenerateAsync(
-        GenerateQuestionsRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var category = request.Category?.Trim();
-
-        if (!string.IsNullOrEmpty(category))
-        {
-            if (await _categories.GetByNameAsync(category, cancellationToken) is null)
-            {
-                return Result.Failure<IReadOnlyList<GeneratedQuestionDto>>(QuestionErrors.UnknownCategory(category));
-            }
-        }
-        else
-        {
-            // No category asked for: pick one that is actually in use.
-            category = (await _categories.GetRandomAsync(cancellationToken))?.Name;
-        }
-
-        var generated = await _questionGenerator.GenerateAsync(
-            new QuestionGenerationRequest(category, request.Count, request.Language),
-            cancellationToken);
-
-        return generated.Count == 0
-            ? Result.Failure<IReadOnlyList<GeneratedQuestionDto>>(QuestionErrors.GenerationFailed)
-            : Result.Success(QuestionMapper.ToDtos(generated));
     }
 }

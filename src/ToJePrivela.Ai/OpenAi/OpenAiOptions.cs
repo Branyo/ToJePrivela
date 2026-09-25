@@ -19,19 +19,14 @@ public sealed class OpenAiOptions
     [Range(0, 2)]
     public decimal Temperature { get; set; } = 0.8M;
 
+    /// <summary>Output budget of one call, which carries at most QuestionGeneration:QuestionsPerRequest questions.</summary>
     [Range(1, 16000)]
-    public int MaxTokens { get; set; } = 2000;
-
-    [Range(1, 10)]
-    public int MaxRetryAttempts { get; set; } = 3;
+    public int MaxTokens { get; set; } = 4000;
 
     [Range(1, 600)]
     public int TimeoutSeconds { get; set; } = 60;
 
-    public string DefaultCategory { get; set; } = "Arbitrary";
-
-    public string DefaultLanguage { get; set; } = "Slovak";
-
-    [Range(1, 5)]
-    public int DefaultDifficulty { get; set; } = 3;
+    /// <summary>Every generated question is written in this language.</summary>
+    [Required(ErrorMessage = "OpenAi:Language must be configured.")]
+    public string Language { get; set; } = "Slovak";
 }

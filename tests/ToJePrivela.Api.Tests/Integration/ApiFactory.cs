@@ -5,17 +5,44 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
+using ToJePrivela.Api.Common;
 using ToJePrivela.Application.Abstractions.Ai;
 using ToJePrivela.Infrastructure.Persistence;
 
 namespace ToJePrivela.Api.Tests.Integration;
 
 /// <summary>Hosts the real API on a throwaway SQLite file with the AI provider stubbed out.</summary>
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public class ApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"tojeprivela-tests-{Guid.NewGuid():N}.db");
+    private int _generatedCount;
+
+    public ApiFactory()
+    {
+        ReplyWithFreshQuestions();
+    }
 
     public IQuestionGenerator QuestionGenerator { get; } = Substitute.For<IQuestionGenerator>();
+
+    /// <summary>High enough that ordinary tests never hit the AI rate limit.</summary>
+    protected virtual int AiGenerationPermitLimit => 10_000;
+
+    /// <summary>Every call answers with as many new, unique questions as it was asked for.</summary>
+    public void ReplyWithFreshQuestions()
+    {
+        QuestionGenerator
+            .GenerateAsync(Arg.Any<QuestionGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call => Fresh(call.Arg<QuestionGenerationRequest>().Count));
+
+        QuestionGenerator
+            .GenerateSubtopicsAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+    }
+
+    public void ReplyWithNothing() =>
+        QuestionGenerator
+            .GenerateAsync(Arg.Any<QuestionGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -24,6 +51,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting(
             $"ConnectionStrings:{SqliteConnectionString.Name}",
             $"Data Source={_databasePath}");
+
+        builder.UseSetting(
+            $"{AiRateLimitOptions.SectionName}:{nameof(AiRateLimitOptions.PermitLimit)}",
+            AiGenerationPermitLimit.ToString());
 
         builder.ConfigureServices(services =>
         {
@@ -51,4 +82,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             File.Delete(_databasePath);
         }
     }
+
+    private IReadOnlyList<GeneratedQuestion> Fresh(int count) =>
+        Enumerable.Range(0, count)
+            .Select(_ => Interlocked.Increment(ref _generatedCount))
+            .Select(number => new GeneratedQuestion($"Generated test question number {number}?", number.ToString()))
+            .ToList();
 }

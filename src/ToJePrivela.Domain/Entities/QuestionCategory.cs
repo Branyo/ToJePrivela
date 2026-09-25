@@ -2,6 +2,7 @@ using ToJePrivela.Domain.Common;
 
 namespace ToJePrivela.Domain.Entities;
 
+/// <summary>Immutable once created: to "rename" a category, delete it and add a new one.</summary>
 public class QuestionCategory
 {
     public const int NameMinLength = 2;
@@ -25,9 +26,4 @@ public class QuestionCategory
     public int? AddedByPlayerId { get; private set; }
 
     public Player? AddedByPlayer { get; private set; }
-
-    public void Rename(string name)
-    {
-        Name = Guard.AgainstInvalidLength(name, nameof(name), NameMinLength, NameMaxLength);
-    }
 }

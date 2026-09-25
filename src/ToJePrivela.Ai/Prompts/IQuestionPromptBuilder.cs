@@ -1,6 +1,10 @@
+using ToJePrivela.Application.Abstractions.Ai;
+
 namespace ToJePrivela.Ai.Prompts;
 
 public interface IQuestionPromptBuilder
 {
-    string Build(string category, int count, string language);
+    string BuildQuestions(QuestionGenerationRequest request, string language);
+
+    string BuildSubtopics(string category, int count, string language);
 }

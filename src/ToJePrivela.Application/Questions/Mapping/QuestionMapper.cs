@@ -1,4 +1,3 @@
-using ToJePrivela.Application.Abstractions.Ai;
 using ToJePrivela.Application.Questions.Dtos;
 using ToJePrivela.Domain.Entities;
 
@@ -6,27 +5,20 @@ namespace ToJePrivela.Application.Questions.Mapping;
 
 public static class QuestionMapper
 {
+    /// <summary>The category name is empty when the category was not loaded.</summary>
     public static QuestionDto ToDto(Question question) => new(
         question.Id,
         question.Text,
         question.Answer,
-        question.Category,
-        question.Difficulty,
-        question.BadPoints);
+        question.CategoryId,
+        question.Category?.Name ?? string.Empty,
+        question.BadPoints,
+        question.Source.ToString(),
+        question.CreatedAt);
 
     public static IReadOnlyList<QuestionDto> ToDtos(IEnumerable<Question> questions) =>
         questions.Select(ToDto).ToList();
 
-    public static Question ToEntity(CreateQuestionRequest request) =>
-        new(request.Text, request.Answer, request.Category, request.Difficulty);
-
-    public static GeneratedQuestionDto ToDto(GeneratedQuestion question) => new(
-        question.Text,
-        question.Answer,
-        question.Category,
-        question.Difficulty,
-        Question.MaxDifficulty + 1 - question.Difficulty);
-
-    public static IReadOnlyList<GeneratedQuestionDto> ToDtos(IEnumerable<GeneratedQuestion> questions) =>
-        questions.Select(ToDto).ToList();
+    public static Question ToEntity(CreateQuestionRequest request, QuestionCategory category, int badPoints, DateTime createdAt) =>
+        new(request.Text, request.Answer, category, badPoints, QuestionSource.Manual, createdAt);
 }

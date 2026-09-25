@@ -24,16 +24,6 @@ public sealed class QuestionsController : ControllerBase
         CancellationToken cancellationToken) =>
         (await _questions.GetAsync(filter, cancellationToken)).ToActionResult();
 
-    /// <summary>Generates questions with the AI provider; they are not stored.</summary>
-    [HttpGet("ai")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<ActionResult<IReadOnlyList<GeneratedQuestionDto>>> GenerateQuestions(
-        [FromQuery] GenerateQuestionsRequest request,
-        CancellationToken cancellationToken) =>
-        (await _questions.GenerateAsync(request, cancellationToken)).ToActionResult();
-
     [HttpGet("{id:int}", Name = nameof(GetQuestion))]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

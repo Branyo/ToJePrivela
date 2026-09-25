@@ -100,6 +100,28 @@ public class OpenAiChatCompletionClientTests
         Assert.Null(await CreateSut(handler).CompleteAsync("prompt"));
     }
 
+    [Fact]
+    public async Task CompleteAsync_ReturnsNullWhenTheRequestTimesOut()
+    {
+        var handler = new StubHttpMessageHandler(_ => throw new TaskCanceledException("timed out"));
+
+        Assert.Null(await CreateSut(handler).CompleteAsync("prompt"));
+    }
+
+    [Fact]
+    public async Task CompleteAsync_LetsTheCallersCancellationThrough()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var handler = new StubHttpMessageHandler(_ =>
+        {
+            cancellation.Cancel();
+            throw new TaskCanceledException("cancelled");
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => CreateSut(handler).CompleteAsync("prompt", cancellation.Token));
+    }
+
     private static OpenAiChatCompletionClient CreateSut(StubHttpMessageHandler handler) => new(
         new HttpClient(handler),
         Microsoft.Extensions.Options.Options.Create(Options),
