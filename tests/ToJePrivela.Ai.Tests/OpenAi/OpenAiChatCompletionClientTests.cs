@@ -14,7 +14,8 @@ public class OpenAiChatCompletionClientTests
     {
         Url = "https://api.example.test/v1/chat/completions",
         ApiKey = "test-key",
-        Model = "gpt-3.5-turbo",
+        Model = "gpt-6-luna",
+        ReasoningEffort = "medium",
         MaxTokens = 1234,
         Temperature = 0.5M
     };
@@ -37,9 +38,31 @@ public class OpenAiChatCompletionClientTests
         await CreateSut(handler).CompleteAsync("generate questions");
 
         Assert.NotNull(handler.LastRequestBody);
-        Assert.Contains("gpt-3.5-turbo", handler.LastRequestBody);
+        Assert.Contains("gpt-6-luna", handler.LastRequestBody);
         Assert.Contains("generate questions", handler.LastRequestBody);
-        Assert.Contains("\"max_tokens\":1234", handler.LastRequestBody);
+        Assert.Contains("\"max_completion_tokens\":1234", handler.LastRequestBody);
+        Assert.Contains("\"reasoning_effort\":\"medium\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_OmitsTemperatureWhenReasoning()
+    {
+        var handler = StubHttpMessageHandler.WithJson(HttpStatusCode.OK, SuccessBody);
+
+        await CreateSut(handler).CompleteAsync("prompt");
+
+        Assert.DoesNotContain("temperature", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_SendsTemperatureWhenReasoningIsOff()
+    {
+        var handler = StubHttpMessageHandler.WithJson(HttpStatusCode.OK, SuccessBody);
+        var options = new OpenAiOptions { Url = Options.Url, ReasoningEffort = "none", Temperature = 0.5M };
+
+        await CreateSut(handler, options).CompleteAsync("prompt");
+
+        Assert.Contains("\"reasoning_effort\":\"none\"", handler.LastRequestBody);
         Assert.Contains("\"temperature\":0.5", handler.LastRequestBody);
     }
 
@@ -122,8 +145,8 @@ public class OpenAiChatCompletionClientTests
             () => CreateSut(handler).CompleteAsync("prompt", cancellation.Token));
     }
 
-    private static OpenAiChatCompletionClient CreateSut(StubHttpMessageHandler handler) => new(
+    private static OpenAiChatCompletionClient CreateSut(StubHttpMessageHandler handler, OpenAiOptions? options = null) => new(
         new HttpClient(handler),
-        Microsoft.Extensions.Options.Options.Create(Options),
+        Microsoft.Extensions.Options.Options.Create(options ?? Options),
         NullLogger<OpenAiChatCompletionClient>.Instance);
 }

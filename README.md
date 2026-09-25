@@ -52,7 +52,8 @@ The database file is created and migrated on startup, so a fresh clone needs no 
 | --- | --- |
 | `ConnectionStrings:ToJePrivelaDbConnectionString` | SQLite file; missing or empty fails fast |
 | `OpenAi:ApiKey` | API key — set via user-secrets or `OpenAi__ApiKey`, never in source |
-| `OpenAi:Model`, `Temperature`, `MaxTokens` (≤ 16000), `TimeoutSeconds` | One provider call |
+| `OpenAi:Model`, `ReasoningEffort`, `MaxTokens` (≤ 128000, reasoning tokens included), `TimeoutSeconds` | One provider call (default `gpt-6-luna`, `medium` reasoning) |
+| `OpenAi:Temperature` | Sent only when `ReasoningEffort` is `none`; reasoning requests reject it |
 | `OpenAi:Language` | Language of every generated question (default `Slovak`) |
 | `QuestionGeneration:QuestionsPerRequest` | Questions per AI call (default 20) |
 | `QuestionGeneration:MaxParallelRequests` | AI calls running at once (default 3) |

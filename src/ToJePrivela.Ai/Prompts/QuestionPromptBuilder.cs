@@ -25,8 +25,13 @@ public sealed class QuestionPromptBuilder : IQuestionPromptBuilder
         builder.AppendLine("Rules:");
         builder.AppendLine("- Answer with a bare JSON array only, without markdown fences or commentary.");
         builder.AppendLine("- Each item has exactly the keys \"question\" and \"answer\".");
-        builder.AppendLine("- The answer must be a plain number, without units or extra text.");
+        builder.AppendLine("- The answer must be a plain integer number, without units or extra text.");
+        builder.AppendLine("- Define questions unambiguously (with units that answer expresses if it is necessary).");
         builder.AppendLine("- Avoid duplicates and trivial rephrasings.");
+        builder.AppendLine("- Use only well-documented facts you are certain of; every answer must be verifiable in an encyclopedia.");
+        builder.AppendLine("- Each question must have exactly one correct answer that sources agree on; skip disputed or estimated values.");
+        builder.AppendLine("- For values that change over time (population, records, prices), name the year the answer refers to.");
+        builder.AppendLine("- Never invent people, events or numbers. If you are unsure of a fact, leave the question out: fewer questions are better than a wrong answer.");
 
         if (request.ExcludedQuestions is { Count: > 0 } excluded)
         {
