@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 using Serilog;
 using ToJePrivela.Ai;
@@ -11,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, configuration) =>
     configuration.WriteTo.Console().ReadFrom.Configuration(context.Configuration));
 
-builder.Services.AddApplication();
+builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAiQuestionGeneration(builder.Configuration);
 
@@ -43,6 +44,20 @@ builder.Services.AddCors(options => options.AddPolicy(CorsOptions.PolicyName, po
     }
 }));
 
+var aiRateLimit = builder.Configuration.GetSection(AiRateLimitOptions.SectionName).Get<AiRateLimitOptions>()
+    ?? new AiRateLimitOptions();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter(AiRateLimitOptions.PolicyName, limiter =>
+    {
+        limiter.PermitLimit = aiRateLimit.PermitLimit;
+        limiter.Window = TimeSpan.FromSeconds(aiRateLimit.WindowSeconds);
+        limiter.QueueLimit = 0;
+    });
+});
+
 var app = builder.Build();
 
 var isTesting = app.Environment.IsEnvironment("Testing");
@@ -68,6 +83,7 @@ if (!isTesting)
 }
 
 app.UseCors(CorsOptions.PolicyName);
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 

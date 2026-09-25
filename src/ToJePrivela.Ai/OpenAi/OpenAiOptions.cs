@@ -13,25 +13,35 @@ public sealed class OpenAiOptions
     public string ApiKey { get; set; } = string.Empty;
 
     [Required]
-    public string Model { get; set; } = "gpt-3.5-turbo";
+    public string Model { get; set; } = "gpt-6-luna";
 
-    /// <summary>0 = deterministic, 2 = maximum randomness.</summary>
+    /// <summary>
+    /// How long the model reasons before answering. Reasoning lets it check its facts, which keeps
+    /// made-up answers out of the generated questions.
+    /// </summary>
+    [Required]
+    [RegularExpression("^(none|low|medium|high|xhigh|max)$",
+        ErrorMessage = "OpenAi:ReasoningEffort must be one of none, low, medium, high, xhigh, max.")]
+    public string ReasoningEffort { get; set; } = "medium";
+
+    /// <summary>
+    /// 0 = deterministic, 2 = maximum randomness. Reasoning requests reject it, so it is sent only when
+    /// ReasoningEffort is "none".
+    /// </summary>
     [Range(0, 2)]
-    public decimal Temperature { get; set; } = 0.8M;
+    public decimal Temperature { get; set; } = 0.2M;
 
-    [Range(1, 16000)]
-    public int MaxTokens { get; set; } = 2000;
-
-    [Range(1, 10)]
-    public int MaxRetryAttempts { get; set; } = 3;
+    /// <summary>
+    /// Output budget of one call, which carries at most QuestionGeneration:QuestionsPerRequest questions.
+    /// Reasoning tokens count against it too.
+    /// </summary>
+    [Range(1, 128000)]
+    public int MaxTokens { get; set; } = 16000;
 
     [Range(1, 600)]
-    public int TimeoutSeconds { get; set; } = 60;
+    public int TimeoutSeconds { get; set; } = 180;
 
-    public string DefaultCategory { get; set; } = "Arbitrary";
-
-    public string DefaultLanguage { get; set; } = "Slovak";
-
-    [Range(1, 5)]
-    public int DefaultDifficulty { get; set; } = 3;
+    /// <summary>Every generated question is written in this language.</summary>
+    [Required(ErrorMessage = "OpenAi:Language must be configured.")]
+    public string Language { get; set; } = "Slovak";
 }

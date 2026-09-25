@@ -6,24 +6,32 @@ public class Question
 {
     public const int TextMinLength = 8;
     public const int TextMaxLength = 512;
-    public const int CategoryMinLength = 2;
-    public const int CategoryMaxLength = 32;
-    public const int MinDifficulty = 1;
-    public const int MaxDifficulty = 5;
+    public const int MinBadPoints = 1;
+    public const int MaxBadPoints = 5;
 
     private Question()
     {
         Text = string.Empty;
         Answer = string.Empty;
-        Category = string.Empty;
     }
 
-    public Question(string text, string answer, string category, int difficulty)
+    public Question(
+        string text,
+        string answer,
+        QuestionCategory category,
+        int badPoints,
+        QuestionSource source,
+        DateTime createdAt)
     {
+        ArgumentNullException.ThrowIfNull(category);
+
         Text = Guard.AgainstInvalidLength(text, nameof(text), TextMinLength, TextMaxLength);
         Answer = Guard.AgainstNonNumeric(answer, nameof(answer));
-        Category = Guard.AgainstInvalidLength(category, nameof(category), CategoryMinLength, CategoryMaxLength);
-        Difficulty = Guard.AgainstOutOfRange(difficulty, nameof(difficulty), MinDifficulty, MaxDifficulty);
+        BadPoints = Guard.AgainstOutOfRange(badPoints, nameof(badPoints), MinBadPoints, MaxBadPoints);
+        Category = category;
+        CategoryId = category.Id;
+        Source = source;
+        CreatedAt = createdAt;
     }
 
     public int Id { get; private set; }
@@ -33,24 +41,34 @@ public class Question
     /// <summary>Stored as text, but always a numeric value.</summary>
     public string Answer { get; private set; }
 
-    public string Category { get; private set; }
+    public int CategoryId { get; private set; }
 
-    public int Difficulty { get; private set; }
+    public QuestionCategory? Category { get; private set; }
 
-    /// <summary>Penalty for a wrong answer: the easier the question, the more it costs.</summary>
-    public int BadPoints => MaxDifficulty + 1 - Difficulty;
+    /// <summary>Penalty for a wrong answer.</summary>
+    public int BadPoints { get; private set; }
 
-    /// <summary>Validates everything before assigning, so a rejected update leaves the question untouched.</summary>
-    public void Update(string text, string answer, string category, int difficulty)
+    public QuestionSource Source { get; private set; }
+
+    public DateTime CreatedAt { get; private set; }
+
+    /// <summary>
+    /// Validates everything before assigning, so a rejected update leaves the question untouched.
+    /// A question someone has edited is theirs now, so it becomes <see cref="QuestionSource.Manual"/>.
+    /// </summary>
+    public void Update(string text, string answer, QuestionCategory category, int badPoints)
     {
+        ArgumentNullException.ThrowIfNull(category);
+
         var validatedText = Guard.AgainstInvalidLength(text, nameof(text), TextMinLength, TextMaxLength);
         var validatedAnswer = Guard.AgainstNonNumeric(answer, nameof(answer));
-        var validatedCategory = Guard.AgainstInvalidLength(category, nameof(category), CategoryMinLength, CategoryMaxLength);
-        var validatedDifficulty = Guard.AgainstOutOfRange(difficulty, nameof(difficulty), MinDifficulty, MaxDifficulty);
+        var validatedBadPoints = Guard.AgainstOutOfRange(badPoints, nameof(badPoints), MinBadPoints, MaxBadPoints);
 
         Text = validatedText;
         Answer = validatedAnswer;
-        Category = validatedCategory;
-        Difficulty = validatedDifficulty;
+        BadPoints = validatedBadPoints;
+        Category = category;
+        CategoryId = category.Id;
+        Source = QuestionSource.Manual;
     }
 }

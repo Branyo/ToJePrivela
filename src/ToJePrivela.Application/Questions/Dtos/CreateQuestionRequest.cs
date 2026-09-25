@@ -13,11 +13,10 @@ public sealed class CreateQuestionRequest
     [Required]
     public string Answer { get; init; } = default!;
 
-    [Required]
-    [StringLength(Question.CategoryMaxLength, MinimumLength = Question.CategoryMinLength,
-        ErrorMessage = "Category name should have from 2 to 32 characters.")]
-    public string Category { get; init; } = default!;
+    [Range(1, int.MaxValue, ErrorMessage = "Category id is required.")]
+    public int CategoryId { get; init; }
 
-    [Range(Question.MinDifficulty, Question.MaxDifficulty, ErrorMessage = "Difficulty should be between 1 and 5.")]
-    public int Difficulty { get; init; }
+    /// <summary>Picked at random when left out.</summary>
+    [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between 1 and 5.")]
+    public int? BadPoints { get; init; }
 }

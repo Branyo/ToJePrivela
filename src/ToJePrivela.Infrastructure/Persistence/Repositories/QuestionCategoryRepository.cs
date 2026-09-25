@@ -22,7 +22,4 @@ public sealed class QuestionCategoryRepository : Repository<QuestionCategory>, I
         var trimmed = name.Trim();
         return await Set.FirstOrDefaultAsync(qc => qc.Name == trimmed, cancellationToken);
     }
-
-    public async Task<QuestionCategory?> GetRandomAsync(CancellationToken cancellationToken = default) =>
-        await Set.OrderBy(_ => EF.Functions.Random()).FirstOrDefaultAsync(cancellationToken);
 }

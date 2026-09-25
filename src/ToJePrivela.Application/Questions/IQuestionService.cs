@@ -14,8 +14,4 @@ public interface IQuestionService
     Task<Result> UpdateAsync(int id, UpdateQuestionRequest request, CancellationToken cancellationToken = default);
 
     Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default);
-
-    Task<Result<IReadOnlyList<GeneratedQuestionDto>>> GenerateAsync(
-        GenerateQuestionsRequest request,
-        CancellationToken cancellationToken = default);
 }

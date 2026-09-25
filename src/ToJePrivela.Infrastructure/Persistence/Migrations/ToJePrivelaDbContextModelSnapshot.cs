@@ -101,14 +101,19 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<int>("Difficulty")
+                    b.Property<int>("BadPoints")
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Text")
                         .IsRequired()
@@ -117,7 +122,7 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Category");
+                    b.HasIndex("CategoryId", "Source");
 
                     b.ToTable("Questions");
                 });
@@ -184,6 +189,17 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("ToJePrivela.Domain.Entities.Question", b =>
+                {
+                    b.HasOne("ToJePrivela.Domain.Entities.QuestionCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("ToJePrivela.Domain.Entities.QuestionCategory", b =>

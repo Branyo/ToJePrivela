@@ -8,6 +8,7 @@ using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Ai.OpenAi;
 
+/// <summary>One provider call per method; retries and batching are the Application layer's job.</summary>
 public sealed class OpenAiQuestionGenerator : IQuestionGenerator
 {
     private readonly IChatCompletionClient _client;
@@ -30,45 +31,45 @@ public sealed class OpenAiQuestionGenerator : IQuestionGenerator
         _options = options.Value;
     }
 
+    public async Task<IReadOnlyList<string>> GenerateSubtopicsAsync(
+        string category,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var prompt = _promptBuilder.BuildSubtopics(category, count, _options.Language);
+        var subtopics = _parser.ParseSubtopics(await _client.CompleteAsync(prompt, cancellationToken))
+            .Take(count)
+            .ToList();
+
+        if (subtopics.Count == 0)
+        {
+            _logger.LogWarning("No subtopics came back for category {Category}.", category);
+        }
+
+        return subtopics;
+    }
+
     public async Task<IReadOnlyList<GeneratedQuestion>> GenerateAsync(
         QuestionGenerationRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var category = Fallback(request.Category, _options.DefaultCategory);
-        var language = Fallback(request.Language, _options.DefaultLanguage);
-        var difficulty = request.Difficulty ?? _options.DefaultDifficulty;
-        var prompt = _promptBuilder.Build(category, request.Count, language);
+        var prompt = _promptBuilder.BuildQuestions(request, _options.Language);
+        var reply = await _client.CompleteAsync(prompt, cancellationToken);
 
-        for (var attempt = 1; attempt <= _options.MaxRetryAttempts; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var reply = await _client.CompleteAsync(prompt, cancellationToken);
-            var questions = _parser.Parse(reply)
-                .Select(parsed => ToGeneratedQuestion(parsed, category, difficulty))
-                .OfType<GeneratedQuestion>()
-                .Take(request.Count)
-                .ToList();
-
-            if (questions.Count > 0)
-            {
-                return questions;
-            }
-
-            _logger.LogWarning(
-                "Attempt {Attempt}/{MaxAttempts} returned no usable questions for category {Category}.",
-                attempt,
-                _options.MaxRetryAttempts,
-                category);
-        }
-
-        return [];
+        return _parser.Parse(reply)
+            .Select(ToGeneratedQuestion)
+            .OfType<GeneratedQuestion>()
+            .Take(request.Count)
+            .ToList();
     }
 
     /// <summary>Drops items the domain would reject, so the caller never sees an unusable question.</summary>
-    private static GeneratedQuestion? ToGeneratedQuestion(ParsedQuestion parsed, string category, int difficulty)
+    private static GeneratedQuestion? ToGeneratedQuestion(ParsedQuestion parsed)
     {
         var text = parsed.Question.Trim();
         var answer = parsed.Answer.Trim();
@@ -79,10 +80,7 @@ public sealed class OpenAiQuestionGenerator : IQuestionGenerator
         }
 
         return Guard.IsNumeric(answer)
-            ? new GeneratedQuestion(text, answer, category, difficulty)
+            ? new GeneratedQuestion(text, answer)
             : null;
     }
-
-    private static string Fallback(string? value, string fallback) =>
-        string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 }

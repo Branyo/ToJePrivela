@@ -6,6 +6,8 @@ namespace ToJePrivela.Infrastructure.Persistence.Configurations;
 
 public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
 {
+    public const int SourceMaxLength = 16;
+
     public void Configure(EntityTypeBuilder<Question> builder)
     {
         builder.HasKey(q => q.Id);
@@ -17,15 +19,22 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
         builder.Property(q => q.Answer)
             .IsRequired();
 
-        builder.Property(q => q.Category)
+        builder.Property(q => q.BadPoints).IsRequired();
+
+        builder.Property(q => q.Source)
             .IsRequired()
-            .HasMaxLength(Question.CategoryMaxLength)
-            .UseCollation("NOCASE");
+            .HasConversion<string>()
+            .HasMaxLength(SourceMaxLength);
 
-        builder.Property(q => q.Difficulty).IsRequired();
+        builder.Property(q => q.CreatedAt).IsRequired();
 
-        builder.Ignore(q => q.BadPoints);
+        // Deleting a category deletes its questions, manual and AI alike.
+        builder.HasOne(q => q.Category)
+            .WithMany()
+            .HasForeignKey(q => q.CategoryId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(q => q.Category);
+        builder.HasIndex(q => new { q.CategoryId, q.Source });
     }
 }

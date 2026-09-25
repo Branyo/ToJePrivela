@@ -4,7 +4,24 @@ namespace ToJePrivela.Ai.Parsing;
 
 public sealed class GeneratedQuestionParser : IGeneratedQuestionParser
 {
-    public IReadOnlyList<ParsedQuestion> Parse(string? reply)
+    public IReadOnlyList<ParsedQuestion> Parse(string? reply) =>
+        ReadArray(reply, items => items
+            .Select(ToParsedQuestion)
+            .OfType<ParsedQuestion>()
+            .ToList());
+
+    public IReadOnlyList<string> ParseSubtopics(string? reply) =>
+        ReadArray(reply, items => items
+            .Where(element => element.ValueKind == JsonValueKind.String)
+            .Select(element => element.GetString()!.Trim())
+            .Where(subtopic => subtopic.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList());
+
+    /// <summary>Anything that is not a readable JSON array yields an empty list.</summary>
+    private static IReadOnlyList<TItem> ReadArray<TItem>(
+        string? reply,
+        Func<IEnumerable<JsonElement>, IReadOnlyList<TItem>> readItems)
     {
         var json = ExtractJsonArray(reply);
 
@@ -17,16 +34,9 @@ public sealed class GeneratedQuestionParser : IGeneratedQuestionParser
         {
             using var document = JsonDocument.Parse(json);
 
-            if (document.RootElement.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-
-            return document.RootElement
-                .EnumerateArray()
-                .Select(ToParsedQuestion)
-                .OfType<ParsedQuestion>()
-                .ToList();
+            return document.RootElement.ValueKind == JsonValueKind.Array
+                ? readItems(document.RootElement.EnumerateArray())
+                : [];
         }
         catch (JsonException)
         {

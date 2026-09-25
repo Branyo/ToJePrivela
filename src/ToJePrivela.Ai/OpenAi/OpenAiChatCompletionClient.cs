@@ -10,6 +10,7 @@ namespace ToJePrivela.Ai.OpenAi;
 public sealed class OpenAiChatCompletionClient : IChatCompletionClient
 {
     private const string UserRole = "user";
+    private const string NoReasoning = "none";
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -33,7 +34,9 @@ public sealed class OpenAiChatCompletionClient : IChatCompletionClient
             _options.Model,
             [new ChatMessage(UserRole, prompt)],
             _options.MaxTokens,
-            _options.Temperature);
+            _options.ReasoningEffort,
+            // Reasoning requests reject temperature with a 400.
+            _options.ReasoningEffort == NoReasoning ? _options.Temperature : null);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, _options.Url)
         {
@@ -61,7 +64,10 @@ public sealed class OpenAiChatCompletionClient : IChatCompletionClient
 
             return completion?.Choices?.FirstOrDefault()?.Message?.Content;
         }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        // A timeout surfaces as TaskCanceledException too; only the caller's own cancellation propagates.
+        catch (Exception exception) when (
+            (exception is HttpRequestException or TaskCanceledException or JsonException)
+            && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(exception, "Chat completion request could not be completed.");
             return null;

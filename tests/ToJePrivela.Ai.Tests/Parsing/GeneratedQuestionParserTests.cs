@@ -86,4 +86,34 @@ public class GeneratedQuestionParserTests
     {
         Assert.Empty(_sut.Parse("[]"));
     }
+
+    [Fact]
+    public void ParseSubtopics_ReadsAFencedArrayOfStrings()
+    {
+        const string reply = """
+            ```json
+            ["Football", " Tennis ", "Ice hockey"]
+            ```
+            """;
+
+        Assert.Equal(["Football", "Tennis", "Ice hockey"], _sut.ParseSubtopics(reply));
+    }
+
+    [Fact]
+    public void ParseSubtopics_SkipsBlankDuplicateAndNonStringItems()
+    {
+        const string reply = """["Football", "", "football", 5, {"name": "x"}, "Tennis"]""";
+
+        Assert.Equal(["Football", "Tennis"], _sut.ParseSubtopics(reply));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("I cannot help with that.")]
+    [InlineData("[\"broken]")]
+    public void ParseSubtopics_ReturnsNothingForUnusableReplies(string? reply)
+    {
+        Assert.Empty(_sut.ParseSubtopics(reply));
+    }
 }

@@ -5,8 +5,10 @@ namespace ToJePrivela.Ai.OpenAi.Contracts;
 internal sealed record ChatCompletionRequest(
     [property: JsonPropertyName("model")] string Model,
     [property: JsonPropertyName("messages")] IReadOnlyList<ChatMessage> Messages,
-    [property: JsonPropertyName("max_tokens")] int MaxTokens,
-    [property: JsonPropertyName("temperature")] decimal Temperature);
+    [property: JsonPropertyName("max_completion_tokens")] int MaxCompletionTokens,
+    [property: JsonPropertyName("reasoning_effort")] string ReasoningEffort,
+    [property: JsonPropertyName("temperature"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    decimal? Temperature);
 
 internal sealed record ChatMessage(
     [property: JsonPropertyName("role")] string Role,

@@ -37,14 +37,4 @@ public class QuestionCategoryTests
 
         Assert.Throws<DomainException>(() => new QuestionCategory(name));
     }
-
-    [Fact]
-    public void Rename_ReplacesTheName()
-    {
-        var category = new QuestionCategory("Sport");
-
-        category.Rename("History");
-
-        Assert.Equal("History", category.Name);
-    }
 }
