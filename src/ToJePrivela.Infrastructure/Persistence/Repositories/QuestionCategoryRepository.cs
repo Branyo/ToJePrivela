@@ -22,4 +22,10 @@ public sealed class QuestionCategoryRepository : Repository<QuestionCategory>, I
         var trimmed = name.Trim();
         return await Set.FirstOrDefaultAsync(qc => qc.Name == trimmed, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<int>> GetMissingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default)
+    {
+        var existing = await Set.Where(qc => ids.Contains(qc.Id)).Select(qc => qc.Id).ToListAsync(cancellationToken);
+        return ids.Except(existing).Order().ToList();
+    }
 }

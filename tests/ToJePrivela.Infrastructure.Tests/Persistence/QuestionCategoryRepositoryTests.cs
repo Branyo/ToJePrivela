@@ -23,6 +23,16 @@ public class QuestionCategoryRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetMissingIdsAsync_ReturnsOnlyTheIdsNoCategoryHas()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionCategoryRepository(context);
+
+        Assert.Equal([98, 99], await sut.GetMissingIdsAsync([99, 1, 3, 98]));
+        Assert.Empty(await sut.GetMissingIdsAsync([1, 2]));
+    }
+
+    [Fact]
     public async Task GetByNameAsync_ReturnsNullForUnknownCategory()
     {
         await using var context = _database.CreateContext();

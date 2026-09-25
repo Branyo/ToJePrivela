@@ -28,6 +28,13 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
 
         builder.Property(q => q.CreatedAt).IsRequired();
 
+        builder.Property(q => q.ViewCount).IsRequired();
+
+        // Updates are guarded by WHERE "Version" = <the value read>, so a lost update surfaces as a conflict.
+        builder.Property(q => q.Version)
+            .IsRequired()
+            .IsConcurrencyToken();
+
         // Deleting a category deletes its questions, manual and AI alike.
         builder.HasOne(q => q.Category)
             .WithMany()
@@ -36,5 +43,6 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(q => new { q.CategoryId, q.Source });
+        builder.HasIndex(q => new { q.CategoryId, q.ViewCount });
     }
 }

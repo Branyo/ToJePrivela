@@ -8,4 +8,6 @@ public sealed record QuestionDto(
     string CategoryName,
     int BadPoints,
     string Source,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int ViewCount,
+    DateTime? LastViewedAt);

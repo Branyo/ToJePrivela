@@ -52,6 +52,17 @@ public class Question
 
     public DateTime CreatedAt { get; private set; }
 
+    /// <summary>How many times the question has been shown to players.</summary>
+    public int ViewCount { get; private set; }
+
+    public DateTime? LastViewedAt { get; private set; }
+
+    /// <summary>
+    /// Row version: every change bumps it, so a concurrent change is detected instead of overwritten.
+    /// SQLite has no native rowversion, so the entity maintains it itself.
+    /// </summary>
+    public long Version { get; private set; }
+
     /// <summary>
     /// Validates everything before assigning, so a rejected update leaves the question untouched.
     /// A question someone has edited is theirs now, so it becomes <see cref="QuestionSource.Manual"/>.
@@ -70,5 +81,13 @@ public class Question
         Category = category;
         CategoryId = category.Id;
         Source = QuestionSource.Manual;
+        Version++;
+    }
+
+    public void MarkViewed(DateTime viewedAt)
+    {
+        ViewCount++;
+        LastViewedAt = viewedAt;
+        Version++;
     }
 }

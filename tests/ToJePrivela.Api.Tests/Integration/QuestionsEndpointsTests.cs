@@ -162,11 +162,140 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task GetRandomQuestion_ShowsEveryQuestionOnceBeforeRepeatingAny()
+    {
+        var categoryId = await CreateCategoryAsync();
+        var created = new[]
+        {
+            await CreateQuestionAsync("How many moons does Mars have?", "2", categoryId),
+            await CreateQuestionAsync("How many planets are in the solar system?", "8", categoryId),
+            await CreateQuestionAsync("How many hours does a day on Earth have?", "24", categoryId)
+        };
+
+        var shown = new List<int>();
+        for (var round = 0; round < created.Length; round++)
+        {
+            var question = await GetRandomAsync($"categoryIds={categoryId}");
+            shown.Add(question.Id);
+            await _client.PostAsync($"/api/questions/{question.Id}/views", null);
+        }
+
+        Assert.Equal(created.Select(q => q.Id).Order(), shown.Order());
+    }
+
+    [Fact]
+    public async Task GetRandomQuestion_ChoosesOnlyFromTheSelectedCategories()
+    {
+        var first = await CreateCategoryAsync();
+        var second = await CreateCategoryAsync();
+        var unselected = await CreateCategoryAsync();
+        await CreateQuestionAsync("How many legs does a spider have?", "8", first);
+        await CreateQuestionAsync("How many legs does an ant have?", "6", second);
+        await CreateQuestionAsync("How many legs does a dog have?", "4", unselected);
+
+        for (var round = 0; round < 10; round++)
+        {
+            var question = await GetRandomAsync($"categoryIds={first}&categoryIds={second}");
+            Assert.Contains(question.CategoryId, new[] { first, second });
+        }
+    }
+
+    [Fact]
+    public async Task GetRandomQuestion_DoesNotCountAView()
+    {
+        var categoryId = await CreateCategoryAsync();
+        var question = await CreateQuestionAsync("How many sides does a hexagon have?", "6", categoryId);
+
+        await GetRandomAsync($"categoryIds={categoryId}");
+
+        Assert.Equal(0, (await _client.GetFromJsonAsync<QuestionDto>($"/api/questions/{question.Id}"))!.ViewCount);
+    }
+
+    [Fact]
+    public async Task GetRandomQuestion_RejectsAnUnknownCategory()
+    {
+        var response = await _client.GetAsync($"/api/questions/random?categoryIds={HistoryId}&categoryIds=9999");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRandomQuestion_RejectsANonPositiveCategoryId()
+    {
+        var response = await _client.GetAsync("/api/questions/random?categoryIds=0");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRandomQuestion_ReturnsNotFoundForACategoryWithoutQuestions()
+    {
+        var categoryId = await CreateCategoryAsync();
+
+        var response = await _client.GetAsync($"/api/questions/random?categoryIds={categoryId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostView_CountsEveryViewAndRemembersTheLastOne()
+    {
+        var question = await CreateQuestionAsync(ValidText, "2022", HistoryId);
+
+        await _client.PostAsync($"/api/questions/{question.Id}/views", null);
+        var response = await _client.PostAsync($"/api/questions/{question.Id}/views", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var viewed = await response.Content.ReadFromJsonAsync<QuestionDto>();
+        Assert.Equal(2, viewed!.ViewCount);
+        Assert.NotNull(viewed.LastViewedAt);
+    }
+
+    [Fact]
+    public async Task PostView_CountsParallelViewsWithoutLosingAny()
+    {
+        var question = await CreateQuestionAsync(ValidText, "2022", HistoryId);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4)
+            .Select(_ => _client.PostAsync($"/api/questions/{question.Id}/views", null)));
+
+        var succeeded = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
+        Assert.All(responses, r => Assert.Contains(r.StatusCode, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
+        Assert.Equal(succeeded, (await _client.GetFromJsonAsync<QuestionDto>($"/api/questions/{question.Id}"))!.ViewCount);
+    }
+
+    [Fact]
+    public async Task PostView_ReturnsNotFoundForUnknownQuestion()
+    {
+        var response = await _client.PostAsync("/api/questions/999999/views", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task TheOldAiEndpointIsGone()
     {
         var response = await _client.GetAsync("/api/questions/ai?category=Sport&count=1");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>A category of its own keeps a test independent of questions other tests add.</summary>
+    private async Task<int> CreateCategoryAsync()
+    {
+        var name = $"Test {Guid.NewGuid():N}"[..20];
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name, questionCount = 0 });
+        response.EnsureSuccessStatusCode();
+
+        return (await response.Content.ReadFromJsonAsync<CreatedQuestionCategoryDto>())!.Id;
+    }
+
+    private async Task<QuestionDto> GetRandomAsync(string query)
+    {
+        var response = await _client.GetAsync($"/api/questions/random?{query}");
+        response.EnsureSuccessStatusCode();
+
+        return (await response.Content.ReadFromJsonAsync<QuestionDto>())!;
     }
 
     private async Task<QuestionDto> CreateQuestionAsync(string text, string answer, int categoryId, int badPoints = 3)
