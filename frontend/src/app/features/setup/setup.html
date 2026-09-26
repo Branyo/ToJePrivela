@@ -1,0 +1,175 @@
+<section class="page setup">
+  <h1 class="setup__title">{{ 'setup.title' | translate }}</h1>
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  <div class="setup__grid">
+    <section class="panel">
+      <h2 class="panel__title">
+        <span class="step-number">1</span> {{ 'setup.players.title' | translate }}
+        <span class="counter" [class.counter--ok]="selectedIds().length >= minPlayers">
+          {{ selectedIds().length }} / {{ maxPlayers }}
+        </span>
+      </h2>
+
+      <form class="add-row" (submit)="$event.preventDefault(); addPlayer()">
+        <input
+          class="text-input"
+          [placeholder]="'setup.players.namePlaceholder' | translate"
+          [attr.aria-label]="'setup.players.name' | translate"
+          maxlength="50"
+          [value]="newName()"
+          (input)="onNameInput($event)"
+          [disabled]="isFull()"
+        />
+        <button type="submit" class="btn btn--primary" [disabled]="isFull() || newName().trim().length === 0">
+          {{ 'setup.players.add' | translate }}
+        </button>
+      </form>
+
+      @if (selectedPlayers().length === 0) {
+        <p class="empty muted">{{ 'setup.players.empty' | translate }}</p>
+      } @else {
+        <ul class="seats">
+          @for (player of selectedPlayers(); track player.id; let seat = $index) {
+            <li class="seat">
+              <app-player-avatar [seat]="seat" />
+              <span class="seat__name">{{ player.name }}</span>
+              <button
+                type="button"
+                class="seat__remove"
+                [attr.aria-label]="'setup.players.remove' | translate: { name: player.name }"
+                (click)="unselect(player.id)"
+              >
+                ✕
+              </button>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (benchPlayers().length > 0) {
+        <h3 class="bench__title muted">{{ 'setup.players.regulars' | translate }}</h3>
+        <div class="chips">
+          @for (player of benchPlayers(); track player.id) {
+            <button type="button" class="chip" [disabled]="isFull()" (click)="select(player.id)">
+              + {{ player.name }}
+            </button>
+          }
+        </div>
+      }
+    </section>
+
+    <div class="setup__side">
+      <section class="panel">
+        <h2 class="panel__title"><span class="step-number">2</span> {{ 'setup.limit.title' | translate }}</h2>
+        <div class="limit">
+          <button
+            type="button"
+            class="icon-btn"
+            [attr.aria-label]="'setup.limit.fewer' | translate"
+            [disabled]="badCardLimit() <= minLimit"
+            (click)="changeLimit(-1)"
+          >
+            −
+          </button>
+          <div class="limit__cards" aria-live="polite">
+            @for (card of limitCards(); track $index) {
+              <span class="limit__card" [style.--i]="$index">🫏</span>
+            }
+          </div>
+          <button
+            type="button"
+            class="icon-btn"
+            [attr.aria-label]="'setup.limit.more' | translate"
+            [disabled]="badCardLimit() >= maxLimit"
+            (click)="changeLimit(1)"
+          >
+            +
+          </button>
+        </div>
+        <p class="limit__label">
+          <strong>{{ badCardLimit() }}</strong> {{ i18n.pluralKey('setup.limit.label', badCardLimit()) | translate }}
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel__title"><span class="step-number">3</span> {{ 'setup.categories.title' | translate }}</h2>
+        @if (categories().length === 0) {
+          <p class="muted">{{ 'setup.categories.empty' | translate }}</p>
+        } @else {
+          <div class="chips">
+            @for (category of sortedCategories(); track category.id) {
+              <button
+                type="button"
+                class="chip"
+                [class.chip--on]="isCategorySelected(category.id)"
+                [attr.aria-pressed]="isCategorySelected(category.id)"
+                (click)="toggleCategory(category.id)"
+              >
+                {{ category.name }}
+                <span class="chip__count">{{ countFor(category.id) }}</span>
+              </button>
+            }
+          </div>
+          <p class="muted hint">
+            {{
+              (selectedCategoryIds().length === 0 ? 'setup.categories.all' : 'setup.categories.chosen')
+                | translate: { questions: questionsLabel() }
+            }}
+          </p>
+        }
+
+        <details class="generator" [open]="categories().length === 0">
+          <summary>{{ 'setup.generator.title' | translate }}</summary>
+          <form class="generator__form" (submit)="$event.preventDefault(); createCategory()">
+            <input
+              class="text-input"
+              [placeholder]="'setup.generator.namePlaceholder' | translate"
+              [attr.aria-label]="'setup.generator.name' | translate"
+              maxlength="32"
+              [value]="newCategoryName()"
+              (input)="onCategoryNameInput($event)"
+              [disabled]="generating()"
+            />
+            <input
+              class="text-input generator__count"
+              type="number"
+              min="1"
+              max="200"
+              [attr.aria-label]="'setup.generator.count' | translate"
+              [value]="newCategoryCount()"
+              (input)="onCategoryCountInput($event)"
+              [disabled]="generating()"
+            />
+            <button type="submit" class="btn btn--sky" [disabled]="generating() || newCategoryName().trim().length === 0">
+              @if (generating()) {
+                <span class="spinner" aria-hidden="true">🤔</span> {{ 'setup.generator.thinking' | translate }}
+              } @else {
+                {{ 'setup.generator.generate' | translate }}
+              }
+            </button>
+          </form>
+          @if (generated(); as message) {
+            <p class="generator__done">{{ message | message }}</p>
+          }
+        </details>
+      </section>
+
+      <div class="start">
+        <button type="button" class="btn btn--fun btn--huge" [disabled]="!!startBlocker() || starting()" (click)="start()">
+          @if (starting()) {
+            {{ 'setup.starting' | translate }}
+          } @else {
+            {{ 'setup.start' | translate }}
+          }
+        </button>
+        @if (startBlocker(); as blocker) {
+          <p class="muted">{{ blocker | message }}</p>
+        }
+      </div>
+    </div>
+  </div>
+</section>

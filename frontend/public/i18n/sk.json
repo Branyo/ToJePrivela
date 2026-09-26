@@ -1,0 +1,206 @@
+{
+  "app": {
+    "name": "To je priveľa!",
+    "home": "To je priveľa! – domov",
+    "language": "Jazyk"
+  },
+  "languages": {
+    "sk": "Slovenčina",
+    "en": "English"
+  },
+  "titles": {
+    "setup": "Nová hra",
+    "play": "Hra",
+    "summary": "Výsledky"
+  },
+  "common": {
+    "dateTime": "d. M. HH:mm",
+    "and": "a",
+    "gameNumber": "Hra č. {{id}}",
+    "newGame": "🎲 Nová hra",
+    "badPoints": "Trestné body: {{points}}"
+  },
+  "home": {
+    "tagline": "Spoločenská hra na odhady, v ktorej sa prehnané tipy trestajú somármi.",
+    "start": "🎉 Nová hra",
+    "running": "⏳ Rozohrané hry",
+    "continue": "Pokračovať →",
+    "rules": {
+      "title": "Ako sa hrá",
+      "question": {
+        "title": "Padne otázka",
+        "text": "Odpoveďou je vždy číslo a k otázke patrí karta s 1 až 5 somármi."
+      },
+      "estimate": {
+        "title": "Prihadzujte odhady",
+        "text": "Hráči sa striedajú jeden po druhom a každý musí povedať vyšší odhad ako hráč pred ním."
+      },
+      "call": {
+        "title": "„To je priveľa!“",
+        "text": "Kto si myslí, že predchádzajúci hráč to prehnal, namiesto odhadu zvolá „To je priveľa!“ a odhalí sa odpoveď."
+      },
+      "card": {
+        "title": "Kto berie kartu?",
+        "text": "Ak bol odhad naozaj vyšší ako správna odpoveď, kartu berie predchádzajúci hráč. Ak nie, berie ju ten, kto zvolal „To je priveľa!“."
+      },
+      "next": {
+        "title": "Ďalšie kolo",
+        "text": "Nové kolo začína hráč, ktorý zvolal „To je priveľa!“."
+      },
+      "end": {
+        "title": "Koniec hry",
+        "text": "Keď niekto nazbiera priveľa kariet, hra končí a prehráva hráč s najviac somármi."
+      }
+    }
+  },
+  "setup": {
+    "title": "Príprava hry 🎲",
+    "players": {
+      "title": "Kto hrá?",
+      "namePlaceholder": "Meno hráča…",
+      "name": "Meno hráča",
+      "add": "➕ Pridať",
+      "empty": "Pri stole zatiaľ nikto nesedí. Pridajte mená alebo ťuknite na stálych hráčov nižšie.",
+      "remove": "Odobrať hráča {{name}}",
+      "regulars": "Stáli hráči"
+    },
+    "limit": {
+      "title": "Koniec hry pri…",
+      "fewer": "Menej kariet",
+      "more": "Viac kariet",
+      "label": {
+        "one": "karta u jedného hráča ukončí hru",
+        "few": "karty u jedného hráča ukončia hru",
+        "many": "karty u jedného hráča ukončí hru",
+        "other": "kariet u jedného hráča ukončí hru"
+      }
+    },
+    "categories": {
+      "title": "Otázky z kategórií",
+      "empty": "Zatiaľ tu nie sú žiadne kategórie. Vytvorte prvú nižšie.",
+      "all": "Nič nevybraté znamená všetky kategórie: {{questions}}.",
+      "chosen": "V hre: {{questions}}.",
+      "questions": {
+        "one": "{{count}} otázka",
+        "few": "{{count}} otázky",
+        "many": "{{count}} otázky",
+        "other": "{{count}} otázok"
+      }
+    },
+    "generator": {
+      "title": "🤖 Nová kategória s AI otázkami",
+      "namePlaceholder": "napr. Zvieratá, Vesmír, Jedlo…",
+      "name": "Názov kategórie",
+      "count": "Počet otázok",
+      "thinking": "Premýšľam…",
+      "generate": "✨ Vygenerovať",
+      "done": "Kategória „{{name}}“ je pripravená, nových otázok: {{count}}! ✨"
+    },
+    "start": "🚀 Poďme hrať!",
+    "starting": "Miešam… 🃏",
+    "errors": {
+      "missingPlayers": {
+        "one": "Pridajte ešte aspoň {{count}} hráča.",
+        "few": "Pridajte ešte aspoň {{count}} hráčov.",
+        "many": "Pridajte ešte aspoň {{count}} hráča.",
+        "other": "Pridajte ešte aspoň {{count}} hráčov."
+      },
+      "noQuestions": "Zatiaľ nie sú žiadne otázky. Najprv vytvorte kategóriu s AI otázkami.",
+      "nameLength": "Meno musí mať {{min}} až {{max}} znakov.",
+      "tableFull": "Stôl je plný: najviac {{max}} hráčov.",
+      "categoryNameLength": "Názov kategórie musí mať {{min}} až {{max}} znakov.",
+      "questionCount": "Zadajte {{min}} až {{max}} otázok."
+    }
+  },
+  "play": {
+    "question": "❓ Otázka {{number}}",
+    "limit": {
+      "one": "🫏 {{count}} karta = koniec hry",
+      "few": "🫏 {{count}} karty = koniec hry",
+      "many": "🫏 {{count}} karty = koniec hry",
+      "other": "🫏 {{count}} kariet = koniec hry"
+    },
+    "end": "🏳️ Ukončiť hru",
+    "loading": "Miešam ďalšiu otázku…",
+    "failed": "Ups, to nevyšlo.",
+    "retry": "🔄 Skúsiť znova",
+    "outOfQuestions": {
+      "title": "Došli otázky!",
+      "text": "V týchto kategóriách už nie sú otázky. Pridajte nové pri príprave hry alebo hru tu ukončite.",
+      "results": "🏁 Zobraziť výsledky"
+    },
+    "gameOver": {
+      "first": "KONIEC",
+      "second": "HRY!"
+    },
+    "answer": "Správna odpoveď je",
+    "reveal": "✋ To je priveľa! Ukázať odpoveď",
+    "skip": "😴 Priľahké, preskočiť (bez somárov)",
+    "whoTakes": "Kto berie kartu <strong>🫏 ×{{points}}</strong>?",
+    "tapPlayer": "Ťuknite na hráča 👇",
+    "nobody": "🙅 Nikto, ďalšia otázka",
+    "cardRule": "Bol posledný odhad vyšší ako odpoveď? Kartu berie ten, kto ho povedal. Ak nie, berie ju ten, kto zvolal „To je priveľa!“.",
+    "incoming": "Letia somáre! 🫏💨",
+    "seat": "{{name}}, karty: {{cards}}, trestné body: {{points}}",
+    "onTheEdge": "🔥 na hrane",
+    "confirmEnd": {
+      "title": "Ukončiť hru teraz?",
+      "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi.",
+      "yes": "Áno, zobraziť výsledky",
+      "no": "Hrať ďalej"
+    }
+  },
+  "summary": {
+    "finished": "Koniec hry!",
+    "running": "Priebežné skóre",
+    "handedOut": "rozdané somárske karty: {{count}}",
+    "nobody": "Nikto nedostal ani jedného somára.",
+    "wellBehaved": "Podozrivo slušný stôl…",
+    "bigDonkey": "je veľký somár!",
+    "tie": "Na chvoste je remíza!",
+    "score": {
+      "one": "🫏 trestné body: {{points}} z {{count}} karty",
+      "few": "🫏 trestné body: {{points}} z {{count}} kariet",
+      "many": "🫏 trestné body: {{points}} z {{count}} karty",
+      "other": "🫏 trestné body: {{points}} z {{count}} kariet"
+    },
+    "board": "📊 Počet somárov",
+    "rematch": "🔁 Odveta s rovnakými hráčmi",
+    "back": "▶️ Späť do hry",
+    "home": "🏠 Domov",
+    "loading": "Počítam somáre… 🫏🫏🫏"
+  },
+  "errors": {
+    "generic": "Niečo sa pokazilo. Skúste to znova.",
+    "unreachable": "Herný server je nedostupný. Beží API?",
+    "api": {
+      "Game": {
+        "NotFound": "Táto hra neexistuje.",
+        "AlreadyFinished": "Táto hra sa už skončila.",
+        "UnknownPlayers": "Niektorí hráči neexistujú.",
+        "PlayerNotInGame": "Tento hráč v hre nehrá.",
+        "UnknownQuestion": "Táto otázka neexistuje."
+      },
+      "Player": {
+        "NotFound": "Tento hráč neexistuje.",
+        "NameTaken": "Hráč s týmto menom už existuje."
+      },
+      "QuestionCategory": {
+        "NotFound": "Táto kategória neexistuje.",
+        "NameTaken": "Kategória s týmto názvom už existuje.",
+        "UnknownPlayer": "Tento hráč neexistuje."
+      },
+      "QuestionGeneration": {
+        "Failed": "Nepodarilo sa vygenerovať žiadne otázky. Skúste to znova."
+      },
+      "Question": {
+        "NotFound": "Táto otázka neexistuje.",
+        "UnknownCategory": "Táto kategória neexistuje.",
+        "InvalidCategoryIds": "Neplatný výber kategórií.",
+        "UnknownCategories": "Niektoré vybraté kategórie neexistujú.",
+        "NoneAvailable": "Vo vybratých kategóriách nie sú žiadne otázky.",
+        "ViewConflict": "Otázku sa nepodarilo zaznamenať. Skúste to znova."
+      }
+    }
+  }
+}

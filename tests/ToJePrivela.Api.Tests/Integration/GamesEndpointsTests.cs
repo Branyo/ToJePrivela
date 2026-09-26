@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using ToJePrivela.Application.Games.Dtos;
+using ToJePrivela.Application.Players.Dtos;
+using ToJePrivela.Application.Questions.Dtos;
 
 namespace ToJePrivela.Api.Tests.Integration;
 
@@ -101,9 +103,76 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/games/{game.Id}")).StatusCode);
     }
 
-    private async Task<GameDto> CreateGameAsync()
+    [Fact]
+    public async Task PostGame_AcceptsTwelvePlayersAndABadCardLimit()
     {
-        var response = await _client.PostAsJsonAsync("/api/games", new { playerIds = new[] { 1, 2 } });
+        var playerIds = new List<int>();
+        for (var i = 0; i < 12; i++)
+        {
+            var response = await _client.PostAsJsonAsync("/api/players", new { name = $"Hrac {Guid.NewGuid():N}"[..20] });
+            playerIds.Add((await response.Content.ReadFromJsonAsync<PlayerDto>())!.Id);
+        }
+
+        var created = await _client.PostAsJsonAsync("/api/games", new { playerIds, badCardLimit = 5 });
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(5, (await created.Content.ReadFromJsonAsync<GameDto>())!.BadCardLimit);
+    }
+
+    [Fact]
+    public async Task PostBadCard_AddsTheQuestionsBadPointsAndFinishesAtTheLimit()
+    {
+        var game = await CreateGameAsync(badCardLimit: 2);
+        var question = await CreateQuestionAsync(badPoints: 4);
+
+        var first = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var details = (await first.Content.ReadFromJsonAsync<GameDetailsDto>())!;
+        var player = details.Players.Single(p => p.PlayerId == 2);
+        Assert.Equal((1, 4), (player.BadCards, player.BadPoints));
+        Assert.Null(details.Finished);
+
+        var second = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        Assert.NotNull((await second.Content.ReadFromJsonAsync<GameDetailsDto>())!.Finished);
+
+        var third = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 1, questionId = question.Id });
+        Assert.Equal(HttpStatusCode.Conflict, third.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostBadCard_RejectsAPlayerOutsideTheGame()
+    {
+        var game = await CreateGameAsync();
+        var question = await CreateQuestionAsync(badPoints: 2);
+
+        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 3, questionId = question.Id });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostFinish_FinishesTheGameOnce()
+    {
+        var game = await CreateGameAsync();
+
+        var response = await _client.PostAsync($"/api/games/{game.Id}/finish", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull((await response.Content.ReadFromJsonAsync<GameDetailsDto>())!.Finished);
+        Assert.Equal(HttpStatusCode.Conflict, (await _client.PostAsync($"/api/games/{game.Id}/finish", null)).StatusCode);
+    }
+
+    private async Task<GameDto> CreateGameAsync(int badCardLimit = 3)
+    {
+        var response = await _client.PostAsJsonAsync("/api/games", new { playerIds = new[] { 1, 2 }, badCardLimit });
         return (await response.Content.ReadFromJsonAsync<GameDto>())!;
+    }
+
+    private async Task<QuestionDto> CreateQuestionAsync(int badPoints)
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/api/questions",
+            new { text = $"How many cars in {Guid.NewGuid():N}?", answer = "42", categoryId = 1, badPoints });
+        return (await response.Content.ReadFromJsonAsync<QuestionDto>())!;
     }
 }

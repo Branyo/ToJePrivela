@@ -1,0 +1,144 @@
+<section class="page play">
+  <header class="bar">
+    <span class="pill">🎲 {{ 'common.gameNumber' | translate: { id: id() } }}</span>
+    @if (store.questionNumber() > 0) {
+      <span class="pill">{{ 'play.question' | translate: { number: store.questionNumber() } }}</span>
+    }
+    @if (store.badCardLimit() > 0) {
+      <span class="pill pill--sun">{{ i18n.pluralKey('play.limit', store.badCardLimit()) | translate: { count: store.badCardLimit() } }}</span>
+    }
+    <button type="button" class="btn btn--ghost bar__end" (click)="askEnd()" [disabled]="store.phase() === 'finished'">
+      {{ 'play.end' | translate }}
+    </button>
+  </header>
+
+  @if (store.error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  <div class="stage">
+    @switch (store.phase()) {
+      @case ('loading') {
+        <div class="question question--loading" aria-live="polite">
+          <span class="shuffle" aria-hidden="true">🃏</span>
+          <p>{{ 'play.loading' | translate }}</p>
+        </div>
+      }
+      @case ('error') {
+        <div class="question question--empty">
+          <span class="big-emoji" aria-hidden="true">🙈</span>
+          <p>{{ 'play.failed' | translate }}</p>
+          <button type="button" class="btn btn--primary" (click)="store.retry()">{{ 'play.retry' | translate }}</button>
+        </div>
+      }
+      @case ('no-questions') {
+        <div class="question question--empty">
+          <span class="big-emoji" aria-hidden="true">🫙</span>
+          <h2>{{ 'play.outOfQuestions.title' | translate }}</h2>
+          <p class="muted">{{ 'play.outOfQuestions.text' | translate }}</p>
+          <div class="actions">
+            <button type="button" class="btn btn--fun" (click)="endGame()">{{ 'play.outOfQuestions.results' | translate }}</button>
+            <a routerLink="/new" class="btn">{{ 'common.newGame' | translate }}</a>
+          </div>
+        </div>
+      }
+      @case ('finished') {
+        <div class="game-over" role="status">
+          <span>{{ 'play.gameOver.first' | translate }}</span>
+          <span>{{ 'play.gameOver.second' | translate }}</span>
+        </div>
+      }
+      @default {
+        @if (store.question(); as question) {
+          <article
+            class="question"
+            [class.question--revealed]="store.phase() !== 'asking'"
+            aria-live="polite"
+          >
+            <header class="question__head">
+              <span class="category">{{ question.categoryName }}</span>
+              <app-bad-card #cardSource class="question__card" [points]="question.badPoints" />
+            </header>
+
+            <p class="question__text">{{ question.text }}</p>
+
+            @if (store.phase() !== 'asking') {
+              <div class="answer">
+                <span class="answer__label">{{ 'play.answer' | translate }}</span>
+                <span class="answer__value">{{ formatAnswer(question.answer, i18n.locale()) }}</span>
+              </div>
+            }
+          </article>
+
+          <div class="actions">
+            @switch (store.phase()) {
+              @case ('asking') {
+                <button type="button" class="btn btn--danger btn--huge too-much" (click)="store.reveal()">
+                  {{ 'play.reveal' | translate }}
+                </button>
+                <button type="button" class="btn btn--ghost" (click)="store.skip()">
+                  {{ 'play.skip' | translate }}
+                </button>
+              }
+              @case ('revealed') {
+                <p class="prompt">
+                  <span class="prompt__question" [innerHTML]="'play.whoTakes' | translate: { points: question.badPoints }"></span>
+                  <span class="prompt__tap">{{ 'play.tapPlayer' | translate }}</span>
+                </p>
+                <button type="button" class="btn btn--ghost" (click)="store.skip()">{{ 'play.nobody' | translate }}</button>
+                <p class="muted hint">{{ 'play.cardRule' | translate }}</p>
+              }
+              @case ('awarding') {
+                <p class="prompt">{{ 'play.incoming' | translate }}</p>
+              }
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <ul class="seats" [class.seats--picking]="store.phase() === 'revealed'">
+    @for (player of store.seats(); track player.playerId; let seat = $index) {
+      <li>
+        <button
+          #seatButton
+          type="button"
+          class="seat"
+          [class.seat--hit]="hitPlayerId() === player.playerId"
+          [class.seat--edge]="store.isOnTheEdge(player)"
+          [class.seat--out]="player.badCards >= store.badCardLimit()"
+          [disabled]="store.phase() !== 'revealed'"
+          [attr.aria-label]="'play.seat' | translate: { name: player.name, cards: player.badCards, points: player.badPoints }"
+          (click)="award(player.playerId, seat)"
+        >
+          <app-player-avatar class="seat__avatar" [seat]="seat" />
+          <span class="seat__name">{{ player.name }}</span>
+          <span class="seat__cards" aria-hidden="true">
+            @for (slot of store.cardSlots(); track $index) {
+              <span class="slot" [class.slot--full]="$index < player.badCards"></span>
+            }
+          </span>
+          <span class="seat__points">🫏 {{ player.badPoints }}</span>
+          @if (store.isOnTheEdge(player)) {
+            <span class="seat__badge">{{ 'play.onTheEdge' | translate }}</span>
+          }
+        </button>
+      </li>
+    }
+  </ul>
+</section>
+
+@if (confirmingEnd()) {
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title" (keydown.escape)="cancelEnd()">
+    <div class="modal__box panel">
+      <span class="big-emoji" aria-hidden="true">🏳️</span>
+      <h2 id="end-title">{{ 'play.confirmEnd.title' | translate }}</h2>
+      <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
+      <div class="actions">
+        <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
+        <button type="button" class="btn" (click)="cancelEnd()" autofocus>{{ 'play.confirmEnd.no' | translate }}</button>
+      </div>
+    </div>
+  </div>
+}

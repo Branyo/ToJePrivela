@@ -21,8 +21,12 @@ public static class TestEntities
     public static QuestionCategory Category(int id, string name, int? addedByPlayerId = null) =>
         WithId(new QuestionCategory(name, addedByPlayerId), id);
 
-    public static Game Game(int id, IEnumerable<int> playerIds, DateTime started) =>
-        WithId(new Game(playerIds, started), id);
+    public static Game Game(
+        int id,
+        IEnumerable<int> playerIds,
+        DateTime started,
+        int badCardLimit = Domain.Entities.Game.DefaultBadCardLimit) =>
+        WithId(new Game(playerIds, started, badCardLimit), id);
 
     private static TEntity WithId<TEntity>(TEntity entity, int id)
     {

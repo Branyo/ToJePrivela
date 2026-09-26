@@ -1,0 +1,64 @@
+/** Mirrors the backend DTOs (camelCase JSON). */
+
+export interface Player {
+  id: number;
+  name: string;
+}
+
+export interface Game {
+  id: number;
+  started: string | null;
+  finished: string | null;
+  badCardLimit: number;
+  playerIds: number[];
+}
+
+export interface GamePlayer {
+  playerId: number;
+  name: string;
+  badPoints: number;
+  badCards: number;
+}
+
+export interface GameDetails {
+  id: number;
+  started: string | null;
+  finished: string | null;
+  badCardLimit: number;
+  players: GamePlayer[];
+}
+
+export interface QuestionCategory {
+  id: number;
+  name: string;
+  addedByPlayer: Player | null;
+}
+
+export interface QuestionGenerationSummary {
+  requested: number;
+  created: number;
+  discarded: number;
+}
+
+export interface CreatedQuestionCategory extends QuestionCategory {
+  questionGeneration: QuestionGenerationSummary;
+}
+
+export interface Question {
+  id: number;
+  text: string;
+  answer: string;
+  categoryId: number;
+  categoryName: string;
+  badPoints: number;
+  source: 'Manual' | 'Ai';
+  createdAt: string;
+  viewCount: number;
+  lastViewedAt: string | null;
+}
+
+export const MIN_PLAYERS = 2;
+export const MAX_PLAYERS = 12;
+export const MIN_BAD_CARD_LIMIT = 1;
+export const MAX_BAD_CARD_LIMIT = 10;
+export const DEFAULT_BAD_CARD_LIMIT = 3;

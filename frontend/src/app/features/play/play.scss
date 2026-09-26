@@ -1,0 +1,330 @@
+.play {
+  display: grid;
+  gap: 22px;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar__end {
+  margin-left: auto;
+}
+
+.pill {
+  padding: 6px 14px;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--paper);
+  font-weight: 600;
+
+  &--sun {
+    background: #fff3c4;
+  }
+}
+
+.stage {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  min-height: 320px;
+}
+
+/* ---------- Question card ---------- */
+.question {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  width: min(760px, 100%);
+  padding: 28px 32px 32px;
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: 8px 8px 0 var(--ink);
+  animation: deal 0.55s var(--bounce) both;
+
+  &--loading,
+  &--empty {
+    justify-items: center;
+    text-align: center;
+    animation: pop-in 0.4s var(--bounce) both;
+  }
+}
+
+@keyframes deal {
+  from { transform: translate(-40vw, -10px) rotate(-18deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.question__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.question__card {
+  --card-w: 88px;
+  --donkey-size: 1.2rem;
+  flex: none;
+  margin: -46px -46px 0 0;
+  animation: wiggle 2.4s ease-in-out infinite;
+}
+
+.category {
+  padding: 5px 14px;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--sky);
+  font-weight: 600;
+}
+
+.question__text {
+  margin: 0;
+  font-size: clamp(1.4rem, 3.6vw, 2.2rem);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.answer {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 16px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--mint);
+  animation: flip-in 0.6s var(--bounce) both;
+}
+
+@keyframes flip-in {
+  from { transform: perspective(600px) rotateX(-90deg); opacity: 0; }
+  to { transform: perspective(600px) rotateX(0); opacity: 1; }
+}
+
+.answer__label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+}
+
+.answer__value {
+  font-size: clamp(2.6rem, 8vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 4px 4px 0 var(--ink);
+}
+
+.shuffle,
+.big-emoji {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.shuffle {
+  display: inline-block;
+  animation: shuffle 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes shuffle {
+  from { transform: rotate(-20deg) translateX(-10px); }
+  to { transform: rotate(20deg) translateX(10px); }
+}
+
+/* ---------- Actions ---------- */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.too-much {
+  animation: pulse-ring 1.4s ease-out infinite;
+  --shadow-sm: var(--shadow);
+}
+
+.prompt {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-align: center;
+
+  .prompt__tap {
+    display: inline-block;
+    animation: float 1.2s ease-in-out infinite;
+  }
+}
+
+.hint {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+/* ---------- Game over splash ---------- */
+.game-over {
+  display: grid;
+  justify-items: center;
+  padding-top: 30px;
+  font-size: clamp(3.5rem, 13vw, 7rem);
+  font-weight: 700;
+  line-height: 0.95;
+
+  span {
+    color: var(--tomato);
+    -webkit-text-stroke: 4px var(--ink);
+    paint-order: stroke fill;
+    text-shadow: 6px 6px 0 var(--ink);
+    animation: pop-in 0.6s var(--bounce) both;
+  }
+
+  span + span {
+    color: var(--bubblegum);
+    animation-delay: 0.2s;
+  }
+}
+
+/* ---------- Seats ---------- */
+.seats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    flex: 0 1 160px;
+  }
+}
+
+.seat {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 16px 10px 12px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  cursor: default;
+  transition: transform 0.2s var(--bounce), background 0.2s ease;
+  --avatar-size: 56px;
+
+  &:disabled {
+    color: inherit;
+  }
+
+  &--edge {
+    background: #ffe6d1;
+  }
+
+  &--out {
+    background: #ffd6d6;
+  }
+
+  &--hit {
+    animation: hit 0.9s ease both;
+  }
+}
+
+.seats--picking .seat {
+  cursor: pointer;
+  animation: pulse-ring 1.5s ease-out infinite;
+
+  &:hover {
+    transform: translateY(-6px) rotate(-2deg) scale(1.04);
+    background: #fff;
+  }
+}
+
+@keyframes hit {
+  0% { transform: scale(1); background: var(--paper); }
+  15% { transform: scale(1.18) rotate(-6deg); background: var(--bubblegum); }
+  30% { transform: scale(0.95) rotate(5deg); }
+  45% { transform: scale(1.06) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.seat__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.seat__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+
+.slot {
+  width: 14px;
+  height: 20px;
+  border: 2px dashed rgb(43 33 64 / 0.35);
+  border-radius: 4px;
+
+  &--full {
+    border: 2px solid var(--ink);
+    background: var(--bubblegum);
+    animation: pop-in 0.4s var(--bounce) both;
+  }
+}
+
+.seat__points {
+  font-weight: 700;
+}
+
+.seat__badge {
+  position: absolute;
+  top: -12px;
+  right: -8px;
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--tangerine);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transform: rotate(8deg);
+}
+
+/* ---------- Confirm dialog ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(43 33 64 / 0.55);
+  animation: slide-up 0.2s ease both;
+}
+
+.modal__box {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: min(440px, 100%);
+  text-align: center;
+  animation: pop-in 0.35s var(--bounce) both;
+
+  p {
+    margin: 0;
+  }
+}

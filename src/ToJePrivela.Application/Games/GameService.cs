@@ -10,17 +10,20 @@ public sealed class GameService : IGameService
 {
     private readonly IGameRepository _games;
     private readonly IPlayerRepository _players;
+    private readonly IQuestionRepository _questions;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
 
     public GameService(
         IGameRepository games,
         IPlayerRepository players,
+        IQuestionRepository questions,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         _games = games;
         _players = players;
+        _questions = questions;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
     }
@@ -60,7 +63,10 @@ public sealed class GameService : IGameService
             return Result.Failure<GameDto>(GameErrors.UnknownPlayers(missingIds));
         }
 
-        var game = new Game(requestedIds, _timeProvider.GetUtcNow().UtcDateTime);
+        var game = new Game(
+            requestedIds,
+            _timeProvider.GetUtcNow().UtcDateTime,
+            request.BadCardLimit ?? Game.DefaultBadCardLimit);
 
         await _games.AddAsync(game, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -81,6 +87,61 @@ public sealed class GameService : IGameService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
+    }
+
+    public async Task<Result<GameDetailsDto>> AwardBadCardAsync(
+        int id,
+        AwardBadCardRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+
+        if (game is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
+        }
+
+        if (game.IsFinished)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
+        }
+
+        if (!game.HasPlayer(request.PlayerId))
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, request.PlayerId));
+        }
+
+        var question = await _questions.GetByIdAsync(request.QuestionId, cancellationToken);
+
+        if (question is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.UnknownQuestion(request.QuestionId));
+        }
+
+        game.AwardBadCard(request.PlayerId, question.BadPoints, _timeProvider.GetUtcNow().UtcDateTime);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(GameMapper.ToDetailsDto(game));
+    }
+
+    public async Task<Result<GameDetailsDto>> FinishAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+
+        if (game is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
+        }
+
+        if (game.IsFinished)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
+        }
+
+        game.Finish(_timeProvider.GetUtcNow().UtcDateTime);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(GameMapper.ToDetailsDto(game));
     }
 
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)

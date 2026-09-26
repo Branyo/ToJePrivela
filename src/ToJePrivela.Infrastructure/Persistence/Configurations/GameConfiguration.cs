@@ -13,6 +13,7 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
 
         builder.Property(g => g.Started);
         builder.Property(g => g.Finished);
+        builder.Property(g => g.BadCardLimit).HasDefaultValue(Game.DefaultBadCardLimit);
         builder.Ignore(g => g.IsFinished);
 
         builder.Metadata

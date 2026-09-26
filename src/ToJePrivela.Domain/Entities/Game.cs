@@ -5,7 +5,10 @@ namespace ToJePrivela.Domain.Entities;
 public class Game
 {
     public const int MinPlayers = 2;
-    public const int MaxPlayers = 10;
+    public const int MaxPlayers = 12;
+    public const int MinBadCardLimit = 1;
+    public const int MaxBadCardLimit = 10;
+    public const int DefaultBadCardLimit = 3;
 
     private readonly List<GamePlayer> _gamePlayers = [];
 
@@ -13,7 +16,7 @@ public class Game
     {
     }
 
-    public Game(IEnumerable<int> playerIds, DateTime startedAt)
+    public Game(IEnumerable<int> playerIds, DateTime startedAt, int badCardLimit = DefaultBadCardLimit)
     {
         ArgumentNullException.ThrowIfNull(playerIds);
 
@@ -25,6 +28,7 @@ public class Game
                 $"A game must have between {MinPlayers} and {MaxPlayers} distinct players.");
         }
 
+        BadCardLimit = Guard.AgainstOutOfRange(badCardLimit, nameof(badCardLimit), MinBadCardLimit, MaxBadCardLimit);
         Started = startedAt;
         _gamePlayers.AddRange(distinctIds.Select(id => new GamePlayer(id)));
     }
@@ -35,9 +39,14 @@ public class Game
 
     public DateTime? Finished { get; private set; }
 
+    /// <summary>The game ends as soon as one player holds this many bad cards.</summary>
+    public int BadCardLimit { get; private set; }
+
     public IReadOnlyCollection<GamePlayer> GamePlayers => _gamePlayers.AsReadOnly();
 
     public bool IsFinished => Finished is not null;
+
+    public bool HasPlayer(int playerId) => _gamePlayers.Any(gp => gp.PlayerId == playerId);
 
     public void Finish(DateTime finishedAt)
     {
@@ -52,6 +61,30 @@ public class Game
         }
 
         Finished = finishedAt;
+    }
+
+    /// <summary>
+    /// Gives the player a bad card worth <paramref name="badPoints"/>; the game finishes when that
+    /// player reaches <see cref="BadCardLimit"/> cards.
+    /// </summary>
+    public GamePlayer AwardBadCard(int playerId, int badPoints, DateTime awardedAt)
+    {
+        if (IsFinished)
+        {
+            throw new DomainException("Game is already finished.");
+        }
+
+        var gamePlayer = _gamePlayers.FirstOrDefault(gp => gp.PlayerId == playerId)
+            ?? throw new DomainException($"Player {playerId} does not play in this game.");
+
+        gamePlayer.AddBadCard(badPoints);
+
+        if (gamePlayer.BadCards >= BadCardLimit)
+        {
+            Finish(awardedAt);
+        }
+
+        return gamePlayer;
     }
 
     /// <summary>Overwrites the schedule; used by the update endpoint.</summary>
