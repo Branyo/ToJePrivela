@@ -204,6 +204,7 @@
   list-style: none;
 
   li {
+    position: relative;
     flex: 0 1 160px;
   }
 }
@@ -302,6 +303,52 @@
   font-size: 0.75rem;
   font-weight: 600;
   transform: rotate(8deg);
+}
+
+/* Doubles that held, tapped for the player who called them before the round's card goes out; − fixes a mis-tap. */
+.doubles {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 3px;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--mint);
+  box-shadow: var(--shadow-sm);
+
+  &--pop {
+    animation: hit 0.9s ease both;
+  }
+}
+
+.doubles__count {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.doubles__step {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.2s var(--bounce);
+
+  &:hover:not(:disabled) {
+    transform: scale(1.12);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
 }
 
 /* ---------- Confirm dialog ---------- */

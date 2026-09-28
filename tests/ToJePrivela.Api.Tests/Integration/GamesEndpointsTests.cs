@@ -140,12 +140,65 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PostGame_RejectsABadCardLimitOfOne()
+    {
+        var response = await _client.PostAsJsonAsync("/api/games", new { playerIds = new[] { 1, 2 }, badCardLimit = 1 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task PostBadCard_RejectsAPlayerOutsideTheGame()
     {
         var game = await CreateGameAsync();
         var question = await CreateQuestionAsync(badPoints: 2);
 
         var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 3, questionId = question.Id });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostDouble_IsCountedBeforeTheCardThatFinishesTheGame()
+    {
+        var game = await CreateGameAsync(badCardLimit: 2);
+        var question = await CreateQuestionAsync(badPoints: 3);
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+
+        var doubled = await _client.PostAsJsonAsync($"/api/games/{game.Id}/doubles", new { playerId = 1 });
+        Assert.Equal(HttpStatusCode.OK, doubled.StatusCode);
+        Assert.Equal(1, (await doubled.Content.ReadFromJsonAsync<GameDetailsDto>())!.Players.Single(p => p.PlayerId == 1).Doubles);
+
+        var card = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        var details = (await card.Content.ReadFromJsonAsync<GameDetailsDto>())!;
+        Assert.NotNull(details.Finished);
+        Assert.Equal(-1, details.Players.Single(p => p.PlayerId == 1).FinalBadPoints);
+        Assert.Equal(6, details.Players.Single(p => p.PlayerId == 2).FinalBadPoints);
+
+        var late = await _client.PostAsJsonAsync($"/api/games/{game.Id}/doubles", new { playerId = 1 });
+        Assert.Equal(HttpStatusCode.Conflict, late.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteDouble_TakesBackOneDoubleUntilNoneAreLeft()
+    {
+        var game = await CreateGameAsync();
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/doubles", new { playerId = 2 });
+
+        var removed = await _client.DeleteAsync($"/api/games/{game.Id}/doubles/2");
+        Assert.Equal(HttpStatusCode.OK, removed.StatusCode);
+        Assert.Equal(0, (await removed.Content.ReadFromJsonAsync<GameDetailsDto>())!.Players.Single(p => p.PlayerId == 2).Doubles);
+
+        var none = await _client.DeleteAsync($"/api/games/{game.Id}/doubles/2");
+        Assert.Equal(HttpStatusCode.Conflict, none.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostDouble_RejectsAPlayerOutsideTheGame()
+    {
+        var game = await CreateGameAsync();
+
+        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/doubles", new { playerId = 3 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

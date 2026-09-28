@@ -124,6 +124,69 @@ public sealed class GameService : IGameService
         return Result.Success(GameMapper.ToDetailsDto(game));
     }
 
+    public async Task<Result<GameDetailsDto>> AwardDoubleAsync(
+        int id,
+        AwardDoubleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+
+        if (game is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
+        }
+
+        if (game.IsFinished)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
+        }
+
+        if (!game.HasPlayer(request.PlayerId))
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, request.PlayerId));
+        }
+
+        game.AwardDouble(request.PlayerId);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(GameMapper.ToDetailsDto(game));
+    }
+
+    public async Task<Result<GameDetailsDto>> RemoveDoubleAsync(
+        int id,
+        int playerId,
+        CancellationToken cancellationToken = default)
+    {
+        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+
+        if (game is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
+        }
+
+        if (game.IsFinished)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
+        }
+
+        var gamePlayer = game.GamePlayers.FirstOrDefault(gp => gp.PlayerId == playerId);
+
+        if (gamePlayer is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, playerId));
+        }
+
+        if (gamePlayer.Doubles == 0)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.NoDoubleToRemove(id, playerId));
+        }
+
+        game.RemoveDouble(playerId);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(GameMapper.ToDetailsDto(game));
+    }
+
     public async Task<Result<GameDetailsDto>> FinishAsync(int id, CancellationToken cancellationToken = default)
     {
         var game = await _games.GetWithDetailsAsync(id, cancellationToken);

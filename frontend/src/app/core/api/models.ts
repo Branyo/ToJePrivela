@@ -18,6 +18,10 @@ export interface GamePlayer {
   name: string;
   badPoints: number;
   badCards: number;
+  /** Doubles that held; each takes one bad point off `finalBadPoints`. */
+  doubles: number;
+  /** `badPoints` minus one per double: this is what decides the loser. */
+  finalBadPoints: number;
 }
 
 export interface GameDetails {
@@ -59,6 +63,6 @@ export interface Question {
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 12;
-export const MIN_BAD_CARD_LIMIT = 1;
+export const MIN_BAD_CARD_LIMIT = 2;
 export const MAX_BAD_CARD_LIMIT = 10;
 export const DEFAULT_BAD_CARD_LIMIT = 3;

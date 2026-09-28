@@ -24,6 +24,16 @@ export class GamesApi {
     return this.http.post<GameDetails>(`/api/games/${id}/bad-cards`, { playerId, questionId });
   }
 
+  /** A double that held: one bad point off at the end; never finishes the game. */
+  awardDouble(id: number, playerId: number): Observable<GameDetails> {
+    return this.http.post<GameDetails>(`/api/games/${id}/doubles`, { playerId });
+  }
+
+  /** Takes back one double tapped by mistake; 409 when the player has none. */
+  removeDouble(id: number, playerId: number): Observable<GameDetails> {
+    return this.http.delete<GameDetails>(`/api/games/${id}/doubles/${playerId}`);
+  }
+
   finish(id: number): Observable<GameDetails> {
     return this.http.post<GameDetails>(`/api/games/${id}/finish`, null);
   }

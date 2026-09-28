@@ -64,6 +64,27 @@ public sealed class GamesController : ControllerBase
         CancellationToken cancellationToken) =>
         (await _games.AwardBadCardAsync(id, request, cancellationToken)).ToActionResult();
 
+    /// <summary>Credits a player with a double that held: one bad point off at the end; never finishes the game.</summary>
+    [HttpPost("{id:int}/doubles")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<GameDetailsDto>> AwardDouble(
+        int id,
+        [FromBody] AwardDoubleRequest request,
+        CancellationToken cancellationToken) =>
+        (await _games.AwardDoubleAsync(id, request, cancellationToken)).ToActionResult();
+
+    /// <summary>Takes back one double tapped by mistake; 409 when the player has none left.</summary>
+    [HttpDelete("{id:int}/doubles/{playerId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<GameDetailsDto>> RemoveDouble(int id, int playerId, CancellationToken cancellationToken) =>
+        (await _games.RemoveDoubleAsync(id, playerId, cancellationToken)).ToActionResult();
+
     [HttpPost("{id:int}/finish")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

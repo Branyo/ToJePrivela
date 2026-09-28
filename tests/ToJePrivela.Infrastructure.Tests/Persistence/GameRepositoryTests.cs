@@ -62,6 +62,25 @@ public class GameRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveChanges_StoresTheDoublesOfAPlayer()
+    {
+        var gameId = await SeedGameAsync([1, 2]);
+
+        await using (var context = _database.CreateContext())
+        {
+            var game = (await new GameRepository(context).GetWithDetailsAsync(gameId))!;
+            game.AwardDouble(2);
+            game.AwardDouble(2);
+            await context.SaveChangesAsync();
+        }
+
+        await using var verification = _database.CreateContext();
+        var stored = await verification.GamePlayers.SingleAsync(gp => gp.GameId == gameId && gp.PlayerId == 2);
+        Assert.Equal(2, stored.Doubles);
+        Assert.Equal(-2, stored.FinalBadPoints);
+    }
+
+    [Fact]
     public async Task Remove_AlsoDeletesTheGamePlayers()
     {
         var gameId = await SeedGameAsync([1, 2]);

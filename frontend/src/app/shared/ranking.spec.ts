@@ -1,11 +1,13 @@
 import { GamePlayer } from '../core/api/models';
 import { rankPlayers, seatPlayers } from './ranking';
 
-const player = (playerId: number, name: string, badPoints: number, badCards: number): GamePlayer => ({
+const player = (playerId: number, name: string, badPoints: number, badCards: number, doubles = 0): GamePlayer => ({
   playerId,
   name,
   badPoints,
   badCards,
+  doubles,
+  finalBadPoints: badPoints - doubles,
 });
 
 describe('seatPlayers', () => {
@@ -48,6 +50,25 @@ describe('rankPlayers', () => {
 
   it('has no loser when nobody took a card', () => {
     const ranked = rankPlayers([player(1, 'Ana', 0, 0), player(2, 'Bo', 0, 0)]);
+
+    expect(ranked.some((p) => p.isLoser)).toBe(false);
+  });
+
+  it('ranks by bad points after doubles are taken off', () => {
+    const ranked = rankPlayers([player(1, 'Ana', 7, 2, 3), player(2, 'Bo', 5, 2)]);
+
+    expect(ranked.map((p) => p.name)).toEqual(['Bo', 'Ana']);
+    expect(ranked.filter((p) => p.isLoser).map((p) => p.name)).toEqual(['Bo']);
+  });
+
+  it('can make a player without cards the loser when doubles push everyone else below them', () => {
+    const ranked = rankPlayers([player(1, 'Ana', 1, 1, 2), player(2, 'Bo', 0, 0)]);
+
+    expect(ranked.filter((p) => p.isLoser).map((p) => p.name)).toEqual(['Bo']);
+  });
+
+  it('has no loser when there are only doubles and no cards', () => {
+    const ranked = rankPlayers([player(1, 'Ana', 0, 0, 1), player(2, 'Bo', 0, 0)]);
 
     expect(ranked.some((p) => p.isLoser)).toBe(false);
   });

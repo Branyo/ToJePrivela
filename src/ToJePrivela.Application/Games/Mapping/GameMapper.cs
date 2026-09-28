@@ -20,6 +20,12 @@ public static class GameMapper
         game.Finished,
         game.BadCardLimit,
         game.GamePlayers
-            .Select(gp => new GamePlayerDto(gp.PlayerId, gp.Player?.Name ?? string.Empty, gp.BadPoints, gp.BadCards))
+            .Select(gp => new GamePlayerDto(
+                gp.PlayerId,
+                gp.Player?.Name ?? string.Empty,
+                gp.BadPoints,
+                gp.BadCards,
+                gp.Doubles,
+                gp.FinalBadPoints))
             .ToList());
 }

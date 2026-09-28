@@ -7,4 +7,5 @@ public sealed record GameDetailsDto(
     int BadCardLimit,
     IReadOnlyList<GamePlayerDto> Players);
 
-public sealed record GamePlayerDto(int PlayerId, string Name, int BadPoints, int BadCards);
+/// <summary><see cref="FinalBadPoints"/> is <see cref="BadPoints"/> minus one per double and decides the loser.</summary>
+public sealed record GamePlayerDto(int PlayerId, string Name, int BadPoints, int BadCards, int Doubles, int FinalBadPoints);
