@@ -26,7 +26,7 @@
           @for (loser of losers(); track loser.playerId) {
             <div class="spotlight__loser">
               <span class="crown" aria-hidden="true">🫏</span>
-              <app-player-avatar [seat]="loser.seat" />
+              <app-player-avatar [avatar]="loser.avatar" />
             </div>
           }
         </div>
@@ -56,7 +56,7 @@
         @for (player of ranking(); track player.playerId; let i = $index) {
           <li class="row" [class.row--loser]="player.isLoser" [style.animation-delay.ms]="i * 80">
             <span class="row__rank">{{ player.rank }}.</span>
-            <app-player-avatar class="row__avatar" [seat]="player.seat" />
+            <app-player-avatar class="row__avatar" [avatar]="player.avatar" />
             <span class="row__name">{{ player.name }}</span>
             <span class="row__bar" aria-hidden="true">
               <span class="row__fill" [style.width.%]="barWidth(player.finalBadPoints)"></span>

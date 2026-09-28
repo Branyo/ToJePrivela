@@ -5,10 +5,10 @@ namespace ToJePrivela.Application.Players.Mapping;
 
 public static class PlayerMapper
 {
-    public static PlayerDto ToDto(Player player) => new(player.Id, player.Name);
+    public static PlayerDto ToDto(Player player) => new(player.Id, player.Name, player.Avatar);
 
     public static IReadOnlyList<PlayerDto> ToDtos(IEnumerable<Player> players) =>
         players.Select(ToDto).ToList();
 
-    public static Player ToEntity(CreatePlayerRequest request) => new(request.Name);
+    public static Player ToEntity(CreatePlayerRequest request, string avatar) => new(request.Name, avatar);
 }

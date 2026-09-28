@@ -12,16 +12,27 @@ public class Player
     private Player()
     {
         Name = string.Empty;
+        Avatar = string.Empty;
     }
 
-    public Player(string name)
+    public Player(string name, string avatar)
     {
         Name = Guard.AgainstInvalidLength(name, nameof(name), NameMinLength, NameMaxLength);
+
+        if (!PlayerAvatars.IsValid(avatar))
+        {
+            throw new DomainException($"{nameof(avatar)} must be one of the player avatars.");
+        }
+
+        Avatar = avatar;
     }
 
     public int Id { get; private set; }
 
     public string Name { get; private set; }
+
+    /// <summary>One of <see cref="PlayerAvatars.All"/>, given once at creation and never changed.</summary>
+    public string Avatar { get; private set; }
 
     public IReadOnlyCollection<GamePlayer> GamePlayers => _gamePlayers.AsReadOnly();
 

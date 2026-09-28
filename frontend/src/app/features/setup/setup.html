@@ -33,9 +33,9 @@
         <p class="empty muted">{{ 'setup.players.empty' | translate }}</p>
       } @else {
         <ul class="seats">
-          @for (player of selectedPlayers(); track player.id; let seat = $index) {
+          @for (player of selectedPlayers(); track player.id) {
             <li class="seat">
-              <app-player-avatar [seat]="seat" />
+              <app-player-avatar [avatar]="player.avatar" />
               <span class="seat__name">{{ player.name }}</span>
               <button
                 type="button"
@@ -55,7 +55,7 @@
         <div class="chips">
           @for (player of benchPlayers(); track player.id) {
             <button type="button" class="chip" [disabled]="isFull()" (click)="select(player.id)">
-              + {{ player.name }}
+              + <span aria-hidden="true">{{ player.avatar }}</span> {{ player.name }}
             </button>
           }
         </div>

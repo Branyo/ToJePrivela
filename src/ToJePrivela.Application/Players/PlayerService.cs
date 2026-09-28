@@ -9,11 +9,13 @@ public sealed class PlayerService : IPlayerService
 {
     private readonly IPlayerRepository _players;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAvatarPicker _avatarPicker;
 
-    public PlayerService(IPlayerRepository players, IUnitOfWork unitOfWork)
+    public PlayerService(IPlayerRepository players, IUnitOfWork unitOfWork, IAvatarPicker avatarPicker)
     {
         _players = players;
         _unitOfWork = unitOfWork;
+        _avatarPicker = avatarPicker;
     }
 
     public async Task<Result<IReadOnlyList<PlayerDto>>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -38,7 +40,8 @@ public sealed class PlayerService : IPlayerService
             return Result.Failure<PlayerDto>(PlayerErrors.NameTaken(request.Name));
         }
 
-        var player = PlayerMapper.ToEntity(request);
+        var existing = await _players.GetAllAsync(cancellationToken);
+        var player = PlayerMapper.ToEntity(request, _avatarPicker.Pick(existing.Select(p => p.Avatar).ToList()));
 
         await _players.AddAsync(player, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

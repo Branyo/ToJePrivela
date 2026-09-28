@@ -1,3 +1,3 @@
 namespace ToJePrivela.Application.Players.Dtos;
 
-public sealed record PlayerDto(int Id, string Name);
+public sealed record PlayerDto(int Id, string Name, string Avatar);

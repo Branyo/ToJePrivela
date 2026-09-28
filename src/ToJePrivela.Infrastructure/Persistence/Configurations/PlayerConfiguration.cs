@@ -18,6 +18,10 @@ public sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
 
         builder.HasIndex(p => p.Name).IsUnique();
 
+        builder.Property(p => p.Avatar)
+            .IsRequired()
+            .HasMaxLength(PlayerAvatars.MaxLength);
+
         builder.Metadata
             .FindNavigation(nameof(Player.GamePlayers))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);

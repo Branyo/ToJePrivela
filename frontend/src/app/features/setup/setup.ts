@@ -62,7 +62,7 @@ export class Setup {
   protected readonly starting = signal(false);
   protected readonly error = signal<Message | null>(null);
 
-  /** Seated by id, the same order the game screens use, so everyone keeps their animal. */
+  /** Seated by id, the same order the game screens use. */
   protected readonly selectedPlayers = computed(() => {
     const byId = new Map(this.players().map((p) => [p.id, p]));
     return [...this.selectedIds()].sort((a, b) => a - b).flatMap((id) => byId.get(id) ?? []);

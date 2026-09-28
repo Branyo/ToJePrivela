@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using ToJePrivela.Application.Players.Dtos;
+using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Api.Tests.Integration;
 
@@ -49,6 +50,19 @@ public class PlayersEndpointsTests : IClassFixture<ApiFactory>
 
         var fetched = await _client.GetFromJsonAsync<PlayerDto>($"/api/players/{created.Id}");
         Assert.Equal(name, fetched!.Name);
+        Assert.Equal(created.Avatar, fetched.Avatar);
+    }
+
+    [Fact]
+    public async Task PostPlayer_AssignsAnAvatarAndIgnoresOneFromTheClient()
+    {
+        var name = $"Player-{Guid.NewGuid():N}"[..20];
+
+        var response = await _client.PostAsJsonAsync("/api/players", new { name, avatar = "🫏" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<PlayerDto>();
+        Assert.Contains(created!.Avatar, PlayerAvatars.All);
     }
 
     [Fact]

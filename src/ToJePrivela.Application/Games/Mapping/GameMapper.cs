@@ -23,6 +23,7 @@ public static class GameMapper
             .Select(gp => new GamePlayerDto(
                 gp.PlayerId,
                 gp.Player?.Name ?? string.Empty,
+                gp.Player?.Avatar ?? string.Empty,
                 gp.BadPoints,
                 gp.BadCards,
                 gp.Doubles,

@@ -3,6 +3,8 @@
 export interface Player {
   id: number;
   name: string;
+  /** Assigned at random by the server when the player is created; never changes. */
+  avatar: string;
 }
 
 export interface Game {
@@ -16,6 +18,7 @@ export interface Game {
 export interface GamePlayer {
   playerId: number;
   name: string;
+  avatar: string;
   badPoints: number;
   badCards: number;
   /** Doubles that held; each takes one bad point off `finalBadPoints`. */

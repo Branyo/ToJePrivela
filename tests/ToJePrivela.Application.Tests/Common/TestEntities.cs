@@ -7,7 +7,7 @@ public static class TestEntities
 {
     public static readonly DateTime CreatedAt = new(2026, 9, 24, 10, 0, 0, DateTimeKind.Utc);
 
-    public static Player Player(int id, string name) => WithId(new Player(name), id);
+    public static Player Player(int id, string name) => WithId(new Player(name, "🦊"), id);
 
     public static Question Question(
         int id,

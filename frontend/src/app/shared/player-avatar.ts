@@ -25,6 +25,7 @@ import { playerLook } from './player-look';
   },
 })
 export class PlayerAvatar {
-  readonly seat = input.required<number>();
-  protected readonly look = computed(() => playerLook(this.seat()));
+  /** The animal the server assigned to the player. */
+  readonly avatar = input.required<string>();
+  protected readonly look = computed(() => playerLook(this.avatar()));
 }
