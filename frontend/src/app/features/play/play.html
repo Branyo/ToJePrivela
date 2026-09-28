@@ -79,6 +79,7 @@
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">
                   {{ 'play.skip' | translate }}
                 </button>
+                <p class="muted hint">{{ 'play.doubleRule' | translate }}</p>
               }
               @case ('revealed') {
                 <p class="prompt">
@@ -87,6 +88,7 @@
                 </p>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">{{ 'play.nobody' | translate }}</button>
                 <p class="muted hint">{{ 'play.cardRule' | translate }}</p>
+                <p class="muted hint">{{ 'play.doublesFirst' | translate }}</p>
               }
               @case ('awarding') {
                 <p class="prompt">{{ 'play.incoming' | translate }}</p>
@@ -109,7 +111,7 @@
           [class.seat--edge]="store.isOnTheEdge(player)"
           [class.seat--out]="player.badCards >= store.badCardLimit()"
           [disabled]="store.phase() !== 'revealed'"
-          [attr.aria-label]="'play.seat' | translate: { name: player.name, cards: player.badCards, points: player.badPoints }"
+          [attr.aria-label]="'play.seat' | translate: { name: player.name, cards: player.badCards, points: player.finalBadPoints, doubles: player.doubles }"
           (click)="award(player.playerId, seat)"
         >
           <app-player-avatar class="seat__avatar" [seat]="seat" />
@@ -119,11 +121,39 @@
               <span class="slot" [class.slot--full]="$index < player.badCards"></span>
             }
           </span>
-          <span class="seat__points">🫏 {{ player.badPoints }}</span>
+          <span class="seat__points">🫏 {{ player.finalBadPoints }}</span>
           @if (store.isOnTheEdge(player)) {
             <span class="seat__badge">{{ 'play.onTheEdge' | translate }}</span>
           }
         </button>
+        <div
+          class="doubles"
+          role="group"
+          [class.doubles--pop]="doubledPlayerId() === player.playerId"
+          [attr.aria-label]="'play.double.group' | translate: { name: player.name }"
+        >
+          <button
+            type="button"
+            class="doubles__step"
+            [disabled]="!store.canDouble() || player.doubles === 0"
+            [attr.aria-label]="'play.double.remove' | translate: { name: player.name }"
+            [title]="'play.double.remove' | translate: { name: player.name }"
+            (click)="undouble(player.playerId)"
+          >
+            −
+          </button>
+          <span class="doubles__count" aria-live="polite">✌️ {{ player.doubles }}</span>
+          <button
+            type="button"
+            class="doubles__step"
+            [disabled]="!store.canDouble()"
+            [attr.aria-label]="'play.double.label' | translate: { name: player.name }"
+            [title]="'play.double.label' | translate: { name: player.name }"
+            (click)="double(player.playerId)"
+          >
+            +
+          </button>
+        </div>
       </li>
     }
   </ul>

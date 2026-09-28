@@ -16,6 +16,9 @@ public static class GameErrors
     public static Error PlayerNotInGame(int gameId, int playerId) =>
         Error.Validation("Game.PlayerNotInGame", $"Player {playerId} does not play in game {gameId}.");
 
+    public static Error NoDoubleToRemove(int gameId, int playerId) =>
+        Error.Conflict("Game.NoDoubleToRemove", $"Player {playerId} has no double to take back in game {gameId}.");
+
     public static Error UnknownQuestion(int questionId) =>
         Error.Validation("Game.UnknownQuestion", $"Question with id {questionId} does not exist.");
 }

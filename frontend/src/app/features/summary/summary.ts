@@ -33,7 +33,7 @@ export class Summary implements OnInit {
   protected readonly ranking = computed(() => rankPlayers(seatPlayers(this.game()?.players ?? []), this.i18n.locale()));
   protected readonly losers = computed(() => this.ranking().filter((player) => player.isLoser));
   protected readonly loserNames = computed(() => this.losers().map((p) => p.name).join(` ${this.i18n.instant('common.and')} `));
-  protected readonly maxPoints = computed(() => Math.max(1, ...this.ranking().map((p) => p.badPoints)));
+  protected readonly maxPoints = computed(() => Math.max(1, ...this.ranking().map((p) => p.finalBadPoints)));
   protected readonly totalCards = computed(() => this.ranking().reduce((sum, p) => sum + p.badCards, 0));
 
   ngOnInit(): void {
@@ -43,8 +43,9 @@ export class Summary implements OnInit {
     });
   }
 
+  /** Final points can drop below zero thanks to doubles; such a bar stays empty. */
   protected barWidth(points: number): number {
-    return Math.round((points / this.maxPoints()) * 100);
+    return Math.round((Math.max(0, points) / this.maxPoints()) * 100);
   }
 
   protected rematch(): void {

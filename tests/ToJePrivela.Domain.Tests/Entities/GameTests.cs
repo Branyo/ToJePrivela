@@ -122,6 +122,7 @@ public class GameTests
 
     [Theory]
     [InlineData(0)]
+    [InlineData(1)]
     [InlineData(11)]
     public void Constructor_RejectsBadCardLimitOutOfRange(int limit)
     {
@@ -158,10 +159,11 @@ public class GameTests
     [Fact]
     public void AwardBadCard_RejectsAFinishedGame()
     {
-        var game = new Game([1, 2], Start, badCardLimit: 1);
+        var game = new Game([1, 2], Start, badCardLimit: 2);
         game.AwardBadCard(1, 3, Start.AddMinutes(5));
+        game.AwardBadCard(1, 3, Start.AddMinutes(6));
 
-        Assert.Throws<DomainException>(() => game.AwardBadCard(2, 3, Start.AddMinutes(6)));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(2, 3, Start.AddMinutes(7)));
     }
 
     [Fact]
@@ -180,5 +182,89 @@ public class GameTests
         var game = new Game([1, 2], Start);
 
         Assert.Throws<DomainException>(() => game.AwardBadCard(1, badPoints, Start.AddMinutes(5)));
+    }
+
+    [Fact]
+    public void AwardDouble_TakesOneBadPointOffTheFinalScore()
+    {
+        var game = new Game([1, 2], Start);
+        game.AwardBadCard(2, 4, Start.AddMinutes(5));
+
+        var player = game.AwardDouble(2);
+        game.AwardDouble(2);
+
+        Assert.Equal(2, player.Doubles);
+        Assert.Equal(4, player.BadPoints);
+        Assert.Equal(2, player.FinalBadPoints);
+        Assert.Equal(1, player.BadCards);
+    }
+
+    [Fact]
+    public void AwardDouble_CanTakeTheFinalScoreBelowZero()
+    {
+        var game = new Game([1, 2], Start);
+
+        var player = game.AwardDouble(1);
+
+        Assert.Equal(-1, player.FinalBadPoints);
+    }
+
+    [Fact]
+    public void AwardDouble_NeverFinishesTheGame()
+    {
+        var game = new Game([1, 2], Start, badCardLimit: 2);
+
+        game.AwardDouble(1);
+        game.AwardDouble(1);
+
+        Assert.False(game.IsFinished);
+    }
+
+    [Fact]
+    public void AwardDouble_RejectsAFinishedGame()
+    {
+        var game = new Game([1, 2], Start);
+        game.Finish(Start.AddMinutes(5));
+
+        Assert.Throws<DomainException>(() => game.AwardDouble(2));
+    }
+
+    [Fact]
+    public void RemoveDouble_TakesBackOneDouble()
+    {
+        var game = new Game([1, 2], Start);
+        game.AwardDouble(1);
+        game.AwardDouble(1);
+
+        var player = game.RemoveDouble(1);
+
+        Assert.Equal(1, player.Doubles);
+        Assert.Equal(-1, player.FinalBadPoints);
+    }
+
+    [Fact]
+    public void RemoveDouble_RejectsAPlayerWithoutDoubles()
+    {
+        var game = new Game([1, 2], Start);
+
+        Assert.Throws<DomainException>(() => game.RemoveDouble(1));
+    }
+
+    [Fact]
+    public void RemoveDouble_RejectsAFinishedGame()
+    {
+        var game = new Game([1, 2], Start);
+        game.AwardDouble(1);
+        game.Finish(Start.AddMinutes(5));
+
+        Assert.Throws<DomainException>(() => game.RemoveDouble(1));
+    }
+
+    [Fact]
+    public void AwardDouble_RejectsAPlayerOutsideTheGame()
+    {
+        var game = new Game([1, 2], Start);
+
+        Assert.Throws<DomainException>(() => game.AwardDouble(9));
     }
 }

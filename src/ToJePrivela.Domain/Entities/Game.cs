@@ -6,7 +6,7 @@ public class Game
 {
     public const int MinPlayers = 2;
     public const int MaxPlayers = 12;
-    public const int MinBadCardLimit = 1;
+    public const int MinBadCardLimit = 2;
     public const int MaxBadCardLimit = 10;
     public const int DefaultBadCardLimit = 3;
 
@@ -69,13 +69,7 @@ public class Game
     /// </summary>
     public GamePlayer AwardBadCard(int playerId, int badPoints, DateTime awardedAt)
     {
-        if (IsFinished)
-        {
-            throw new DomainException("Game is already finished.");
-        }
-
-        var gamePlayer = _gamePlayers.FirstOrDefault(gp => gp.PlayerId == playerId)
-            ?? throw new DomainException($"Player {playerId} does not play in this game.");
+        var gamePlayer = RunningGamePlayer(playerId);
 
         gamePlayer.AddBadCard(badPoints);
 
@@ -83,6 +77,29 @@ public class Game
         {
             Finish(awardedAt);
         }
+
+        return gamePlayer;
+    }
+
+    /// <summary>
+    /// Credits the player with a double that held (the next player raised the doubled estimate or
+    /// wrongly called "too much"). It is worth one bad point off and never ends the game.
+    /// </summary>
+    public GamePlayer AwardDouble(int playerId)
+    {
+        var gamePlayer = RunningGamePlayer(playerId);
+
+        gamePlayer.AddDouble();
+
+        return gamePlayer;
+    }
+
+    /// <summary>Takes back a double tapped by mistake; the final score may still be below zero.</summary>
+    public GamePlayer RemoveDouble(int playerId)
+    {
+        var gamePlayer = RunningGamePlayer(playerId);
+
+        gamePlayer.RemoveDouble();
 
         return gamePlayer;
     }
@@ -97,5 +114,16 @@ public class Game
 
         Started = started;
         Finished = finished;
+    }
+
+    private GamePlayer RunningGamePlayer(int playerId)
+    {
+        if (IsFinished)
+        {
+            throw new DomainException("Game is already finished.");
+        }
+
+        return _gamePlayers.FirstOrDefault(gp => gp.PlayerId == playerId)
+            ?? throw new DomainException($"Player {playerId} does not play in this game.");
     }
 }

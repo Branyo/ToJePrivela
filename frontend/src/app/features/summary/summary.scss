@@ -89,7 +89,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 32px auto minmax(80px, 1fr) 2fr auto auto;
+  grid-template-columns: 32px auto minmax(80px, 1fr) 2fr auto auto auto;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
@@ -108,7 +108,8 @@
     grid-template-columns: 28px auto 1fr auto;
 
     .row__bar,
-    .row__cards {
+    .row__cards,
+    .row__doubles {
       display: none;
     }
   }
@@ -148,6 +149,7 @@
 }
 
 .row__cards,
+.row__doubles,
 .row__points {
   font-weight: 600;
   white-space: nowrap;

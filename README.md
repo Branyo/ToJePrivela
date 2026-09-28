@@ -82,9 +82,11 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/players` | 409 when the name is taken (case-insensitive) |
 | GET | `/api/games` | |
 | GET/PUT/DELETE | `/api/games/{id}` | |
-| GET | `/api/games/{id}/details` | Includes player names, bad points and bad cards |
-| POST | `/api/games` | 2–12 known, distinct players; optional `badCardLimit` (1–10, default 3) |
+| GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
+| POST | `/api/games` | 2–12 known, distinct players; optional `badCardLimit` (2–10, default 3) |
 | POST | `/api/games/{id}/bad-cards` | Body `{ playerId, questionId }`; the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
+| POST | `/api/games/{id}/doubles` | Body `{ playerId }`; credits a double that held (one bad point off at the end); never finishes the game; 409 on a finished game |
+| DELETE | `/api/games/{id}/doubles/{playerId}` | Takes back one double tapped by mistake; 409 when the player has none or the game is finished |
 | POST | `/api/games/{id}/finish` | Ends a running game now; 409 when already finished |
 | GET | `/api/questions?categoryId=&source=` | Both filters optional; `source` is `Manual` or `Ai` |
 | GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none); 400 for unknown ids, 404 when they hold no questions; does not count a view |
@@ -149,6 +151,15 @@ Every generated question gets random bad points (1–5), `Source = Ai` and a `Cr
 - **Bad cards.** A game ends as soon as one player holds `BadCardLimit` cards. `GamePlayer` keeps the
   card count (`BadCards`) and their sum (`BadPoints`); the value of a card always comes from the stored
   question, never from the client. The loser is the player with the most bad points.
+
+- **Doubles.** A player who thinks the previous estimate is too low calls "double" and at least doubles
+  it. When the next player raises it again or wrongly calls "To je priveľa!", the double held and is
+  tapped for the player who called it (`POST /api/games/{id}/doubles`). `GamePlayer.Doubles` counts
+  them, and `FinalBadPoints = BadPoints - Doubles` (can go below zero) decides the loser. Doubles never
+  end the game, and in a round that ends with a wrong "To je priveľa!" they are tapped before the card
+  goes out; the client holds the card request until every double tapped before it is saved. Each seat
+  has a − / + stepper; − takes back a mis-tapped double (`DELETE /api/games/{id}/doubles/{playerId}`),
+  never below zero doubles.
 
 ## Frontend
 

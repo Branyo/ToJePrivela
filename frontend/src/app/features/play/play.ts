@@ -60,6 +60,7 @@ export class Play implements OnInit, OnDestroy {
   private readonly seatButtons = viewChildren<ElementRef<HTMLElement>>('seatButton');
 
   protected readonly hitPlayerId = signal<number | null>(null);
+  protected readonly doubledPlayerId = signal<number | null>(null);
   protected readonly confirmingEnd = signal(false);
   protected readonly formatAnswer = formatAnswer;
 
@@ -97,6 +98,17 @@ export class Play implements OnInit, OnDestroy {
     });
 
     void this.store.award(playerId, landing);
+  }
+
+  protected double(playerId: number): void {
+    this.doubledPlayerId.set(playerId);
+    this.later(() => this.doubledPlayerId.set(null), HIT_EFFECT_MS);
+
+    void this.store.awardDouble(playerId);
+  }
+
+  protected undouble(playerId: number): void {
+    void this.store.removeDouble(playerId);
   }
 
   protected askEnd(): void {

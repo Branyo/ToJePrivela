@@ -35,6 +35,10 @@
         "title": "Raise the estimate",
         "text": "Players take turns one after another, and everyone has to say a bigger estimate than the player before."
       },
+      "double": {
+        "title": "Double",
+        "text": "If you think the previous estimate is too low, call \"Double!\" and at least double it. When the next player raises it or wrongly calls \"To je priveľa!\", your double held and takes one donkey off your score at the end."
+      },
       "call": {
         "title": "\"To je priveľa!\"",
         "text": "If you think the previous player overdid it, call \"To je priveľa!\" instead of estimating, and the answer is revealed."
@@ -49,7 +53,7 @@
       },
       "end": {
         "title": "Game over",
-        "text": "When someone collects too many cards, the game ends and the player with the most donkeys loses."
+        "text": "When someone collects too many cards, the game ends. Every double that held takes one donkey off, and the player left with the most donkeys loses."
       }
     }
   },
@@ -128,16 +132,23 @@
     "answer": "The answer is",
     "reveal": "✋ To je priveľa! Show the answer",
     "skip": "😴 Too easy, skip it (no donkeys)",
+    "doubleRule": "Did a double hold? The next player raised it, so tap + by the ✌️ of whoever called it – it takes one donkey off their score at the end. Fix a mis-tap with −.",
     "whoTakes": "Who takes the <strong>🫏 ×{{points}}</strong> card?",
     "tapPlayer": "Tap a player 👇",
     "nobody": "🙅 Nobody, next question",
     "cardRule": "Was the last estimate over the answer? Whoever said it takes the card. If not, the one who called \"To je priveľa!\" takes it.",
+    "doublesFirst": "Add (+) every double ✌️ that held first, and only then hand out the card.",
+    "double": {
+      "group": "{{name}}'s doubles",
+      "label": "Double held: {{name}} (−1 donkey)",
+      "remove": "Take back a double: {{name}}"
+    },
     "incoming": "Incoming donkeys! 🫏💨",
-    "seat": "{{name}}, {{cards}} cards, {{points}} bad points",
+    "seat": "{{name}}, {{cards}} cards, {{doubles}} doubles, {{points}} final bad points",
     "onTheEdge": "🔥 on the edge",
     "confirmEnd": {
       "title": "End the game now?",
-      "text": "Results are counted as they stand, and the player with the most donkeys loses.",
+      "text": "Results are counted as they stand, and the player with the most donkeys after doubles loses.",
       "yes": "Yes, show results",
       "no": "Keep playing"
     }
@@ -154,6 +165,8 @@
       "one": "🫏 {{points}} bad points from {{count}} card",
       "other": "🫏 {{points}} bad points from {{count}} cards"
     },
+    "doublesOff": "(✌️ −{{count}})",
+    "doublesLabel": "{{count}} doubles",
     "board": "📊 Donkey count",
     "rematch": "🔁 Rematch, same players",
     "back": "▶️ Back to the game",
@@ -169,7 +182,8 @@
         "AlreadyFinished": "This game is already over.",
         "UnknownPlayers": "Some of the players do not exist.",
         "PlayerNotInGame": "This player is not in the game.",
-        "UnknownQuestion": "This question does not exist."
+        "UnknownQuestion": "This question does not exist.",
+        "NoDoubleToRemove": "This player has no double to take back."
       },
       "Player": {
         "NotFound": "This player does not exist.",

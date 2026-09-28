@@ -41,8 +41,11 @@
         <p class="spotlight__score">
           {{
             i18n.pluralKey('summary.score', losers()[0].badCards)
-              | translate: { points: losers()[0].badPoints, count: losers()[0].badCards }
+              | translate: { points: losers()[0].finalBadPoints, count: losers()[0].badCards }
           }}
+          @if (losers()[0].doubles > 0) {
+            {{ 'summary.doublesOff' | translate: { count: losers()[0].doubles } }}
+          }
         </p>
       }
     </section>
@@ -56,10 +59,11 @@
             <app-player-avatar class="row__avatar" [seat]="player.seat" />
             <span class="row__name">{{ player.name }}</span>
             <span class="row__bar" aria-hidden="true">
-              <span class="row__fill" [style.width.%]="barWidth(player.badPoints)"></span>
+              <span class="row__fill" [style.width.%]="barWidth(player.finalBadPoints)"></span>
             </span>
             <span class="row__cards">{{ player.badCards }} 🃏</span>
-            <span class="row__points">{{ player.badPoints }} 🫏</span>
+            <span class="row__doubles" [attr.aria-label]="'summary.doublesLabel' | translate: { count: player.doubles }">{{ player.doubles }} ✌️</span>
+            <span class="row__points">{{ player.finalBadPoints }} 🫏</span>
           </li>
         }
       </ol>

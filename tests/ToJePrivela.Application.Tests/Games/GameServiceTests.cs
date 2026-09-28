@@ -164,7 +164,8 @@ public class GameServiceTests
     [Fact]
     public async Task AwardBadCardAsync_FinishesTheGameAtTheLimit()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badCardLimit: 1);
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badCardLimit: 2);
+        game.AwardBadCard(1, 2, Now.UtcDateTime);
         _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
@@ -218,6 +219,106 @@ public class GameServiceTests
 
         Assert.Equal(ErrorType.Validation, result.Error.Type);
         Assert.Equal("Game.UnknownQuestion", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task AwardDoubleAsync_TakesOneBadPointOffTheFinalScore()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        game.AwardBadCard(2, 4, Now.UtcDateTime);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 2 });
+
+        Assert.True(result.IsSuccess);
+        var player = result.Value.Players.Single(p => p.PlayerId == 2);
+        Assert.Equal((1, 4, 1, 3), (player.BadCards, player.BadPoints, player.Doubles, player.FinalBadPoints));
+        Assert.Null(result.Value.Finished);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardDoubleAsync_ReturnsNotFoundForUnknownGame()
+    {
+        _games.GetWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
+
+        var result = await _sut.AwardDoubleAsync(7, new AwardDoubleRequest { PlayerId = 1 });
+
+        Assert.Equal(ErrorType.NotFound, result.Error.Type);
+    }
+
+    [Fact]
+    public async Task AwardDoubleAsync_ReturnsConflictForAFinishedGame()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        game.Finish(Now.UtcDateTime);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 1 });
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardDoubleAsync_RejectsAPlayerOutsideTheGame()
+    {
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 9 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.PlayerNotInGame", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RemoveDoubleAsync_TakesBackOneDouble()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        game.AwardDouble(2);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.RemoveDoubleAsync(1, 2);
+
+        Assert.True(result.IsSuccess);
+        var player = result.Value.Players.Single(p => p.PlayerId == 2);
+        Assert.Equal((0, 0), (player.Doubles, player.FinalBadPoints));
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RemoveDoubleAsync_ReturnsConflictWhenThePlayerHasNoDouble()
+    {
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.RemoveDoubleAsync(1, 2);
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        Assert.Equal("Game.NoDoubleToRemove", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RemoveDoubleAsync_RejectsAPlayerOutsideTheGame()
+    {
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.RemoveDoubleAsync(1, 9);
+
+        Assert.Equal("Game.PlayerNotInGame", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RemoveDoubleAsync_ReturnsConflictForAFinishedGame()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        game.AwardDouble(1);
+        game.Finish(Now.UtcDateTime);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.RemoveDoubleAsync(1, 1);
+
+        Assert.Equal("Game.AlreadyFinished", result.Error.Code);
     }
 
     [Fact]

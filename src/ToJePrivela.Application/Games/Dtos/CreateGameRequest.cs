@@ -11,6 +11,6 @@ public sealed class CreateGameRequest
     public IList<int> PlayerIds { get; init; } = [];
 
     /// <summary>Bad cards that end the game; <see cref="Game.DefaultBadCardLimit"/> when left out.</summary>
-    [Range(Game.MinBadCardLimit, Game.MaxBadCardLimit, ErrorMessage = "Bad card limit should be between 1 and 10.")]
+    [Range(Game.MinBadCardLimit, Game.MaxBadCardLimit, ErrorMessage = "Bad card limit should be between 2 and 10.")]
     public int? BadCardLimit { get; init; }
 }

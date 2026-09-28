@@ -19,6 +19,7 @@ interface RunningGame {
 const RULES = [
   { key: 'question', icon: '❓', tilt: '-2deg', color: 'var(--sky)' },
   { key: 'estimate', icon: '🗣️', tilt: '1.5deg', color: 'var(--mint)' },
+  { key: 'double', icon: '✌️', tilt: '-2.5deg', color: 'var(--sky)' },
   { key: 'call', icon: '✋', tilt: '-1deg', color: 'var(--bubblegum)' },
   { key: 'card', icon: '🫏', tilt: '2deg', color: 'var(--grape)' },
   { key: 'next', icon: '🔁', tilt: '-1.5deg', color: 'var(--sun)' },
