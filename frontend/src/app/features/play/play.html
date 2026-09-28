@@ -114,7 +114,7 @@
           [attr.aria-label]="'play.seat' | translate: { name: player.name, cards: player.badCards, points: player.finalBadPoints, doubles: player.doubles }"
           (click)="award(player.playerId, seat)"
         >
-          <app-player-avatar class="seat__avatar" [seat]="seat" />
+          <app-player-avatar class="seat__avatar" [avatar]="player.avatar" />
           <span class="seat__name">{{ player.name }}</span>
           <span class="seat__cards" aria-hidden="true">
             @for (slot of store.cardSlots(); track $index) {

@@ -17,6 +17,16 @@ public class SeedDataTests : IDisposable
     }
 
     [Fact]
+    public async Task Migrations_GiveTheDefaultPlayersAvatars()
+    {
+        await using var context = _database.CreateContext();
+
+        var avatars = await context.Players.Select(p => p.Avatar).ToListAsync();
+
+        Assert.All(avatars, avatar => Assert.Contains(avatar, Domain.Entities.PlayerAvatars.All));
+    }
+
+    [Fact]
     public async Task Migrations_SeedTheDefaultCategories()
     {
         await using var context = _database.CreateContext();

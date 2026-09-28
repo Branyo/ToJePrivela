@@ -59,7 +59,7 @@ public class PlayerRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new PlayerRepository(context);
 
-        await sut.AddAsync(new Player("Jozo"));
+        await sut.AddAsync(new Player("Jozo", "🦊"));
         await context.SaveChangesAsync();
 
         await using var verification = _database.CreateContext();
@@ -72,7 +72,7 @@ public class PlayerRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new PlayerRepository(context);
 
-        await sut.AddAsync(new Player("brano"));
+        await sut.AddAsync(new Player("brano", "🦊"));
 
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }

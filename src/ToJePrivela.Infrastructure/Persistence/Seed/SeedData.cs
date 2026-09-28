@@ -9,9 +9,9 @@ public static class SeedData
     public static void ApplySeedData(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Player>().HasData(
-            new { Id = 1, Name = "Admin" },
-            new { Id = 2, Name = "Brano" },
-            new { Id = 3, Name = "Duri" });
+            new { Id = 1, Name = "Admin", Avatar = "🦉" },
+            new { Id = 2, Name = "Brano", Avatar = "🦊" },
+            new { Id = 3, Name = "Duri", Avatar = "🐼" });
 
         modelBuilder.Entity<QuestionCategory>().HasData(
             new { Id = 1, Name = "Cars", AddedByPlayerId = (int?)1 },

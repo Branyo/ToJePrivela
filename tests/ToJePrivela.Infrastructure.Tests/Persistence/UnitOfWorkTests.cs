@@ -17,7 +17,7 @@ public class UnitOfWorkTests : IDisposable
         var players = new PlayerRepository(context);
         var sut = new UnitOfWork(context);
 
-        await players.AddAsync(new Player("Jozo"));
+        await players.AddAsync(new Player("Jozo", "🦊"));
         var affected = await sut.SaveChangesAsync();
 
         Assert.Equal(1, affected);
@@ -32,7 +32,7 @@ public class UnitOfWorkTests : IDisposable
         await using var context = _database.CreateContext();
         var players = new PlayerRepository(context);
 
-        await players.AddAsync(new Player("Jozo"));
+        await players.AddAsync(new Player("Jozo", "🦊"));
 
         await using var verification = _database.CreateContext();
         Assert.Null(await verification.Players.FirstOrDefaultAsync(p => p.Name == "Jozo"));

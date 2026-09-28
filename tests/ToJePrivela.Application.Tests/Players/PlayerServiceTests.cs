@@ -12,18 +12,19 @@ public class PlayerServiceTests
 {
     private readonly IPlayerRepository _players = Substitute.For<IPlayerRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly FixedAvatarPicker _avatarPicker = new("🐙");
     private readonly PlayerService _sut;
 
     public PlayerServiceTests()
     {
-        _sut = new PlayerService(_players, _unitOfWork);
+        _sut = new PlayerService(_players, _unitOfWork, _avatarPicker);
     }
 
     [Fact]
     public async Task GetAllAsync_MapsEveryPlayer()
     {
         _players.GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns([new Player("Brano"), new Player("Duri")]);
+            .Returns([new Player("Brano", "🦊"), new Player("Duri", "🦊")]);
 
         var result = await _sut.GetAllAsync();
 
@@ -56,9 +57,24 @@ public class PlayerServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_AssignsAnAvatarPickedAgainstTheExistingPlayers()
+    {
+        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns([new Player("Duri", "🐼"), new Player("Jozo", "🦊")]);
+
+        var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "Brano" });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("🐙", result.Value.Avatar);
+        Assert.Equal(["🐼", "🦊"], _avatarPicker.LastAvatarsInUse!);
+        await _players.Received(1).AddAsync(Arg.Is<Player>(p => p.Avatar == "🐙"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task CreateAsync_RejectsDuplicateName()
     {
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns(new Player("Brano"));
+        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns(new Player("Brano", "🦊"));
 
         var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "Brano" });
 

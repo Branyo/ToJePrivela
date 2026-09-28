@@ -4,6 +4,7 @@ import { rankPlayers, seatPlayers } from './ranking';
 const player = (playerId: number, name: string, badPoints: number, badCards: number, doubles = 0): GamePlayer => ({
   playerId,
   name,
+  avatar: '🦊',
   badPoints,
   badCards,
   doubles,
@@ -25,13 +26,6 @@ describe('rankPlayers', () => {
     expect(ranked.map((p) => p.name)).toEqual(['Bo', 'Cy', 'Ana']);
     expect(ranked.map((p) => p.rank)).toEqual([1, 2, 3]);
     expect(ranked.filter((p) => p.isLoser).map((p) => p.name)).toEqual(['Bo']);
-  });
-
-  it('keeps the seat of every player for their avatar', () => {
-    const ranked = rankPlayers([player(1, 'Ana', 0, 0), player(2, 'Bo', 4, 1)]);
-
-    expect(ranked.find((p) => p.name === 'Bo')?.seat).toBe(1);
-    expect(ranked.find((p) => p.name === 'Ana')?.seat).toBe(0);
   });
 
   it('breaks a points tie with the number of cards', () => {

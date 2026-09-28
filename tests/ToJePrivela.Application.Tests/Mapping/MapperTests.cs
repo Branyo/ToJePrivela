@@ -18,20 +18,22 @@ public class MapperTests
     private static readonly DateTime Start = new(2026, 9, 22, 18, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void PlayerMapper_CopiesIdAndName()
+    public void PlayerMapper_CopiesIdNameAndAvatar()
     {
         var dto = PlayerMapper.ToDto(TestEntities.Player(4, "Brano"));
 
         Assert.Equal(4, dto.Id);
         Assert.Equal("Brano", dto.Name);
+        Assert.Equal("🦊", dto.Avatar);
     }
 
     [Fact]
     public void PlayerMapper_BuildsEntityFromRequest()
     {
-        var player = PlayerMapper.ToEntity(new CreatePlayerRequest { Name = " Brano " });
+        var player = PlayerMapper.ToEntity(new CreatePlayerRequest { Name = " Brano " }, "🐸");
 
         Assert.Equal("Brano", player.Name);
+        Assert.Equal("🐸", player.Avatar);
         Assert.Equal(0, player.Id);
     }
 

@@ -5,11 +5,9 @@ export interface RankedPlayer extends GamePlayer {
   /** 1-based; players with equal points and cards share a rank. */
   rank: number;
   isLoser: boolean;
-  /** Position in the game's player list, which decides the player's animal and colour. */
-  seat: number;
 }
 
-/** Seat order: by player id, the same on every screen so a player keeps their animal. */
+/** Seat order: by player id, the same on every screen. */
 export function seatPlayers<T extends { playerId: number }>(players: readonly T[]): T[] {
   return [...players].sort((a, b) => a.playerId - b.playerId);
 }
@@ -20,12 +18,9 @@ export function seatPlayers<T extends { playerId: number }>(players: readonly T[
  * losers. Nobody loses while nobody has a card.
  */
 export function rankPlayers(players: readonly GamePlayer[], locale?: string): RankedPlayer[] {
-  const sorted = players
-    .map((player, seat) => ({ ...player, seat }))
-    .sort(
-      (a, b) =>
-        b.finalBadPoints - a.finalBadPoints || b.badCards - a.badCards || compareNames(a.name, b.name, locale),
-    );
+  const sorted = [...players].sort(
+    (a, b) => b.finalBadPoints - a.finalBadPoints || b.badCards - a.badCards || compareNames(a.name, b.name, locale),
+  );
 
   const worst = sorted[0];
   const anyCards = sorted.some((player) => player.badCards > 0);
