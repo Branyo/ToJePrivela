@@ -52,6 +52,25 @@ public sealed class GamesController : ControllerBase
         CancellationToken cancellationToken) =>
         (await _games.UpdateAsync(id, request, cancellationToken)).ToActionResult();
 
+    /// <summary>Gives a player a bad card worth the question's bad points; finishes the game at the limit.</summary>
+    [HttpPost("{id:int}/bad-cards")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<GameDetailsDto>> AwardBadCard(
+        int id,
+        [FromBody] AwardBadCardRequest request,
+        CancellationToken cancellationToken) =>
+        (await _games.AwardBadCardAsync(id, request, cancellationToken)).ToActionResult();
+
+    [HttpPost("{id:int}/finish")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<GameDetailsDto>> FinishGame(int id, CancellationToken cancellationToken) =>
+        (await _games.FinishAsync(id, cancellationToken)).ToActionResult();
+
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -1,0 +1,196 @@
+{
+  "app": {
+    "name": "To je priveľa!",
+    "home": "To je priveľa! – home",
+    "language": "Language"
+  },
+  "languages": {
+    "sk": "Slovenčina",
+    "en": "English"
+  },
+  "titles": {
+    "setup": "New game",
+    "play": "Playing",
+    "summary": "Results"
+  },
+  "common": {
+    "dateTime": "d MMM, HH:mm",
+    "and": "&",
+    "gameNumber": "Game #{{id}}",
+    "newGame": "🎲 New game",
+    "badPoints": "{{points}} bad points"
+  },
+  "home": {
+    "tagline": "The guessing party game where going too far earns you donkeys.",
+    "start": "🎉 Start a new game",
+    "running": "⏳ Games in progress",
+    "continue": "Continue →",
+    "rules": {
+      "title": "How to play",
+      "question": {
+        "title": "A question pops up",
+        "text": "It always has a number for an answer, and a card with 1–5 donkeys."
+      },
+      "estimate": {
+        "title": "Raise the estimate",
+        "text": "Players take turns one after another, and everyone has to say a bigger estimate than the player before."
+      },
+      "call": {
+        "title": "\"To je priveľa!\"",
+        "text": "If you think the previous player overdid it, call \"To je priveľa!\" instead of estimating, and the answer is revealed."
+      },
+      "card": {
+        "title": "Who takes the card?",
+        "text": "If the estimate really was over the answer, the previous player takes the card. If not, the one who called \"To je priveľa!\" takes it."
+      },
+      "next": {
+        "title": "Next round",
+        "text": "The player who called \"To je priveľa!\" starts the next round."
+      },
+      "end": {
+        "title": "Game over",
+        "text": "When someone collects too many cards, the game ends and the player with the most donkeys loses."
+      }
+    }
+  },
+  "setup": {
+    "title": "Set the table 🎲",
+    "players": {
+      "title": "Who's playing?",
+      "namePlaceholder": "Player name…",
+      "name": "Player name",
+      "add": "➕ Add",
+      "empty": "Nobody at the table yet. Add names or tap regulars below.",
+      "remove": "Remove {{name}}",
+      "regulars": "Regulars"
+    },
+    "limit": {
+      "title": "Game over at…",
+      "fewer": "Fewer cards",
+      "more": "More cards",
+      "label": {
+        "one": "bad card for one player ends the game",
+        "other": "bad cards for one player end the game"
+      }
+    },
+    "categories": {
+      "title": "Questions from",
+      "empty": "No categories yet. Create the first one below.",
+      "all": "Nothing picked means every category: {{questions}}.",
+      "chosen": "{{questions}} in the mix.",
+      "questions": {
+        "one": "{{count}} question",
+        "other": "{{count}} questions"
+      }
+    },
+    "generator": {
+      "title": "🤖 New category with AI questions",
+      "namePlaceholder": "e.g. Animals, Space, Food…",
+      "name": "Category name",
+      "count": "Number of questions",
+      "thinking": "Thinking…",
+      "generate": "✨ Generate",
+      "done": "\"{{name}}\" is ready with {{count}} fresh questions! ✨"
+    },
+    "start": "🚀 Let's play!",
+    "starting": "Shuffling… 🃏",
+    "errors": {
+      "missingPlayers": {
+        "one": "Add at least {{count}} more player.",
+        "other": "Add at least {{count}} more players."
+      },
+      "noQuestions": "There are no questions yet. Create a category with AI questions first.",
+      "nameLength": "A name needs {{min}} to {{max}} characters.",
+      "tableFull": "The table is full: {{max}} players at most.",
+      "categoryNameLength": "A category name needs {{min}} to {{max}} characters.",
+      "questionCount": "Ask for {{min}} to {{max}} questions."
+    }
+  },
+  "play": {
+    "question": "❓ Question {{number}}",
+    "limit": {
+      "one": "🫏 {{count}} card = game over",
+      "other": "🫏 {{count}} cards = game over"
+    },
+    "end": "🏳️ End game",
+    "loading": "Shuffling the next question…",
+    "failed": "Oops, that didn't work.",
+    "retry": "🔄 Try again",
+    "outOfQuestions": {
+      "title": "Out of questions!",
+      "text": "These categories have no questions. Add some on the setup screen, or wrap it up here.",
+      "results": "🏁 Show results"
+    },
+    "gameOver": {
+      "first": "GAME",
+      "second": "OVER!"
+    },
+    "answer": "The answer is",
+    "reveal": "✋ To je priveľa! Show the answer",
+    "skip": "😴 Too easy, skip it (no donkeys)",
+    "whoTakes": "Who takes the <strong>🫏 ×{{points}}</strong> card?",
+    "tapPlayer": "Tap a player 👇",
+    "nobody": "🙅 Nobody, next question",
+    "cardRule": "Was the last estimate over the answer? Whoever said it takes the card. If not, the one who called \"To je priveľa!\" takes it.",
+    "incoming": "Incoming donkeys! 🫏💨",
+    "seat": "{{name}}, {{cards}} cards, {{points}} bad points",
+    "onTheEdge": "🔥 on the edge",
+    "confirmEnd": {
+      "title": "End the game now?",
+      "text": "Results are counted as they stand, and the player with the most donkeys loses.",
+      "yes": "Yes, show results",
+      "no": "Keep playing"
+    }
+  },
+  "summary": {
+    "finished": "Game over!",
+    "running": "Scores so far",
+    "handedOut": "{{count}} donkey cards handed out",
+    "nobody": "Nobody got a single donkey.",
+    "wellBehaved": "Suspiciously well-behaved table…",
+    "bigDonkey": "is the big donkey!",
+    "tie": "It's a tie at the bottom!",
+    "score": {
+      "one": "🫏 {{points}} bad points from {{count}} card",
+      "other": "🫏 {{points}} bad points from {{count}} cards"
+    },
+    "board": "📊 Donkey count",
+    "rematch": "🔁 Rematch, same players",
+    "back": "▶️ Back to the game",
+    "home": "🏠 Home",
+    "loading": "Counting donkeys… 🫏🫏🫏"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "unreachable": "The game server is not reachable. Is the API running?",
+    "api": {
+      "Game": {
+        "NotFound": "This game does not exist.",
+        "AlreadyFinished": "This game is already over.",
+        "UnknownPlayers": "Some of the players do not exist.",
+        "PlayerNotInGame": "This player is not in the game.",
+        "UnknownQuestion": "This question does not exist."
+      },
+      "Player": {
+        "NotFound": "This player does not exist.",
+        "NameTaken": "A player with this name already exists."
+      },
+      "QuestionCategory": {
+        "NotFound": "This category does not exist.",
+        "NameTaken": "A category with this name already exists.",
+        "UnknownPlayer": "This player does not exist."
+      },
+      "QuestionGeneration": {
+        "Failed": "No questions could be generated. Please try again."
+      },
+      "Question": {
+        "NotFound": "This question does not exist.",
+        "UnknownCategory": "This category does not exist.",
+        "InvalidCategoryIds": "The category selection is not valid.",
+        "UnknownCategories": "Some of the chosen categories do not exist.",
+        "NoneAvailable": "The selected categories contain no questions.",
+        "ViewConflict": "The question could not be recorded. Please try again."
+      }
+    }
+  }
+}

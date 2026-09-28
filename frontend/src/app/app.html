@@ -1,0 +1,26 @@
+<header class="topbar">
+  <a routerLink="/" class="logo" [attr.aria-label]="'app.home' | translate">
+    <span class="logo__donkey">🫏</span>
+    <span>{{ 'app.name' | translate }}</span>
+  </a>
+
+  <div class="languages" role="group" [attr.aria-label]="'app.language' | translate">
+    @for (code of i18n.languages; track code) {
+      <button
+        type="button"
+        class="chip languages__option"
+        [class.chip--on]="i18n.language() === code"
+        [attr.aria-pressed]="i18n.language() === code"
+        [attr.lang]="code"
+        [title]="'languages.' + code | translate"
+        (click)="i18n.use(code)"
+      >
+        {{ code.toUpperCase() }}
+      </button>
+    }
+  </div>
+</header>
+
+<main>
+  <router-outlet />
+</main>

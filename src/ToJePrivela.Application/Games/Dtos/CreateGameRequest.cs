@@ -7,6 +7,10 @@ public sealed class CreateGameRequest
 {
     [Required]
     [MinLength(Game.MinPlayers, ErrorMessage = "Game must have at least 2 players.")]
-    [MaxLength(Game.MaxPlayers, ErrorMessage = "Game can have maximum of 10 players.")]
+    [MaxLength(Game.MaxPlayers, ErrorMessage = "Game can have maximum of 12 players.")]
     public IList<int> PlayerIds { get; init; } = [];
+
+    /// <summary>Bad cards that end the game; <see cref="Game.DefaultBadCardLimit"/> when left out.</summary>
+    [Range(Game.MinBadCardLimit, Game.MaxBadCardLimit, ErrorMessage = "Bad card limit should be between 1 and 10.")]
+    public int? BadCardLimit { get; init; }
 }

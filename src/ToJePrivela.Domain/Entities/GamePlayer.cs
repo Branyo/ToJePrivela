@@ -23,4 +23,13 @@ public class GamePlayer
     public Player? Player { get; private set; }
 
     public int BadPoints { get; private set; }
+
+    /// <summary>Bad cards taken so far; <see cref="BadPoints"/> is the sum of their values.</summary>
+    public int BadCards { get; private set; }
+
+    internal void AddBadCard(int badPoints)
+    {
+        BadPoints += Guard.AgainstOutOfRange(badPoints, nameof(badPoints), Question.MinBadPoints, Question.MaxBadPoints);
+        BadCards++;
+    }
 }

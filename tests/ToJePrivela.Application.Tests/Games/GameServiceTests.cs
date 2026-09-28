@@ -14,12 +14,13 @@ public class GameServiceTests
 
     private readonly IGameRepository _games = Substitute.For<IGameRepository>();
     private readonly IPlayerRepository _players = Substitute.For<IPlayerRepository>();
+    private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly GameService _sut;
 
     public GameServiceTests()
     {
-        _sut = new GameService(_games, _players, _unitOfWork, new FixedTimeProvider(Now));
+        _sut = new GameService(_games, _players, _questions, _unitOfWork, new FixedTimeProvider(Now));
     }
 
     [Fact]
@@ -130,5 +131,115 @@ public class GameServiceTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UsesTheRequestedBadCardLimit()
+    {
+        _players.GetExistingIdsAsync(Arg.Any<IEnumerable<int>>(), Arg.Any<CancellationToken>()).Returns([1, 2]);
+
+        var result = await _sut.CreateAsync(new CreateGameRequest { PlayerIds = [1, 2], BadCardLimit = 5 });
+
+        Assert.Equal(5, result.Value.BadCardLimit);
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_GivesTheCardWorthTheQuestionsBadPoints()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10 });
+
+        Assert.True(result.IsSuccess);
+        var player = result.Value.Players.Single(p => p.PlayerId == 2);
+        Assert.Equal(1, player.BadCards);
+        Assert.Equal(4, player.BadPoints);
+        Assert.Null(result.Value.Finished);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_FinishesTheGameAtTheLimit()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badCardLimit: 1);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+
+        Assert.Equal(Now.UtcDateTime, result.Value.Finished);
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_ReturnsNotFoundForUnknownGame()
+    {
+        _games.GetWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
+
+        var result = await _sut.AwardBadCardAsync(7, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.NotFound, result.Error.Type);
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_ReturnsConflictForAFinishedGame()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        game.Finish(Now.UtcDateTime);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_RejectsAPlayerOutsideTheGame()
+    {
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 9, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.PlayerNotInGame", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_RejectsAnUnknownQuestion()
+    {
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns((Question?)null);
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.UnknownQuestion", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task FinishAsync_FinishesTheGameNow()
+    {
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.FinishAsync(1);
+
+        Assert.Equal(Now.UtcDateTime, result.Value.Finished);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FinishAsync_ReturnsConflictForAFinishedGame()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        game.Finish(Now.UtcDateTime);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.FinishAsync(1);
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
     }
 }

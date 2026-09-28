@@ -1,0 +1,187 @@
+.setup {
+  display: grid;
+  gap: 20px;
+}
+
+.setup__title {
+  text-align: center;
+  font-size: clamp(2rem, 6vw, 3rem);
+  animation: pop-in 0.5s var(--bounce) both;
+}
+
+.setup__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.setup__side {
+  display: grid;
+  gap: 24px;
+}
+
+.counter {
+  margin-left: auto;
+  padding: 2px 12px;
+  border: var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 1rem;
+  transition: background 0.2s ease;
+
+  &--ok {
+    background: var(--mint);
+  }
+}
+
+.add-row,
+.generator__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.empty {
+  margin: 18px 0 4px;
+}
+
+.seats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  animation: pop-in 0.4s var(--bounce) both;
+  --avatar-size: 40px;
+}
+
+.seat__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.seat__remove {
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: transform 0.15s var(--bounce), background 0.15s ease;
+
+  &:hover {
+    background: var(--tomato);
+    color: #fff;
+    transform: rotate(90deg);
+  }
+}
+
+.bench__title {
+  margin: 22px 0 10px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hint {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+}
+
+.limit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.limit__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  min-height: 56px;
+}
+
+.limit__card {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 50px;
+  border: var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 1.1rem;
+  transform: rotate(calc((var(--i) - 2) * 4deg));
+  animation: pop-in 0.35s var(--bounce) both;
+}
+
+.limit__label {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+.generator {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 2px dashed rgb(43 33 64 / 0.25);
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+}
+
+.generator__count {
+  flex: 0 0 90px;
+}
+
+.generator__done {
+  margin: 12px 0 0;
+  font-weight: 600;
+  color: #11845b;
+  animation: slide-up 0.4s ease both;
+}
+
+.spinner {
+  display: inline-block;
+  animation: wiggle 0.8s ease infinite;
+}
+
+.start {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+
+  p {
+    margin: 0;
+  }
+}

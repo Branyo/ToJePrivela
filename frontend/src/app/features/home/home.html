@@ -1,0 +1,45 @@
+<section class="page home">
+  <div class="hero">
+    <div class="hero__donkey" aria-hidden="true">🫏</div>
+    <h1 class="hero__title">
+      <span>To</span> <span>je</span> <span>priveľa!</span>
+    </h1>
+    <p class="hero__tagline">{{ 'home.tagline' | translate }}</p>
+    <a routerLink="/new" class="btn btn--fun btn--huge">{{ 'home.start' | translate }}</a>
+  </div>
+
+  @if (error(); as message) {
+    <p class="error-banner">{{ message | message }}</p>
+  }
+
+  @if (running().length > 0) {
+    <section class="panel running">
+      <h2 class="panel__title">{{ 'home.running' | translate }}</h2>
+      <ul class="running__list">
+        @for (item of running(); track item.game.id) {
+          <li>
+            <a class="running__game" [routerLink]="['/games', item.game.id]">
+              <strong>{{ 'common.gameNumber' | translate: { id: item.game.id } }}</strong>
+              <span class="muted">{{ item.names.join(', ') }}</span>
+              <span class="muted">{{ item.game.started | date: ('common.dateTime' | translate) : undefined : i18n.locale() }}</span>
+              <span class="running__go">{{ 'home.continue' | translate }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="rules">
+    <h2 class="rules__title">{{ 'home.rules.title' | translate }}</h2>
+    <ol class="rules__list">
+      @for (rule of rules; track rule.key) {
+        <li class="rule" [style.--tilt]="rule.tilt" [style.--bg]="rule.color">
+          <span class="rule__icon">{{ rule.icon }}</span>
+          <strong>{{ 'home.rules.' + rule.key + '.title' | translate }}</strong>
+          <span>{{ 'home.rules.' + rule.key + '.text' | translate }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+</section>

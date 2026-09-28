@@ -11,6 +11,7 @@ public sealed class GamePlayerConfiguration : IEntityTypeConfiguration<GamePlaye
         builder.HasKey(gp => new { gp.GameId, gp.PlayerId });
 
         builder.Property(gp => gp.BadPoints).HasDefaultValue(0);
+        builder.Property(gp => gp.BadCards).HasDefaultValue(0);
 
         builder.HasOne(gp => gp.Game)
             .WithMany(g => g.GamePlayers)

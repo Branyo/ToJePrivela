@@ -82,8 +82,10 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/players` | 409 when the name is taken (case-insensitive) |
 | GET | `/api/games` | |
 | GET/PUT/DELETE | `/api/games/{id}` | |
-| GET | `/api/games/{id}/details` | Includes player names and bad points |
-| POST | `/api/games` | 2–10 known, distinct players |
+| GET | `/api/games/{id}/details` | Includes player names, bad points and bad cards |
+| POST | `/api/games` | 2–12 known, distinct players; optional `badCardLimit` (1–10, default 3) |
+| POST | `/api/games/{id}/bad-cards` | Body `{ playerId, questionId }`; the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
+| POST | `/api/games/{id}/finish` | Ends a running game now; 409 when already finished |
 | GET | `/api/questions?categoryId=&source=` | Both filters optional; `source` is `Manual` or `Ai` |
 | GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none); 400 for unknown ids, 404 when they hold no questions; does not count a view |
 | POST | `/api/questions/{id}/views` | Records that the question was shown; returns it with the new `viewCount` |
@@ -144,18 +146,24 @@ Every generated question gets random bad points (1–5), `Source = Ai` and a `Cr
   `ConcurrencyConflictException`; recording a view rereads the row and retries (up to 5 attempts, then
   409), and any other conflicting change becomes a 409 through `ConcurrencyConflictExceptionHandler`.
 
-## Frontend readiness
+- **Bad cards.** A game ends as soon as one player holds `BadCardLimit` cards. `GamePlayer` keeps the
+  card count (`BadCards`) and their sum (`BadPoints`); the value of a card always comes from the stored
+  question, never from the client. The loser is the player with the most bad points.
 
-The frontend is not written yet; the API is prepared for it:
+## Frontend
 
-- CORS origins configured per environment through `Cors:AllowedOrigins`
-- OpenAPI document at `/swagger/v1/swagger.json` for client generation
-- camelCase JSON, `ProblemDetails` errors, correct status codes and `Location` headers
-- `frontend/` is reserved for the client application
+`frontend/` is the Angular 22 client (standalone components, signals, zoneless, Vitest). See
+[`frontend/README.md`](frontend/README.md).
+
+```bash
+cd frontend && npm install
+cd frontend && npm start        # http://localhost:4200, proxies /api to http://localhost:5178
+cd frontend && npm test
+```
 
 ## Tests
 
-`dotnet test ToJePrivela.slnx` runs 327 tests: domain invariants, every use case with substituted
+`dotnet test ToJePrivela.slnx` runs 350 tests: domain invariants, every use case with substituted
 ports, the generation orchestration (batching, throttling, duplicates, top-ups, call budget), mappers,
 repositories and the data-preserving migration against in-memory SQLite, the AI prompt/parse/HTTP
 units, result-to-HTTP mapping, and endpoint tests that host the real API with the AI provider stubbed.

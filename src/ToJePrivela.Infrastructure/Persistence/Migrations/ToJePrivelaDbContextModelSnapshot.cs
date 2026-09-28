@@ -23,6 +23,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("BadCardLimit")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(3);
+
                     b.Property<DateTime?>("Finished")
                         .HasColumnType("TEXT");
 
@@ -41,6 +46,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("PlayerId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("BadCards")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("BadPoints")
                         .ValueGeneratedOnAdd()

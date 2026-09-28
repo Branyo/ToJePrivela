@@ -9,6 +9,7 @@ public static class GameMapper
         game.Id,
         game.Started,
         game.Finished,
+        game.BadCardLimit,
         game.GamePlayers.Select(gp => gp.PlayerId).ToList());
 
     public static IReadOnlyList<GameDto> ToDtos(IEnumerable<Game> games) => games.Select(ToDto).ToList();
@@ -17,7 +18,8 @@ public static class GameMapper
         game.Id,
         game.Started,
         game.Finished,
+        game.BadCardLimit,
         game.GamePlayers
-            .Select(gp => new GamePlayerDto(gp.PlayerId, gp.Player?.Name ?? string.Empty, gp.BadPoints))
+            .Select(gp => new GamePlayerDto(gp.PlayerId, gp.Player?.Name ?? string.Empty, gp.BadPoints, gp.BadCards))
             .ToList());
 }
