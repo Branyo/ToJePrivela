@@ -58,6 +58,28 @@ public class QuestionPromptBuilderTests
     }
 
     [Fact]
+    public void BuildQuestions_AsksForVariedHiddenAndBoundedAnswers()
+    {
+        var prompt = _sut.BuildQuestions(new QuestionGenerationRequest("Sport", 5), "Slovak");
+
+        Assert.Contains("Vary the kind of number", prompt);
+        Assert.Contains("kilograms", prompt);
+        Assert.Contains("Never reveal the answer in the question", prompt);
+        Assert.Contains("1 000 000 000 000", prompt);
+        Assert.Contains("How many millions", prompt);
+    }
+
+    [Fact]
+    public void BuildSubtopics_PrefersBroadNonOverlappingSubtopics()
+    {
+        var prompt = _sut.BuildSubtopics("Toys", 4, "Slovak");
+
+        Assert.Contains("broad, general subtopics", prompt);
+        Assert.Contains("\"Construction sets\" rather than \"Lego\"", prompt);
+        Assert.Contains("must not overlap", prompt);
+    }
+
+    [Fact]
     public void BuildSubtopics_AsksForTheRequestedNumberOfSubtopicsAsAJsonArray()
     {
         var prompt = _sut.BuildSubtopics("Sport", 4, "Slovak");

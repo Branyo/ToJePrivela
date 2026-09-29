@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ToJePrivela.Ai.Parsing;
@@ -9,8 +11,11 @@ using ToJePrivela.Domain.Entities;
 namespace ToJePrivela.Ai.OpenAi;
 
 /// <summary>One provider call per method; retries and batching are the Application layer's job.</summary>
-public sealed class OpenAiQuestionGenerator : IQuestionGenerator
+public sealed partial class OpenAiQuestionGenerator : IQuestionGenerator
 {
+    /// <summary>Anything larger is unreadable in a quiz; the prompt asks for "how many millions/billions" instead.</summary>
+    public const decimal MaxAnswer = 1_000_000_000_000m;
+
     private readonly IChatCompletionClient _client;
     private readonly IQuestionPromptBuilder _promptBuilder;
     private readonly IGeneratedQuestionParser _parser;
@@ -68,7 +73,10 @@ public sealed class OpenAiQuestionGenerator : IQuestionGenerator
             .ToList();
     }
 
-    /// <summary>Drops items the domain would reject, so the caller never sees an unusable question.</summary>
+    /// <summary>
+    /// Drops items the domain would reject, answers above <see cref="MaxAnswer"/> and questions that
+    /// state their own answer, so the caller never sees an unusable question.
+    /// </summary>
     private static GeneratedQuestion? ToGeneratedQuestion(ParsedQuestion parsed)
     {
         var text = parsed.Question.Trim();
@@ -79,8 +87,27 @@ public sealed class OpenAiQuestionGenerator : IQuestionGenerator
             return null;
         }
 
-        return Guard.IsNumeric(answer)
-            ? new GeneratedQuestion(text, answer)
-            : null;
+        if (!Guard.IsNumeric(answer))
+        {
+            return null;
+        }
+
+        var value = Math.Abs(decimal.Parse(answer, NumberStyles.Float, CultureInfo.InvariantCulture));
+
+        return value > MaxAnswer || StatesNumber(text, value)
+            ? null
+            : new GeneratedQuestion(text, answer);
     }
+
+    /// <summary>A question that states its own answer gives it away ("In 1969, which year did Apollo 11 land?").</summary>
+    private static bool StatesNumber(string text, decimal value) =>
+        NumberInText().Matches(text).Any(match => decimal.TryParse(
+            string.Concat(match.Value.Where(character => !char.IsWhiteSpace(character))).Replace(',', '.'),
+            NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture,
+            out var number) && number == value);
+
+    /// <summary>Plain numbers, decimals with either separator and space-grouped thousands ("1 000 000").</summary>
+    [GeneratedRegex(@"\d{1,3}(?:\s\d{3})+|\d+(?:[.,]\d+)?")]
+    private static partial Regex NumberInText();
 }
