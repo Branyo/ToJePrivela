@@ -49,6 +49,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
     {
         ArgumentNullException.ThrowIfNull(category);
         ArgumentOutOfRangeException.ThrowIfNegative(count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, QuestionGenerationOptions.MaxCount);
 
         if (count == 0)
         {

@@ -35,6 +35,11 @@ public sealed class PlayerService : IPlayerService
 
     public async Task<Result<PlayerDto>> CreateAsync(CreatePlayerRequest request, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<PlayerDto>(invalid);
+        }
+
         if (await _players.GetByNameAsync(request.Name, cancellationToken) is not null)
         {
             return Result.Failure<PlayerDto>(PlayerErrors.NameTaken(request.Name));
@@ -51,6 +56,11 @@ public sealed class PlayerService : IPlayerService
 
     public async Task<Result> UpdateAsync(int id, UpdatePlayerRequest request, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure(invalid);
+        }
+
         var player = await _players.GetByIdAsync(id, cancellationToken);
 
         if (player is null)
