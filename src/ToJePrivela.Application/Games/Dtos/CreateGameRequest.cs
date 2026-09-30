@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Games.Dtos;
@@ -20,6 +19,5 @@ public sealed class CreateGameRequest
     /// <see cref="BadPointsMode.Question"/> when left out.
     /// </summary>
     [EnumDataType(typeof(BadPointsMode), ErrorMessage = "Bad points mode should be Question or Chooser.")]
-    [JsonConverter(typeof(JsonStringEnumConverter<BadPointsMode>))]
     public BadPointsMode? BadPointsMode { get; init; }
 }

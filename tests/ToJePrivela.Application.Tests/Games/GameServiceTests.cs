@@ -86,6 +86,16 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_ValidatesTheRequestItself()
+    {
+        var result = await _sut.CreateAsync(new CreateGameRequest { PlayerIds = [1], BadCardLimit = 50 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _players.DidNotReceive().GetExistingIdsAsync(Arg.Any<IEnumerable<int>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UpdateAsync_ReschedulesTheGame()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);

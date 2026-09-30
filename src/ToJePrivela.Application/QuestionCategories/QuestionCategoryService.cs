@@ -48,6 +48,11 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
 
     public async Task<Result<CreatedQuestionCategoryDto>> CreateAsync(CreateQuestionCategoryRequest request, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<CreatedQuestionCategoryDto>(invalid);
+        }
+
         // Both checks run before generation, so a rejected request never pays for AI calls.
         if (await _categories.GetByNameAsync(request.Name, cancellationToken) is not null)
         {
@@ -104,6 +109,11 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
         GenerateAiQuestionsRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<GeneratedAiQuestionsDto>(invalid);
+        }
+
         var category = await _categories.GetByIdAsync(id, cancellationToken);
 
         if (category is null)
