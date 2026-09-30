@@ -52,17 +52,25 @@
         @if (store.question(); as question) {
           <article
             class="question"
-            [class.question--revealed]="store.phase() !== 'asking'"
+            [class.question--revealed]="store.phase() === 'revealed' || store.phase() === 'awarding'"
             aria-live="polite"
           >
             <header class="question__head">
               <span class="category">{{ question.categoryName }}</span>
-              <app-bad-card #cardSource class="question__card" [points]="question.badPoints" />
+              @if (store.phase() === 'choosing') {
+                <span class="question__card question__card--hidden" aria-hidden="true">?</span>
+              } @else {
+                <app-bad-card #cardSource class="question__card" [points]="store.badPoints()" />
+              }
             </header>
 
-            <p class="question__text">{{ question.text }}</p>
+            @if (store.phase() === 'choosing') {
+              <p class="question__text question__text--choosing">{{ 'play.choose.title' | translate }}</p>
+            } @else {
+              <p class="question__text">{{ question.text }}</p>
+            }
 
-            @if (store.phase() !== 'asking') {
+            @if (store.phase() === 'revealed' || store.phase() === 'awarding') {
               <div class="answer">
                 <span class="answer__label">{{ 'play.answer' | translate }}</span>
                 <span class="answer__value">{{ formatAnswer(question.answer, i18n.locale()) }}</span>
@@ -72,6 +80,21 @@
 
           <div class="actions">
             @switch (store.phase()) {
+              @case ('choosing') {
+                <div class="picks" role="group" [attr.aria-label]="'play.choose.group' | translate">
+                  @for (points of badPointOptions; track points) {
+                    <button
+                      type="button"
+                      class="pick"
+                      [attr.aria-label]="'common.badPoints' | translate: { points }"
+                      (click)="store.choose(points)"
+                    >
+                      <app-bad-card class="pick__card" [points]="points" />
+                    </button>
+                  }
+                </div>
+                <p class="muted hint">{{ 'play.choose.hint' | translate }}</p>
+              }
               @case ('asking') {
                 <button type="button" class="btn btn--danger btn--huge too-much" (click)="store.reveal()">
                   {{ 'play.reveal' | translate }}
@@ -83,7 +106,7 @@
               }
               @case ('revealed') {
                 <p class="prompt">
-                  <span class="prompt__question" [innerHTML]="'play.whoTakes' | translate: { points: question.badPoints }"></span>
+                  <span class="prompt__question" [innerHTML]="'play.whoTakes' | translate: { points: store.badPoints() }"></span>
                   <span class="prompt__tap">{{ 'play.tapPlayer' | translate }}</span>
                 </p>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">{{ 'play.nobody' | translate }}</button>

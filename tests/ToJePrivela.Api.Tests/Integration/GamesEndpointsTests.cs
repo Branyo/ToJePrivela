@@ -140,6 +140,56 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PostBadCard_InAChooserGameUsesTheChosenBadPoints()
+    {
+        var created = await _client.PostAsJsonAsync("/api/games", new { playerIds = new[] { 1, 2 }, badPointsMode = "Chooser" });
+        var game = (await created.Content.ReadFromJsonAsync<GameDto>())!;
+        var question = await CreateQuestionAsync(badPoints: 4);
+
+        Assert.Equal("Chooser", game.BadPointsMode);
+
+        var withoutPoints = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        Assert.Equal(HttpStatusCode.BadRequest, withoutPoints.StatusCode);
+
+        var tooMany = await _client.PostAsJsonAsync(
+            $"/api/games/{game.Id}/bad-cards",
+            new { playerId = 2, questionId = question.Id, badPoints = 6 });
+        Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+
+        var card = await _client.PostAsJsonAsync(
+            $"/api/games/{game.Id}/bad-cards",
+            new { playerId = 2, questionId = question.Id, badPoints = 2 });
+        Assert.Equal(HttpStatusCode.OK, card.StatusCode);
+        var player = (await card.Content.ReadFromJsonAsync<GameDetailsDto>())!.Players.Single(p => p.PlayerId == 2);
+        Assert.Equal(2, player.BadPoints);
+    }
+
+    [Fact]
+    public async Task PostBadCard_InAQuestionGameRejectsClientBadPoints()
+    {
+        var game = await CreateGameAsync();
+        var question = await CreateQuestionAsync(badPoints: 4);
+
+        Assert.Equal("Question", game.BadPointsMode);
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/games/{game.Id}/bad-cards",
+            new { playerId = 2, questionId = question.Id, badPoints = 1 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Dice")]
+    [InlineData("7")]
+    public async Task PostGame_RejectsAnUnknownBadPointsMode(string mode)
+    {
+        var response = await _client.PostAsJsonAsync("/api/games", new { playerIds = new[] { 1, 2 }, badPointsMode = mode });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task PostGame_RejectsABadCardLimitOfOne()
     {
         var response = await _client.PostAsJsonAsync("/api/games", new { playerIds = new[] { 1, 2 }, badCardLimit = 1 });

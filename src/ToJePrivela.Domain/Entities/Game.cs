@@ -16,7 +16,11 @@ public class Game
     {
     }
 
-    public Game(IEnumerable<int> playerIds, DateTime startedAt, int badCardLimit = DefaultBadCardLimit)
+    public Game(
+        IEnumerable<int> playerIds,
+        DateTime startedAt,
+        int badCardLimit = DefaultBadCardLimit,
+        BadPointsMode badPointsMode = BadPointsMode.Question)
     {
         ArgumentNullException.ThrowIfNull(playerIds);
 
@@ -28,7 +32,13 @@ public class Game
                 $"A game must have between {MinPlayers} and {MaxPlayers} distinct players.");
         }
 
+        if (!Enum.IsDefined(badPointsMode))
+        {
+            throw new DomainException($"Unknown bad points mode {badPointsMode}.");
+        }
+
         BadCardLimit = Guard.AgainstOutOfRange(badCardLimit, nameof(badCardLimit), MinBadCardLimit, MaxBadCardLimit);
+        BadPointsMode = badPointsMode;
         Started = startedAt;
         _gamePlayers.AddRange(distinctIds.Select(id => new GamePlayer(id)));
     }
@@ -41,6 +51,9 @@ public class Game
 
     /// <summary>The game ends as soon as one player holds this many bad cards.</summary>
     public int BadCardLimit { get; private set; }
+
+    /// <summary>Where each bad card's worth comes from; fixed for the whole game.</summary>
+    public BadPointsMode BadPointsMode { get; private set; }
 
     public IReadOnlyCollection<GamePlayer> GamePlayers => _gamePlayers.AsReadOnly();
 

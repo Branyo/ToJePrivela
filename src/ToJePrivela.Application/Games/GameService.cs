@@ -66,7 +66,8 @@ public sealed class GameService : IGameService
         var game = new Game(
             requestedIds,
             _timeProvider.GetUtcNow().UtcDateTime,
-            request.BadCardLimit ?? Game.DefaultBadCardLimit);
+            request.BadCardLimit ?? Game.DefaultBadCardLimit,
+            request.BadPointsMode ?? BadPointsMode.Question);
 
         await _games.AddAsync(game, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -111,6 +112,16 @@ public sealed class GameService : IGameService
             return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, request.PlayerId));
         }
 
+        if (game.BadPointsMode == BadPointsMode.Question && request.BadPoints is not null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.BadPointsNotAllowed(id));
+        }
+
+        if (game.BadPointsMode == BadPointsMode.Chooser && request.BadPoints is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.BadPointsRequired(id));
+        }
+
         var question = await _questions.GetByIdAsync(request.QuestionId, cancellationToken);
 
         if (question is null)
@@ -118,7 +129,9 @@ public sealed class GameService : IGameService
             return Result.Failure<GameDetailsDto>(GameErrors.UnknownQuestion(request.QuestionId));
         }
 
-        game.AwardBadCard(request.PlayerId, question.BadPoints, _timeProvider.GetUtcNow().UtcDateTime);
+        var badPoints = request.BadPoints ?? question.BadPoints;
+
+        game.AwardBadCard(request.PlayerId, badPoints, _timeProvider.GetUtcNow().UtcDateTime);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success(GameMapper.ToDetailsDto(game));

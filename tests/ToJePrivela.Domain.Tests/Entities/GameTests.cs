@@ -20,6 +20,19 @@ public class GameTests
     }
 
     [Fact]
+    public void Constructor_TakesBadPointsFromTheQuestionByDefault()
+    {
+        Assert.Equal(BadPointsMode.Question, new Game([1, 2], Start).BadPointsMode);
+        Assert.Equal(BadPointsMode.Chooser, new Game([1, 2], Start, badPointsMode: BadPointsMode.Chooser).BadPointsMode);
+    }
+
+    [Fact]
+    public void Constructor_RejectsAnUnknownBadPointsMode()
+    {
+        Assert.Throws<DomainException>(() => new Game([1, 2], Start, badPointsMode: (BadPointsMode)7));
+    }
+
+    [Fact]
     public void Constructor_IgnoresDuplicatePlayers()
     {
         var game = new Game([1, 2, 2, 1, 3], Start);

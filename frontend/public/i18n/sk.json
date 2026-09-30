@@ -79,6 +79,17 @@
         "other": "kariet u jedného hráča ukončí hru"
       }
     },
+    "badPoints": {
+      "title": "Počet zlých bodov/somárov na karte",
+      "Question": {
+        "name": "🃏 Podľa otázky",
+        "text": "Počet somárov (1-5) sa zobrazí automaticky."
+      },
+      "Chooser": {
+        "name": "🎯 Určí začínajúci hráč",
+        "text": "Pred každou otázkou sa ukáže iba jej kategória a začínajúci hráč určí, koľko somárov (1–5) bude stáť."
+      }
+    },
     "categories": {
       "title": "Otázky z kategórií",
       "empty": "Zatiaľ tu nie sú žiadne kategórie. Vytvorte prvú nižšie.",
@@ -159,6 +170,11 @@
       "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi po odrátaní zdvojovačov.",
       "yes": "Áno, zobraziť výsledky",
       "no": "Hrať ďalej"
+    },
+    "choose": {
+      "title": "Začínajúci hráč: koľko somárov bude stáť táto otázka?",
+      "group": "Trestné body za túto otázku",
+      "hint": "Zatiaľ je známa iba kategória. Ťuknite na kartu a ukáže sa otázka."
     }
   },
   "summary": {

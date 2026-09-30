@@ -144,6 +144,57 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_TakesBadPointsFromTheQuestionUnlessChooserIsRequested()
+    {
+        _players.GetExistingIdsAsync(Arg.Any<IEnumerable<int>>(), Arg.Any<CancellationToken>()).Returns([1, 2]);
+
+        var byDefault = await _sut.CreateAsync(new CreateGameRequest { PlayerIds = [1, 2] });
+        var chooser = await _sut.CreateAsync(new CreateGameRequest { PlayerIds = [1, 2], BadPointsMode = BadPointsMode.Chooser });
+
+        Assert.Equal("Question", byDefault.Value.BadPointsMode);
+        Assert.Equal("Chooser", chooser.Value.BadPointsMode);
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_InAChooserGameGivesTheCardWorthTheChosenBadPoints()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badPointsMode: BadPointsMode.Chooser);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10, BadPoints = 1 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, result.Value.Players.Single(p => p.PlayerId == 2).BadPoints);
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_InAChooserGameRequiresTheBadPoints()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badPointsMode: BadPointsMode.Chooser);
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.BadPointsRequired", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_InAQuestionGameRejectsClientBadPoints()
+    {
+        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10, BadPoints = 5 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.BadPointsNotAllowed", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task AwardBadCardAsync_GivesTheCardWorthTheQuestionsBadPoints()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);

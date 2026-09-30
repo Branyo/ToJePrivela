@@ -74,6 +74,26 @@
   animation: wiggle 2.4s ease-in-out infinite;
 }
 
+.question__card--hidden {
+  display: grid;
+  place-items: center;
+  width: var(--card-w);
+  aspect-ratio: 5 / 7;
+  border: var(--border);
+  border-radius: 14px;
+  background: repeating-linear-gradient(45deg, var(--bubblegum) 0 8px, #fff 8px 16px);
+  box-shadow: var(--shadow-sm);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #fff;
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+}
+
+.question__text--choosing {
+  text-align: center;
+}
+
 .category {
   padding: 5px 14px;
   border: var(--border);
@@ -145,6 +165,31 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
+}
+
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.pick {
+  padding: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.15s var(--bounce);
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-6px) scale(1.06);
+  }
+}
+
+.pick__card {
+  --card-w: 72px;
+  --donkey-size: 1rem;
 }
 
 .too-much {

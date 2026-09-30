@@ -25,8 +25,9 @@ public static class TestEntities
         int id,
         IEnumerable<int> playerIds,
         DateTime started,
-        int badCardLimit = Domain.Entities.Game.DefaultBadCardLimit) =>
-        WithId(new Game(playerIds, started, badCardLimit), id);
+        int badCardLimit = Domain.Entities.Game.DefaultBadCardLimit,
+        BadPointsMode badPointsMode = BadPointsMode.Question) =>
+        WithId(new Game(playerIds, started, badCardLimit, badPointsMode), id);
 
     private static TEntity WithId<TEntity>(TEntity entity, int id)
     {

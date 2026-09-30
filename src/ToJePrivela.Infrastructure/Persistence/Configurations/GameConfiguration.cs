@@ -7,6 +7,8 @@ namespace ToJePrivela.Infrastructure.Persistence.Configurations;
 
 public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
 {
+    private const int BadPointsModeMaxLength = 16;
+
     public void Configure(EntityTypeBuilder<Game> builder)
     {
         builder.HasKey(g => g.Id);
@@ -14,6 +16,10 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
         builder.Property(g => g.Started);
         builder.Property(g => g.Finished);
         builder.Property(g => g.BadCardLimit).HasDefaultValue(Game.DefaultBadCardLimit);
+        builder.Property(g => g.BadPointsMode)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(BadPointsModeMaxLength);
         builder.Ignore(g => g.IsFinished);
 
         builder.Metadata

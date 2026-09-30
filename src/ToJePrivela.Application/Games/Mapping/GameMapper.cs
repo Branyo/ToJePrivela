@@ -10,6 +10,7 @@ public static class GameMapper
         game.Started,
         game.Finished,
         game.BadCardLimit,
+        game.BadPointsMode.ToString(),
         game.GamePlayers.Select(gp => gp.PlayerId).ToList());
 
     public static IReadOnlyList<GameDto> ToDtos(IEnumerable<Game> games) => games.Select(ToDto).ToList();
@@ -19,6 +20,7 @@ public static class GameMapper
         game.Started,
         game.Finished,
         game.BadCardLimit,
+        game.BadPointsMode.ToString(),
         game.GamePlayers
             .Select(gp => new GamePlayerDto(
                 gp.PlayerId,

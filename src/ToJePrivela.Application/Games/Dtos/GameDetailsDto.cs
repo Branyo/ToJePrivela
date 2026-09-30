@@ -5,6 +5,7 @@ public sealed record GameDetailsDto(
     DateTime? Started,
     DateTime? Finished,
     int BadCardLimit,
+    string BadPointsMode,
     IReadOnlyList<GamePlayerDto> Players);
 
 /// <summary><see cref="FinalBadPoints"/> is <see cref="BadPoints"/> minus one per double and decides the loser.</summary>

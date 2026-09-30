@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import { GamesApi } from '../../core/api/games-api';
-import { GameDetails, GamePlayer, Question } from '../../core/api/models';
+import { GameDetails, GamePlayer, MAX_BAD_POINTS, MIN_BAD_POINTS, Question } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { Message } from '../../core/i18n/language';
 import { QuestionsApi } from '../../core/api/questions-api';
@@ -9,6 +9,7 @@ import { seatPlayers } from '../../shared/ranking';
 
 export type PlayPhase =
   | 'loading'
+  | 'choosing'
   | 'asking'
   | 'revealed'
   | 'awarding'
@@ -16,7 +17,10 @@ export type PlayPhase =
   | 'finished'
   | 'error';
 
-/** State of one running game screen: the scoreboard, the current question and where the round is. */
+/**
+ * State of one running game screen: the scoreboard, the current question and where the round is. In a `Chooser` game
+ * every question starts in `choosing`: only its category is shown until the starting player sets its bad points.
+ */
 @Injectable()
 export class PlayStore {
   private readonly gamesApi = inject(GamesApi);
@@ -32,10 +36,17 @@ export class PlayStore {
   readonly phase = signal<PlayPhase>('loading');
   readonly error = signal<Message | null>(null);
   readonly questionNumber = signal(0);
+  /** What the starting player set for the current question in a `Chooser` game; `null` until then. */
+  readonly chosenBadPoints = signal<number | null>(null);
 
   readonly seats = computed(() => seatPlayers(this.game()?.players ?? []));
   readonly badCardLimit = computed(() => this.game()?.badCardLimit ?? 0);
   readonly cardSlots = computed(() => Array.from({ length: this.badCardLimit() }));
+  readonly choosesBadPoints = computed(() => this.game()?.badPointsMode === 'Chooser');
+  /** What the current question's card is worth: the chosen value in a `Chooser` game, else the stored one. */
+  readonly badPoints = computed(() =>
+    this.choosesBadPoints() ? (this.chosenBadPoints() ?? 0) : (this.question()?.badPoints ?? 0),
+  );
   /** While bidding and after "To je priveľa!", but before the card is handed out. */
   readonly canDouble = computed(() => this.phase() === 'asking' || this.phase() === 'revealed');
 
@@ -77,8 +88,9 @@ export class PlayStore {
       // A lost view only makes a repeat a bit likelier; the round can go on.
       await firstValueFrom(this.questionsApi.recordView(drawn.id)).catch(() => undefined);
       this.question.set(drawn);
+      this.chosenBadPoints.set(null);
       this.questionNumber.update((n) => n + 1);
-      this.phase.set('asking');
+      this.phase.set(this.choosesBadPoints() ? 'choosing' : 'asking');
     } catch (error) {
       if (toProblem(error).code === 'Question.NoneAvailable') {
         this.question.set(null);
@@ -87,6 +99,16 @@ export class PlayStore {
       }
       this.fail(error);
     }
+  }
+
+  /** The starting player set the question's worth; now its text is shown. */
+  choose(badPoints: number): void {
+    if (this.phase() !== 'choosing' || !Number.isInteger(badPoints) || badPoints < MIN_BAD_POINTS || badPoints > MAX_BAD_POINTS) {
+      return;
+    }
+
+    this.chosenBadPoints.set(badPoints);
+    this.phase.set('asking');
   }
 
   /** "To je priveľa!" – someone stopped the bidding. */
@@ -160,7 +182,14 @@ export class PlayStore {
 
     try {
       const [game] = await Promise.all([
-        firstValueFrom(this.gamesApi.awardBadCard(this.gameId, playerId, question.id)),
+        firstValueFrom(
+          this.gamesApi.awardBadCard(
+            this.gameId,
+            playerId,
+            question.id,
+            this.choosesBadPoints() ? this.badPoints() : undefined,
+          ),
+        ),
         landing,
       ]);
       this.game.set(game);

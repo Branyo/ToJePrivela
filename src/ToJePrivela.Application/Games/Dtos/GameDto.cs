@@ -5,4 +5,5 @@ public sealed record GameDto(
     DateTime? Started,
     DateTime? Finished,
     int BadCardLimit,
+    string BadPointsMode,
     IReadOnlyList<int> PlayerIds);

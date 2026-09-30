@@ -9,6 +9,7 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   started: '2026-09-25T18:00:00Z',
   finished: null,
   badCardLimit: 3,
+  badPointsMode: 'Question',
   players: [
     { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0 },
     { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0 },
@@ -46,9 +47,9 @@ describe('PlayStore', () => {
 
   afterEach(() => http.verify());
 
-  async function startWithQuestion(categoryIds: number[] = []): Promise<void> {
+  async function startWithQuestion(categoryIds: number[] = [], details: GameDetails = game()): Promise<void> {
     const started = store.start(5, categoryIds);
-    http.expectOne('/api/games/5/details').flush(game());
+    http.expectOne('/api/games/5/details').flush(details);
     await flush();
     http.expectOne((req) => req.url === '/api/questions/random').flush(question);
     await flush();
@@ -76,6 +77,48 @@ describe('PlayStore', () => {
     await flush();
     http.expectOne('/api/questions/42/views').flush(question);
     await started;
+  });
+
+  it('in a chooser game shows only the category until the starting player sets the bad points', async () => {
+    await startWithQuestion([], game({ badPointsMode: 'Chooser' }));
+
+    expect(store.phase()).toBe('choosing');
+    expect(store.canDouble()).toBe(false);
+
+    store.reveal();
+    store.choose(6);
+    expect(store.phase()).toBe('choosing');
+
+    store.choose(2);
+    expect(store.phase()).toBe('asking');
+    expect(store.badPoints()).toBe(2);
+  });
+
+  it('in a chooser game sends the chosen bad points with the card and asks again for the next question', async () => {
+    await startWithQuestion([], game({ badPointsMode: 'Chooser' }));
+    store.choose(1);
+    store.reveal();
+
+    const awarded = store.award(2);
+    const request = http.expectOne('/api/games/5/bad-cards');
+    expect(request.request.body).toEqual({ playerId: 2, questionId: 42, badPoints: 1 });
+    request.flush(game({ badPointsMode: 'Chooser' }));
+    await flush();
+    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
+    await flush();
+    http.expectOne('/api/questions/44/views').flush(question);
+    await awarded;
+
+    expect(store.phase()).toBe('choosing');
+    expect(store.chosenBadPoints()).toBeNull();
+  });
+
+  it('in a question game uses the stored bad points and never asks for them', async () => {
+    await startWithQuestion();
+
+    store.choose(2);
+    expect(store.phase()).toBe('asking');
+    expect(store.badPoints()).toBe(4);
   });
 
   it('reveals the answer only while asking', async () => {
