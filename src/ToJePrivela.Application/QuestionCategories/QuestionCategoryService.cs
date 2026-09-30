@@ -71,7 +71,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
 
         if (generation.Failed)
         {
-            return Result.Failure<CreatedQuestionCategoryDto>(QuestionGenerationErrors.GenerationFailed);
+            return Result.Failure<CreatedQuestionCategoryDto>(QuestionGenerationErrors.For(generation));
         }
 
         await _categories.AddAsync(category, cancellationToken);
@@ -127,7 +127,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
 
         if (generation.Failed)
         {
-            return Result.Failure<GeneratedAiQuestionsDto>(QuestionGenerationErrors.GenerationFailed);
+            return Result.Failure<GeneratedAiQuestionsDto>(QuestionGenerationErrors.For(generation));
         }
 
         await _questions.AddRangeAsync(generation.Questions, cancellationToken);

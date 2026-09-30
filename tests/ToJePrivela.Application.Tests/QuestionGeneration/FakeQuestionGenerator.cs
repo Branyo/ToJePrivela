@@ -16,6 +16,9 @@ public sealed class FakeQuestionGenerator : IQuestionGenerator
 
     public IReadOnlyList<string> Subtopics { get; set; } = [];
 
+    /// <summary>Thrown by the subtopic call instead of returning <see cref="Subtopics"/>.</summary>
+    public Exception? SubtopicFailure { get; set; }
+
     public TimeSpan Delay { get; set; } = TimeSpan.Zero;
 
     public int SubtopicCalls { get; private set; }
@@ -42,7 +45,7 @@ public sealed class FakeQuestionGenerator : IQuestionGenerator
     {
         SubtopicCalls++;
         RequestedSubtopicCount = count;
-        return Task.FromResult(Subtopics);
+        return SubtopicFailure is null ? Task.FromResult(Subtopics) : Task.FromException<IReadOnlyList<string>>(SubtopicFailure);
     }
 
     public async Task<IReadOnlyList<GeneratedQuestion>> GenerateAsync(

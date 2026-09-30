@@ -239,6 +239,48 @@ public class QuestionGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateAsync_StopsAtOnceWhenTheProviderIsUnavailable()
+    {
+        _generator.Reply = _ => throw new QuestionGeneratorUnavailableException("quota exceeded");
+
+        var result = await CreateSut().GenerateAsync(_sport, 5);
+
+        Assert.True(result.Failed);
+        Assert.True(result.ProviderUnavailable);
+        Assert.Single(_generator.Requests);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_KeepsWhatOtherCallsBroughtWhenTheProviderGoesDown()
+    {
+        _options.QuestionsPerRequest = 2;
+        _generator.Subtopics = ["A", "B"];
+        _generator.Reply = request => request.Subtopic == "B"
+            ? throw new QuestionGeneratorUnavailableException("outage")
+            : _generator.Fresh(request.Count);
+
+        var result = await CreateSut().GenerateAsync(_sport, 4);
+
+        Assert.Equal(2, result.Created);
+        Assert.True(result.ProviderUnavailable);
+        Assert.False(result.Failed);
+        Assert.Equal(2, _generator.Requests.Count);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ReportsTheProviderUnavailableWhenSplittingIntoSubtopicsFails()
+    {
+        _options.QuestionsPerRequest = 2;
+        _generator.SubtopicFailure = new QuestionGeneratorUnavailableException("not configured");
+
+        var result = await CreateSut().GenerateAsync(_sport, 4);
+
+        Assert.True(result.ProviderUnavailable);
+        Assert.True(result.Failed);
+        Assert.Empty(_generator.Requests);
+    }
+
+    [Fact]
     public async Task GenerateAsync_RefusesMoreThanTheMaximumCount()
     {
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(

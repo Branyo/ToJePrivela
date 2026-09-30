@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ToJePrivela.Ai.OpenAi.Contracts;
+using ToJePrivela.Application.Abstractions.Ai;
 
 namespace ToJePrivela.Ai.OpenAi;
 
@@ -30,6 +31,12 @@ public sealed class OpenAiChatCompletionClient : IChatCompletionClient
 
     public async Task<string?> CompleteAsync(string prompt, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            throw new QuestionGeneratorUnavailableException(
+                "OpenAi:ApiKey is not configured; set it through user-secrets or the OpenAi__ApiKey environment variable.");
+        }
+
         var payload = new ChatCompletionRequest(
             _options.Model,
             [new ChatMessage(UserRole, prompt)],
@@ -49,13 +56,11 @@ public sealed class OpenAiChatCompletionClient : IChatCompletionClient
         {
             using var response = await _httpClient.SendAsync(request, cancellationToken);
 
+            // Wrong key, exhausted quota, bad model name or an outage: none of them clears up on a retry.
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning(
-                    "Chat completion request failed with status {StatusCode}.",
-                    (int)response.StatusCode);
-
-                return null;
+                throw new QuestionGeneratorUnavailableException(
+                    $"Chat completion request failed with status {(int)response.StatusCode}.");
             }
 
             var completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(
@@ -64,13 +69,18 @@ public sealed class OpenAiChatCompletionClient : IChatCompletionClient
 
             return completion?.Choices?.FirstOrDefault()?.Message?.Content;
         }
+        catch (JsonException exception)
+        {
+            // The provider answered, just not readably: that reply is unusable, the provider is not down.
+            _logger.LogWarning(exception, "Chat completion reply could not be read.");
+            return null;
+        }
         // A timeout surfaces as TaskCanceledException too; only the caller's own cancellation propagates.
         catch (Exception exception) when (
-            (exception is HttpRequestException or TaskCanceledException or JsonException)
+            exception is HttpRequestException or TaskCanceledException
             && !cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(exception, "Chat completion request could not be completed.");
-            return null;
+            throw new QuestionGeneratorUnavailableException("Chat completion request could not be completed.", exception);
         }
     }
 }
