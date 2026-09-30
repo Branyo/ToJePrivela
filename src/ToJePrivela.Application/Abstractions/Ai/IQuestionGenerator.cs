@@ -3,7 +3,8 @@ namespace ToJePrivela.Application.Abstractions.Ai;
 /// <summary>
 /// Port implemented by the AI layer. Each method is a single call to the provider; retries, batching,
 /// duplicate handling and deciding which questions are usable belong to the caller. The question
-/// language is the AI layer's own setting.
+/// language is the AI layer's own setting. Both methods throw
+/// <see cref="QuestionGeneratorUnavailableException"/> when the provider cannot be used.
 /// </summary>
 public interface IQuestionGenerator
 {

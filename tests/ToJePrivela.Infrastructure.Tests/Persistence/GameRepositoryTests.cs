@@ -18,7 +18,7 @@ public class GameRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new GameRepository(context);
 
-        var game = await sut.GetWithDetailsAsync(gameId);
+        var game = await sut.GetByIdAsync(gameId);
 
         Assert.NotNull(game);
         Assert.Equal(["Admin", "Brano"], game!.GamePlayers.Select(gp => gp.Player!.Name).Order());
@@ -30,7 +30,7 @@ public class GameRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new GameRepository(context);
 
-        Assert.Null(await sut.GetWithDetailsAsync(404));
+        Assert.Null(await sut.GetByIdAsync(404));
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class GameRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new GameRepository(context);
 
-        var games = await sut.GetAllWithDetailsAsync();
+        var games = await sut.GetAllAsync();
 
         Assert.Equal(2, games.Count);
         Assert.All(games, game => Assert.All(game.GamePlayers, gp => Assert.NotNull(gp.Player)));
@@ -68,7 +68,7 @@ public class GameRepositoryTests : IDisposable
 
         await using (var context = _database.CreateContext())
         {
-            var game = (await new GameRepository(context).GetWithDetailsAsync(gameId))!;
+            var game = (await new GameRepository(context).GetByIdAsync(gameId))!;
             game.AwardDouble(2);
             game.AwardDouble(2);
             await context.SaveChangesAsync();

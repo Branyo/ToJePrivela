@@ -10,15 +10,12 @@ public sealed class GameRepository : Repository<Game>, IGameRepository
     {
     }
 
-    public async Task<Game?> GetWithDetailsAsync(int id, CancellationToken cancellationToken = default) =>
-        await Set
-            .Include(g => g.GamePlayers)
-            .ThenInclude(gp => gp.Player)
-            .FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
+    public override async Task<Game?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
+        await WithPlayers().FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
 
-    public async Task<IReadOnlyList<Game>> GetAllWithDetailsAsync(CancellationToken cancellationToken = default) =>
-        await Set
-            .Include(g => g.GamePlayers)
-            .ThenInclude(gp => gp.Player)
-            .ToListAsync(cancellationToken);
+    public override async Task<IReadOnlyList<Game>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await WithPlayers().ToListAsync(cancellationToken);
+
+    private IQueryable<Game> WithPlayers() =>
+        Set.Include(g => g.GamePlayers).ThenInclude(gp => gp.Player);
 }

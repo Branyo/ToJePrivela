@@ -2,6 +2,7 @@ using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Players.Dtos;
 using ToJePrivela.Application.Players.Mapping;
+using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Players;
 
@@ -40,16 +41,27 @@ public sealed class PlayerService : IPlayerService
             return Result.Failure<PlayerDto>(invalid);
         }
 
-        if (await _players.GetByNameAsync(request.Name, cancellationToken) is not null)
+        var name = Player.NormalizeName(request.Name);
+
+        if (await _players.GetByNameAsync(name, cancellationToken) is not null)
         {
-            return Result.Failure<PlayerDto>(PlayerErrors.NameTaken(request.Name));
+            return Result.Failure<PlayerDto>(PlayerErrors.NameTaken(name));
         }
 
-        var existing = await _players.GetAllAsync(cancellationToken);
-        var player = PlayerMapper.ToEntity(request, _avatarPicker.Pick(existing.Select(p => p.Avatar).ToList()));
+        var avatar = _avatarPicker.Pick(await _players.GetAvatarsAsync(cancellationToken));
+        var player = PlayerMapper.ToEntity(request, avatar);
 
         await _players.AddAsync(player, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (UniqueConstraintException)
+        {
+            // Another request took the same name between the check above and this save.
+            return Result.Failure<PlayerDto>(PlayerErrors.NameTaken(name));
+        }
 
         return Result.Success(PlayerMapper.ToDto(player));
     }
@@ -68,15 +80,25 @@ public sealed class PlayerService : IPlayerService
             return Result.Failure(PlayerErrors.NotFound(id));
         }
 
-        var duplicate = await _players.GetByNameAsync(request.Name, cancellationToken);
+        var name = Player.NormalizeName(request.Name);
+        var duplicate = await _players.GetByNameAsync(name, cancellationToken);
 
         if (duplicate is not null && duplicate.Id != id)
         {
-            return Result.Failure(PlayerErrors.NameTaken(request.Name));
+            return Result.Failure(PlayerErrors.NameTaken(name));
         }
 
-        player.Rename(request.Name);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        player.Rename(name);
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (UniqueConstraintException)
+        {
+            // Another request took the same name between the check above and this save.
+            return Result.Failure(PlayerErrors.NameTaken(name));
+        }
 
         return Result.Success();
     }

@@ -231,6 +231,20 @@ public class QuestionCategoryServiceTests
     }
 
     [Fact]
+    public async Task GenerateAiQuestionsAsync_SaysWhenTheProviderItselfIsUnavailable()
+    {
+        _categories.GetByIdAsync(2, Arg.Any<CancellationToken>()).Returns(TestEntities.Category(2, "Sport"));
+        _generation.GenerateAsync(Arg.Any<QuestionCategory>(), 4, Arg.Any<CancellationToken>())
+            .Returns(new QuestionGenerationResult([], 4, 0, ProviderUnavailable: true));
+
+        var result = await _sut.GenerateAiQuestionsAsync(2, new GenerateAiQuestionsRequest { Count = 4 });
+
+        Assert.Equal(ErrorType.Unavailable, result.Error.Type);
+        Assert.Equal("QuestionGeneration.ProviderUnavailable", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task GenerateAiQuestionsAsync_ReturnsNotFoundForUnknownCategory()
     {
         _categories.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((QuestionCategory?)null);

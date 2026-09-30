@@ -141,6 +141,39 @@ public class GameTests
     }
 
     [Fact]
+    public void Checks_ReportEveryBrokenRuleWithoutChangingTheGame()
+    {
+        var chooser = new Game([1, 2], Start, badPointsMode: BadPointsMode.Chooser);
+        var finished = new Game([1, 2], Start);
+        finished.Finish(Start.AddHours(1));
+
+        Assert.Equal(GameRuleViolation.PlayerNotInGame, chooser.CheckAwardBadCard(9, 3));
+        Assert.Equal(GameRuleViolation.ChosenBadPointsRequired, chooser.CheckAwardBadCard(1, null));
+        Assert.Equal(GameRuleViolation.ChosenBadPointsNotAllowed, new Game([1, 2], Start).CheckAwardBadCard(1, 3));
+        Assert.Equal(GameRuleViolation.NoDoubleToRemove, chooser.CheckRemoveDouble(1));
+        Assert.Equal(GameRuleViolation.AlreadyFinished, finished.CheckAwardDouble(1));
+        Assert.Equal(GameRuleViolation.AlreadyFinished, finished.CheckFinish(Start.AddHours(2)));
+        Assert.Equal(GameRuleViolation.EndsBeforeStart, chooser.CheckFinish(Start.AddHours(-1)));
+        Assert.Equal(GameRuleViolation.CannotReopen, finished.CheckReschedule(Start, null));
+        Assert.Equal(GameRuleViolation.EndsBeforeStart, chooser.CheckReschedule(Start, Start.AddHours(-1)));
+        Assert.All(chooser.GamePlayers, gp => Assert.Equal((0, 0), (gp.BadCards, gp.Doubles)));
+        Assert.False(chooser.IsFinished);
+    }
+
+    [Fact]
+    public void Checks_PassWhenTheChangeIsAllowed()
+    {
+        var game = new Game([1, 2], Start, badPointsMode: BadPointsMode.Chooser);
+        game.AwardDouble(1);
+
+        Assert.Null(game.CheckAwardBadCard(1, 3));
+        Assert.Null(game.CheckAwardDouble(2));
+        Assert.Null(game.CheckRemoveDouble(1));
+        Assert.Null(game.CheckFinish(Start.AddHours(1)));
+        Assert.Null(game.CheckReschedule(Start, null));
+    }
+
+    [Fact]
     public void Constructor_UsesTheDefaultBadCardLimit()
     {
         var game = new Game([1, 2], Start);

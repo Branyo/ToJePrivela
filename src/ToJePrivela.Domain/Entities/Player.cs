@@ -7,6 +7,9 @@ public class Player
     public const int NameMinLength = 2;
     public const int NameMaxLength = 50;
 
+    /// <summary>The form a name is stored and looked up in; the unique index compares it case-insensitively.</summary>
+    public static string NormalizeName(string name) => name.Trim();
+
     private readonly List<GamePlayer> _gamePlayers = [];
 
     private Player()

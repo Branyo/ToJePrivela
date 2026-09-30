@@ -64,15 +64,27 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
 
         var plannedCalls = (count + _options.QuestionsPerRequest - 1) / _options.QuestionsPerRequest;
         var callBudget = plannedCalls + _options.MaxRetryAttempts;
-        IReadOnlyList<string> subtopics = plannedCalls > 1
-            ? await _generator.GenerateSubtopicsAsync(category.Name, plannedCalls, cancellationToken)
-            : [];
+        IReadOnlyList<string> subtopics = [];
+
+        if (plannedCalls > 1)
+        {
+            try
+            {
+                subtopics = await _generator.GenerateSubtopicsAsync(category.Name, plannedCalls, cancellationToken);
+            }
+            catch (QuestionGeneratorUnavailableException exception)
+            {
+                LogUnavailable(category.Name, exception);
+                return new QuestionGenerationResult([], count, 0, ProviderUnavailable: true);
+            }
+        }
 
         var accepted = new List<GeneratedQuestion>(count);
         var discarded = 0;
         var callsMade = 0;
+        var providerUnavailable = false;
 
-        while (accepted.Count < count && callsMade < callBudget)
+        while (accepted.Count < count && callsMade < callBudget && !providerUnavailable)
         {
             var excluded = accepted.Select(q => q.Text).Reverse()
                 .Concat(existing)
@@ -90,8 +102,15 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
 
             callsMade += requests.Count;
 
-            foreach (var reply in await CallInParallelAsync(requests, cancellationToken))
+            foreach (var reply in await CallInParallelAsync(requests, category.Name, cancellationToken))
             {
+                // The provider is down: keep what the other calls brought, but spend no more of the budget.
+                if (reply is null)
+                {
+                    providerUnavailable = true;
+                    continue;
+                }
+
                 // Unusable items are dropped before anything else, as if the provider never sent them.
                 foreach (var question in reply.Where(GeneratedQuestionFilter.IsUsable))
                 {
@@ -114,7 +133,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
             .Select(q => new Question(q.Text, q.Answer, category, _badPoints.Pick(), QuestionSource.Ai, createdAt))
             .ToList();
 
-        return new QuestionGenerationResult(questions, count, discarded);
+        return new QuestionGenerationResult(questions, count, discarded, providerUnavailable);
     }
 
     private IEnumerable<int> SplitIntoBatches(int missing)
@@ -129,8 +148,10 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
     private static string? PickSubtopic(IReadOnlyList<string> subtopics, int callIndex) =>
         subtopics.Count == 0 ? null : subtopics[callIndex % subtopics.Count];
 
-    private async Task<IReadOnlyList<GeneratedQuestion>[]> CallInParallelAsync(
+    /// <returns>One reply per request, null where the provider was unavailable.</returns>
+    private async Task<IReadOnlyList<GeneratedQuestion>?[]> CallInParallelAsync(
         IReadOnlyList<QuestionGenerationRequest> requests,
+        string category,
         CancellationToken cancellationToken)
     {
         using var throttle = new SemaphoreSlim(_options.MaxParallelRequests);
@@ -143,12 +164,20 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
             {
                 return await _generator.GenerateAsync(request, cancellationToken);
             }
+            catch (QuestionGeneratorUnavailableException exception)
+            {
+                LogUnavailable(category, exception);
+                return null;
+            }
             finally
             {
                 throttle.Release();
             }
         }));
     }
+
+    private void LogUnavailable(string category, QuestionGeneratorUnavailableException exception) =>
+        _logger.LogWarning(exception, "The question generator is unavailable while generating for category {Category}.", category);
 
     private void LogOutcome(string category, int requested, int created, int discarded, int calls)
     {

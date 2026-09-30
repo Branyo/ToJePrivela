@@ -92,15 +92,15 @@ public sealed class QuestionService : IQuestionService
 
     public async Task<Result<QuestionDto>> RecordViewAsync(int id, CancellationToken cancellationToken = default)
     {
-        var question = await _questions.GetByIdAsync(id, cancellationToken);
-
-        if (question is null)
-        {
-            return Result.Failure<QuestionDto>(QuestionErrors.NotFound(id));
-        }
-
         for (var attempt = 1; ; attempt++)
         {
+            var question = await _questions.GetByIdAsync(id, cancellationToken);
+
+            if (question is null)
+            {
+                return Result.Failure<QuestionDto>(QuestionErrors.NotFound(id));
+            }
+
             question.MarkViewed(_timeProvider.GetUtcNow().UtcDateTime);
 
             try
@@ -115,11 +115,9 @@ public sealed class QuestionService : IQuestionService
                     return Result.Failure<QuestionDto>(QuestionErrors.ViewConflict(id));
                 }
 
-                // Someone else changed the row: take their values (and version) and count on top of them.
-                if (!await _questions.ReloadAsync(question, cancellationToken))
-                {
-                    return Result.Failure<QuestionDto>(QuestionErrors.NotFound(id));
-                }
+                // Someone else changed the row: forget this attempt, read their values (and version) and
+                // count on top of them.
+                _unitOfWork.DiscardChanges();
             }
         }
     }

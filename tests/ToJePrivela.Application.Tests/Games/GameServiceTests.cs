@@ -26,7 +26,7 @@ public class GameServiceTests
     [Fact]
     public async Task GetAllAsync_MapsPlayerIds()
     {
-        _games.GetAllWithDetailsAsync(Arg.Any<CancellationToken>())
+        _games.GetAllAsync(Arg.Any<CancellationToken>())
             .Returns([TestEntities.Game(1, [1, 2], Now.UtcDateTime)]);
 
         var result = await _sut.GetAllAsync();
@@ -38,7 +38,7 @@ public class GameServiceTests
     [Fact]
     public async Task GetByIdAsync_ReturnsNotFoundForUnknownGame()
     {
-        _games.GetWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
+        _games.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
 
         var result = await _sut.GetByIdAsync(7);
 
@@ -49,7 +49,7 @@ public class GameServiceTests
     [Fact]
     public async Task GetDetailsAsync_ReturnsNotFoundForUnknownGame()
     {
-        _games.GetWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
+        _games.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
 
         var result = await _sut.GetDetailsAsync(7);
 
@@ -136,6 +136,18 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_RejectsAnEndBeforeTheStart()
+    {
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Started = Now.UtcDateTime, Finished = Now.UtcDateTime.AddHours(-1) });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.EndsBeforeStart", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UpdateAsync_ReturnsNotFoundForUnknownGame()
     {
         _games.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
@@ -195,7 +207,7 @@ public class GameServiceTests
     public async Task AwardBadCardAsync_InAChooserGameGivesTheCardWorthTheChosenBadPoints()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badPointsMode: BadPointsMode.Chooser);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
 
@@ -209,7 +221,7 @@ public class GameServiceTests
     public async Task AwardBadCardAsync_InAChooserGameRequiresTheBadPoints()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badPointsMode: BadPointsMode.Chooser);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10 });
 
@@ -221,7 +233,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardBadCardAsync_InAQuestionGameRejectsClientBadPoints()
     {
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10, BadPoints = 5 });
 
@@ -234,7 +246,7 @@ public class GameServiceTests
     public async Task AwardBadCardAsync_GivesTheCardWorthTheQuestionsBadPoints()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
 
@@ -253,7 +265,7 @@ public class GameServiceTests
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badCardLimit: 2);
         game.AwardBadCard(1, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 2), null, Now.UtcDateTime);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
 
@@ -265,7 +277,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardBadCardAsync_ReturnsNotFoundForUnknownGame()
     {
-        _games.GetWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
+        _games.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
 
         var result = await _sut.AwardBadCardAsync(7, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
 
@@ -277,7 +289,7 @@ public class GameServiceTests
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
         game.Finish(Now.UtcDateTime);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
 
@@ -288,7 +300,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardBadCardAsync_RejectsAPlayerOutsideTheGame()
     {
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 9, QuestionId = 10 });
 
@@ -299,7 +311,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardBadCardAsync_RejectsAnUnknownQuestion()
     {
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns((Question?)null);
 
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
@@ -313,7 +325,7 @@ public class GameServiceTests
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
         game.AwardBadCard(2, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 4), null, Now.UtcDateTime);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 2 });
 
@@ -327,7 +339,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardDoubleAsync_ReturnsNotFoundForUnknownGame()
     {
-        _games.GetWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
+        _games.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
 
         var result = await _sut.AwardDoubleAsync(7, new AwardDoubleRequest { PlayerId = 1 });
 
@@ -339,7 +351,7 @@ public class GameServiceTests
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
         game.Finish(Now.UtcDateTime);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 1 });
 
@@ -350,7 +362,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardDoubleAsync_RejectsAPlayerOutsideTheGame()
     {
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
         var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 9 });
 
@@ -363,7 +375,7 @@ public class GameServiceTests
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
         game.AwardDouble(2);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.RemoveDoubleAsync(1, 2);
 
@@ -376,7 +388,7 @@ public class GameServiceTests
     [Fact]
     public async Task RemoveDoubleAsync_ReturnsConflictWhenThePlayerHasNoDouble()
     {
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
         var result = await _sut.RemoveDoubleAsync(1, 2);
 
@@ -388,7 +400,7 @@ public class GameServiceTests
     [Fact]
     public async Task RemoveDoubleAsync_RejectsAPlayerOutsideTheGame()
     {
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
         var result = await _sut.RemoveDoubleAsync(1, 9);
 
@@ -401,7 +413,7 @@ public class GameServiceTests
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
         game.AwardDouble(1);
         game.Finish(Now.UtcDateTime);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.RemoveDoubleAsync(1, 1);
 
@@ -411,7 +423,7 @@ public class GameServiceTests
     [Fact]
     public async Task FinishAsync_FinishesTheGameNow()
     {
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
         var result = await _sut.FinishAsync(1);
 
@@ -424,7 +436,7 @@ public class GameServiceTests
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
         game.Finish(Now.UtcDateTime);
-        _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.FinishAsync(1);
 

@@ -59,15 +59,6 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<bool> ReloadAsync(Question question, CancellationToken cancellationToken = default)
-    {
-        var entry = Context.Entry(question);
-        await entry.ReloadAsync(cancellationToken);
-
-        // ReloadAsync detaches an entity whose row is gone.
-        return entry.State != EntityState.Detached;
-    }
-
     public async Task AddRangeAsync(IEnumerable<Question> questions, CancellationToken cancellationToken = default) =>
         await Set.AddRangeAsync(questions, cancellationToken);
 

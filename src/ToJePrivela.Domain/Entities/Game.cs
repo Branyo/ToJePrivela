@@ -67,17 +67,34 @@ public class Game
     /// </summary>
     public bool RequiresChosenBadPoints => BadPointsMode == BadPointsMode.Chooser;
 
+    public GameRuleViolation? CheckFinish(DateTime finishedAt) =>
+        IsFinished ? GameRuleViolation.AlreadyFinished
+        : finishedAt < Started ? GameRuleViolation.EndsBeforeStart
+        : null;
+
+    public GameRuleViolation? CheckAwardBadCard(int playerId, int? chosenBadPoints) =>
+        CheckRunningPlayer(playerId)
+        ?? (RequiresChosenBadPoints, chosenBadPoints.HasValue) switch
+        {
+            (true, false) => GameRuleViolation.ChosenBadPointsRequired,
+            (false, true) => GameRuleViolation.ChosenBadPointsNotAllowed,
+            _ => null
+        };
+
+    public GameRuleViolation? CheckAwardDouble(int playerId) => CheckRunningPlayer(playerId);
+
+    public GameRuleViolation? CheckRemoveDouble(int playerId) =>
+        CheckRunningPlayer(playerId)
+        ?? (FindPlayer(playerId)!.Doubles == 0 ? GameRuleViolation.NoDoubleToRemove : null);
+
+    public GameRuleViolation? CheckReschedule(DateTime started, DateTime? finished) =>
+        IsFinished && finished is null ? GameRuleViolation.CannotReopen
+        : finished < started ? GameRuleViolation.EndsBeforeStart
+        : null;
+
     public void Finish(DateTime finishedAt)
     {
-        if (IsFinished)
-        {
-            throw new DomainException("Game is already finished.");
-        }
-
-        if (Started is not null && finishedAt < Started)
-        {
-            throw new DomainException("Game cannot be finished before it started.");
-        }
+        ThrowIfBroken(CheckFinish(finishedAt));
 
         Finished = finishedAt;
     }
@@ -90,10 +107,11 @@ public class Game
     public GamePlayer AwardBadCard(int playerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {
         ArgumentNullException.ThrowIfNull(question);
+        ThrowIfBroken(CheckAwardBadCard(playerId, chosenBadPoints));
 
-        var gamePlayer = RunningGamePlayer(playerId);
+        var gamePlayer = FindPlayer(playerId)!;
 
-        gamePlayer.AddBadCard(BadCardWorth(question, chosenBadPoints));
+        gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
 
         if (gamePlayer.BadCards >= BadCardLimit)
         {
@@ -109,7 +127,9 @@ public class Game
     /// </summary>
     public GamePlayer AwardDouble(int playerId)
     {
-        var gamePlayer = RunningGamePlayer(playerId);
+        ThrowIfBroken(CheckAwardDouble(playerId));
+
+        var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.AddDouble();
 
@@ -119,7 +139,9 @@ public class Game
     /// <summary>Takes back a double tapped by mistake; the final score may still be below zero.</summary>
     public GamePlayer RemoveDouble(int playerId)
     {
-        var gamePlayer = RunningGamePlayer(playerId);
+        ThrowIfBroken(CheckRemoveDouble(playerId));
+
+        var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.RemoveDouble();
 
@@ -132,39 +154,24 @@ public class Game
     /// </summary>
     public void Reschedule(DateTime started, DateTime? finished)
     {
-        if (IsFinished && finished is null)
-        {
-            throw new DomainException("A finished game cannot be reopened.");
-        }
-
-        if (finished < started)
-        {
-            throw new DomainException("Game cannot be finished before it started.");
-        }
+        ThrowIfBroken(CheckReschedule(started, finished));
 
         Started = started;
         Finished = finished;
     }
 
-    private int BadCardWorth(Question question, int? chosenBadPoints) =>
-        (RequiresChosenBadPoints, chosenBadPoints) switch
-        {
-            (true, int chosen) => chosen,
-            (true, null) => throw new DomainException(
-                "This game has its bad points chosen before each question, so the card needs them."),
-            (false, null) => question.BadPoints,
-            (false, _) => throw new DomainException(
-                "This game takes bad points from the question, so they cannot be chosen.")
-        };
+    private GameRuleViolation? CheckRunningPlayer(int playerId) =>
+        IsFinished ? GameRuleViolation.AlreadyFinished
+        : !HasPlayer(playerId) ? GameRuleViolation.PlayerNotInGame
+        : null;
 
-    private GamePlayer RunningGamePlayer(int playerId)
+    private GamePlayer? FindPlayer(int playerId) => _gamePlayers.FirstOrDefault(gp => gp.PlayerId == playerId);
+
+    private static void ThrowIfBroken(GameRuleViolation? violation)
     {
-        if (IsFinished)
+        if (violation is GameRuleViolation broken)
         {
-            throw new DomainException("Game is already finished.");
+            throw new DomainException(GameRuleViolationMessages.Describe(broken));
         }
-
-        return _gamePlayers.FirstOrDefault(gp => gp.PlayerId == playerId)
-            ?? throw new DomainException($"Player {playerId} does not play in this game.");
     }
 }

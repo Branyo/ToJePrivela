@@ -17,11 +17,8 @@ public sealed class QuestionCategoryRepository : Repository<QuestionCategory>, I
         await Set.Include(qc => qc.AddedByPlayer).FirstOrDefaultAsync(qc => qc.Id == id, cancellationToken);
 
     /// <summary>Case-insensitive through the NOCASE collation on QuestionCategory.Name.</summary>
-    public async Task<QuestionCategory?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
-    {
-        var trimmed = name.Trim();
-        return await Set.FirstOrDefaultAsync(qc => qc.Name == trimmed, cancellationToken);
-    }
+    public async Task<QuestionCategory?> GetByNameAsync(string name, CancellationToken cancellationToken = default) =>
+        await Set.FirstOrDefaultAsync(qc => qc.Name == name, cancellationToken);
 
     public async Task<IReadOnlyList<int>> GetMissingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default)
     {

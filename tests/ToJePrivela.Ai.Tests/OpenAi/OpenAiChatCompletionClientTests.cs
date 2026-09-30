@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using ToJePrivela.Ai.OpenAi;
+using ToJePrivela.Application.Abstractions.Ai;
 
 namespace ToJePrivela.Ai.Tests.OpenAi;
 
@@ -58,7 +59,7 @@ public class OpenAiChatCompletionClientTests
     public async Task CompleteAsync_SendsTemperatureWhenReasoningIsOff()
     {
         var handler = StubHttpMessageHandler.WithJson(HttpStatusCode.OK, SuccessBody);
-        var options = new OpenAiOptions { Url = Options.Url, ReasoningEffort = "none", Temperature = 0.5M };
+        var options = new OpenAiOptions { Url = Options.Url, ApiKey = "test-key", ReasoningEffort = "none", Temperature = 0.5M };
 
         await CreateSut(handler, options).CompleteAsync("prompt");
 
@@ -92,11 +93,30 @@ public class OpenAiChatCompletionClientTests
     [InlineData(HttpStatusCode.Unauthorized)]
     [InlineData(HttpStatusCode.TooManyRequests)]
     [InlineData(HttpStatusCode.InternalServerError)]
-    public async Task CompleteAsync_ReturnsNullOnErrorStatus(HttpStatusCode statusCode)
+    [InlineData(HttpStatusCode.BadRequest)]
+    public async Task CompleteAsync_ReportsTheProviderUnavailableOnErrorStatus(HttpStatusCode statusCode)
     {
         var handler = StubHttpMessageHandler.WithJson(statusCode, "{}");
 
-        Assert.Null(await CreateSut(handler).CompleteAsync("prompt"));
+        var exception = await Assert.ThrowsAsync<QuestionGeneratorUnavailableException>(
+            () => CreateSut(handler).CompleteAsync("prompt"));
+
+        Assert.Contains(((int)statusCode).ToString(), exception.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public async Task CompleteAsync_ReportsAMissingApiKeyWithoutCallingTheProvider(string apiKey)
+    {
+        var handler = StubHttpMessageHandler.WithJson(HttpStatusCode.OK, SuccessBody);
+        var options = new OpenAiOptions { Url = Options.Url, ApiKey = apiKey };
+
+        var exception = await Assert.ThrowsAsync<QuestionGeneratorUnavailableException>(
+            () => CreateSut(handler, options).CompleteAsync("prompt"));
+
+        Assert.Contains("ApiKey", exception.Message);
+        Assert.Null(handler.LastRequest);
     }
 
     [Fact]
@@ -116,19 +136,19 @@ public class OpenAiChatCompletionClientTests
     }
 
     [Fact]
-    public async Task CompleteAsync_ReturnsNullWhenTheTransportFails()
+    public async Task CompleteAsync_ReportsTheProviderUnavailableWhenTheTransportFails()
     {
         var handler = new StubHttpMessageHandler(_ => throw new HttpRequestException("network down"));
 
-        Assert.Null(await CreateSut(handler).CompleteAsync("prompt"));
+        await Assert.ThrowsAsync<QuestionGeneratorUnavailableException>(() => CreateSut(handler).CompleteAsync("prompt"));
     }
 
     [Fact]
-    public async Task CompleteAsync_ReturnsNullWhenTheRequestTimesOut()
+    public async Task CompleteAsync_ReportsTheProviderUnavailableWhenTheRequestTimesOut()
     {
         var handler = new StubHttpMessageHandler(_ => throw new TaskCanceledException("timed out"));
 
-        Assert.Null(await CreateSut(handler).CompleteAsync("prompt"));
+        await Assert.ThrowsAsync<QuestionGeneratorUnavailableException>(() => CreateSut(handler).CompleteAsync("prompt"));
     }
 
     [Fact]

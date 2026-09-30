@@ -148,14 +148,14 @@ public class QuestionServiceTests
     {
         var question = TestEntities.Question(1, ValidText, "2022", _history);
         _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
-        _questions.ReloadAsync(question, Arg.Any<CancellationToken>()).Returns(true);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(_ => throw Conflict(), _ => throw Conflict(), _ => Task.FromResult(1));
 
         var result = await _sut.RecordViewAsync(1);
 
         Assert.True(result.IsSuccess);
-        await _questions.Received(2).ReloadAsync(question, Arg.Any<CancellationToken>());
+        _unitOfWork.Received(2).DiscardChanges();
+        await _questions.Received(3).GetByIdAsync(1, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(3).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -164,7 +164,6 @@ public class QuestionServiceTests
     {
         var question = TestEntities.Question(1, ValidText, "2022", _history);
         _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
-        _questions.ReloadAsync(question, Arg.Any<CancellationToken>()).Returns(true);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
 
         var result = await _sut.RecordViewAsync(1);
@@ -178,8 +177,7 @@ public class QuestionServiceTests
     public async Task RecordViewAsync_ReturnsNotFoundWhenTheQuestionWasDeletedMeanwhile()
     {
         var question = TestEntities.Question(1, ValidText, "2022", _history);
-        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
-        _questions.ReloadAsync(question, Arg.Any<CancellationToken>()).Returns(false);
+        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question, (Question?)null);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
 
         var result = await _sut.RecordViewAsync(1);

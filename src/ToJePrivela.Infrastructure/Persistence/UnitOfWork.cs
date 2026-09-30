@@ -32,4 +32,6 @@ public sealed class UnitOfWork : IUnitOfWork
             throw new UniqueConstraintException("A unique index rejected the changes.", exception);
         }
     }
+
+    public void DiscardChanges() => _context.ChangeTracker.Clear();
 }

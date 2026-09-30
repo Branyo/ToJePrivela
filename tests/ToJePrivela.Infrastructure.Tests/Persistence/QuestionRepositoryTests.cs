@@ -168,38 +168,25 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task ReloadAsync_ReadsTheCurrentValuesSoTheNextSaveSucceeds()
+    public async Task DiscardChanges_LetsTheNextReadSeeTheStoredValuesSoTheNextSaveSucceeds()
     {
         await using var stale = _database.CreateContext();
         var sut = new QuestionRepository(stale);
-        var question = await stale.Questions.FirstAsync(q => q.Answer == "11");
+        var unitOfWork = new UnitOfWork(stale);
+        var question = (await sut.FindAsync(SportId, null)).Single();
 
         await MarkViewedAsync("11");
         question.MarkViewed(CreatedAt);
 
-        Assert.True(await sut.ReloadAsync(question));
-        Assert.Equal(1, question.ViewCount);
+        unitOfWork.DiscardChanges();
+        var current = (await sut.GetByIdAsync(question.Id))!;
+        Assert.Equal(1, current.ViewCount);
 
-        question.MarkViewed(CreatedAt);
-        await new UnitOfWork(stale).SaveChangesAsync();
+        current.MarkViewed(CreatedAt);
+        await unitOfWork.SaveChangesAsync();
 
         await using var verification = _database.CreateContext();
         Assert.Equal(2, (await verification.Questions.FirstAsync(q => q.Answer == "11")).ViewCount);
-    }
-
-    [Fact]
-    public async Task ReloadAsync_ReportsADeletedQuestion()
-    {
-        await using var stale = _database.CreateContext();
-        var sut = new QuestionRepository(stale);
-        var question = await stale.Questions.FirstAsync(q => q.Answer == "11");
-
-        await using (var other = _database.CreateContext())
-        {
-            await other.Questions.Where(q => q.Answer == "11").ExecuteDeleteAsync();
-        }
-
-        Assert.False(await sut.ReloadAsync(question));
     }
 
     [Fact]
