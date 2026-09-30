@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 using Serilog;
@@ -16,7 +17,9 @@ builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAiQuestionGeneration(builder.Configuration);
 
-builder.Services.AddControllers();
+// Enums travel as their names ("Chooser"), which is a wire-format concern, so it is set here rather than on the DTOs.
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<ConcurrencyConflictExceptionHandler>();
@@ -65,7 +68,7 @@ var isTesting = app.Environment.IsEnvironment("Testing");
 
 if (!isTesting)
 {
-    await app.MigrateDatabaseAsync();
+    await app.Services.InitializeDatabaseAsync();
 }
 
 app.UseExceptionHandler();

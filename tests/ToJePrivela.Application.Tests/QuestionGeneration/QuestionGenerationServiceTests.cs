@@ -239,6 +239,15 @@ public class QuestionGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateAsync_RefusesMoreThanTheMaximumCount()
+    {
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => CreateSut().GenerateAsync(_sport, QuestionGenerationOptions.MaxCount + 1));
+
+        Assert.Empty(_generator.Requests);
+    }
+
+    [Fact]
     public async Task GenerateAsync_StopsWhenCancelled()
     {
         using var cancellation = new CancellationTokenSource();

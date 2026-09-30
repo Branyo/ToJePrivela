@@ -35,6 +35,11 @@ public sealed class QuestionService : IQuestionService
 
     public async Task<Result<IReadOnlyList<QuestionDto>>> GetAsync(QuestionFilter filter, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(filter) is { } invalid)
+        {
+            return Result.Failure<IReadOnlyList<QuestionDto>>(invalid);
+        }
+
         var questions = await _questions.FindAsync(filter.CategoryId, filter.Source, cancellationToken);
         return Result.Success(QuestionMapper.ToDtos(questions));
     }
@@ -121,6 +126,11 @@ public sealed class QuestionService : IQuestionService
 
     public async Task<Result<QuestionDto>> CreateAsync(CreateQuestionRequest request, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<QuestionDto>(invalid);
+        }
+
         var category = await _categories.GetByIdAsync(request.CategoryId, cancellationToken);
 
         if (category is null)
@@ -142,6 +152,11 @@ public sealed class QuestionService : IQuestionService
 
     public async Task<Result> UpdateAsync(int id, UpdateQuestionRequest request, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure(invalid);
+        }
+
         var question = await _questions.GetByIdAsync(id, cancellationToken);
 
         if (question is null)

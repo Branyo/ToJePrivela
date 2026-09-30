@@ -54,6 +54,11 @@ public sealed class GameService : IGameService
 
     public async Task<Result<GameDto>> CreateAsync(CreateGameRequest request, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<GameDto>(invalid);
+        }
+
         var requestedIds = request.PlayerIds.Distinct().ToList();
         var existingIds = await _players.GetExistingIdsAsync(requestedIds, cancellationToken);
         var missingIds = requestedIds.Except(existingIds).ToList();
@@ -105,6 +110,11 @@ public sealed class GameService : IGameService
         AwardBadCardRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<GameDetailsDto>(invalid);
+        }
+
         var game = await _games.GetWithDetailsAsync(id, cancellationToken);
 
         if (game is null)
@@ -147,6 +157,11 @@ public sealed class GameService : IGameService
         AwardDoubleRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<GameDetailsDto>(invalid);
+        }
+
         var game = await _games.GetWithDetailsAsync(id, cancellationToken);
 
         if (game is null)

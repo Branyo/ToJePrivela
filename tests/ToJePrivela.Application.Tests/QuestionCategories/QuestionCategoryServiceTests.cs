@@ -44,6 +44,24 @@ public class QuestionCategoryServiceTests
     }
 
     [Fact]
+    public async Task GenerateAiQuestionsAsync_RejectsTooManyQuestionsBeforePayingForAnyCall()
+    {
+        var result = await _sut.GenerateAiQuestionsAsync(1, new GenerateAiQuestionsRequest { Count = QuestionGenerationOptions.MaxCount + 1 });
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _generation.DidNotReceive().GenerateAsync(Arg.Any<QuestionCategory>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_RequiresTheQuestionCount()
+    {
+        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport" });
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _categories.DidNotReceive().AddAsync(Arg.Any<QuestionCategory>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task GetByIdAsync_ReturnsNotFoundForUnknownCategory()
     {
         _categories.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((QuestionCategory?)null);
