@@ -9,8 +9,9 @@ namespace ToJePrivela.Application.QuestionGeneration;
 
 /// <summary>
 /// Splits a request into calls of <see cref="QuestionGenerationOptions.QuestionsPerRequest"/>, runs them in
-/// parallel on distinct subtopics, drops duplicates (against the category and each other) and tops up the
-/// shortfall until the requested count is reached or the call budget is spent.
+/// parallel on distinct subtopics, drops unusable items (<see cref="GeneratedQuestionFilter"/>) and duplicates
+/// (against the category and each other) and tops up the shortfall until the requested count is reached or
+/// the call budget is spent.
 /// </summary>
 /// <remarks>
 /// The call budget is the number of planned calls plus <see cref="QuestionGenerationOptions.MaxRetryAttempts"/>,
@@ -90,7 +91,8 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
 
             foreach (var reply in await CallInParallelAsync(requests, cancellationToken))
             {
-                foreach (var question in reply)
+                // Unusable items are dropped before anything else, as if the provider never sent them.
+                foreach (var question in reply.Where(GeneratedQuestionFilter.IsUsable))
                 {
                     if (accepted.Count < count && knownTexts.Add(QuestionTextNormalizer.Normalize(question.Text)))
                     {

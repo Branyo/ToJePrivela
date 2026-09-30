@@ -100,6 +100,32 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_RequiresTheStart()
+    {
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Finished = Now.UtcDateTime.AddHours(1) });
+
+        Assert.Equal("Game.StartRequired", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReturnsConflictWhenReopeningAFinishedGame()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        game.Finish(Now.UtcDateTime.AddHours(1));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Started = Now.UtcDateTime });
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        Assert.Equal("Game.CannotReopen", result.Error.Code);
+        Assert.True(game.IsFinished);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UpdateAsync_ReturnsNotFoundForUnknownGame()
     {
         _games.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Game?)null);
@@ -216,7 +242,7 @@ public class GameServiceTests
     public async Task AwardBadCardAsync_FinishesTheGameAtTheLimit()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badCardLimit: 2);
-        game.AwardBadCard(1, 2, Now.UtcDateTime);
+        game.AwardBadCard(1, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 2), null, Now.UtcDateTime);
         _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
@@ -276,7 +302,7 @@ public class GameServiceTests
     public async Task AwardDoubleAsync_TakesOneBadPointOffTheFinalScore()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
-        game.AwardBadCard(2, 4, Now.UtcDateTime);
+        game.AwardBadCard(2, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 4), null, Now.UtcDateTime);
         _games.GetWithDetailsAsync(1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 2 });

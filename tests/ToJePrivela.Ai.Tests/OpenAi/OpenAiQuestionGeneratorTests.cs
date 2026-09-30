@@ -49,77 +49,19 @@ public class OpenAiQuestionGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_DropsQuestionsTheDomainWouldReject()
+    public async Task GenerateAsync_LeavesJudgingTheQuestionsToTheCaller()
     {
         _parser.Parse(Arg.Any<string>()).Returns(
         [
             new ParsedQuestion(ValidQuestion, "2022"),
             new ParsedQuestion(ValidQuestion, "two thousand"),
-            new ParsedQuestion(ValidQuestion, "3,5"),
-            new ParsedQuestion("Short", "5")
-        ]);
-
-        var questions = await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 5));
-
-        Assert.Equal("2022", Assert.Single(questions).Answer);
-    }
-
-    [Theory]
-    [InlineData("1000000000001")]
-    [InlineData("-1000000000001")]
-    [InlineData("5000000000000")]
-    public async Task GenerateAsync_DropsAnswersAboveOneTrillion(string answer)
-    {
-        _parser.Parse(Arg.Any<string>()).Returns([new ParsedQuestion(ValidQuestion, answer)]);
-
-        Assert.Empty(await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 5)));
-    }
-
-    [Fact]
-    public async Task GenerateAsync_KeepsAnAnswerOfExactlyOneTrillion()
-    {
-        _parser.Parse(Arg.Any<string>()).Returns([new ParsedQuestion(ValidQuestion, "1000000000000")]);
-
-        Assert.Single(await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 5)));
-    }
-
-    [Theory]
-    [InlineData("In 1969, which year did Apollo 11 land on the Moon?", "1969")]
-    [InlineData("How many kilometers is the 42 km long marathon?", "42")]
-    [InlineData("How many meters is 3,5 meters rounded to one decimal?", "3.5")]
-    [InlineData("How many inhabitants does a town of 1 000 000 people have?", "1000000")]
-    [InlineData("How many degrees below zero is -40 degrees Celsius?", "-40")]
-    public async Task GenerateAsync_DropsQuestionsThatStateTheirAnswer(string text, string answer)
-    {
-        _parser.Parse(Arg.Any<string>()).Returns([new ParsedQuestion(text, answer)]);
-
-        Assert.Empty(await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 5)));
-    }
-
-    [Theory]
-    [InlineData("How many players did a Formula 1 team field in 2020?", "2")]
-    [InlineData("How many years after 1945 did the Berlin Wall fall?", "44")]
-    [InlineData("How many kilometers long is the river Danube?", "2850")]
-    public async Task GenerateAsync_KeepsQuestionsWithOtherNumbers(string text, string answer)
-    {
-        _parser.Parse(Arg.Any<string>()).Returns([new ParsedQuestion(text, answer)]);
-
-        Assert.Single(await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 5)));
-    }
-
-    [Fact]
-    public async Task GenerateAsync_NeverReturnsMoreThanRequested()
-    {
-        _parser.Parse(Arg.Any<string>()).Returns(
-        [
-            new ParsedQuestion(ValidQuestion, "1"),
-            new ParsedQuestion(ValidQuestion, "2"),
-            new ParsedQuestion(ValidQuestion, "3")
+            new ParsedQuestion("Short", "5"),
+            new ParsedQuestion("In 1969, which year did Apollo 11 land on the Moon?", "1969")
         ]);
 
         var questions = await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 2));
 
-        Assert.Equal(2, questions.Count);
+        Assert.Equal(["2022", "two thousand", "5", "1969"], questions.Select(q => q.Answer));
     }
 
     [Fact]

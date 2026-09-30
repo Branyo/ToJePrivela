@@ -29,6 +29,12 @@ public static class GameErrors
             "Game.BadPointsRequired",
             $"Game {gameId} has its bad points set before each question, so the card needs them.");
 
+    public static Error StartRequired(int gameId) =>
+        Error.Validation("Game.StartRequired", $"Game {gameId} must keep its start time.");
+
+    public static Error CannotReopen(int gameId) =>
+        Error.Conflict("Game.CannotReopen", $"Game {gameId} is finished and cannot be reopened.");
+
     public static Error UnknownQuestion(int questionId) =>
         Error.Validation("Game.UnknownQuestion", $"Question with id {questionId} does not exist.");
 }

@@ -86,6 +86,6 @@ public class ApiFactory : WebApplicationFactory<Program>
     private IReadOnlyList<GeneratedQuestion> Fresh(int count) =>
         Enumerable.Range(0, count)
             .Select(_ => Interlocked.Increment(ref _generatedCount))
-            .Select(number => new GeneratedQuestion($"Generated test question number {number}?", number.ToString()))
+            .Select(number => new GeneratedQuestion($"Generated test question number {number}?", (number + 1000).ToString()))
             .ToList();
 }

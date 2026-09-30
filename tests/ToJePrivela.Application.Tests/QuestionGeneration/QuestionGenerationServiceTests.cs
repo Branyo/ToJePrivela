@@ -131,6 +131,21 @@ public class QuestionGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateAsync_DropsUnusableQuestionsAndTopsUpTheShortfall()
+    {
+        _generator.Reply = request => _generator.Requests.Count == 1
+            ? [new GeneratedQuestion("In 1969, which year did Apollo 11 land on the Moon?", "1969"), .. _generator.Fresh(1)]
+            : _generator.Fresh(request.Count);
+
+        var result = await CreateSut().GenerateAsync(_sport, 2);
+
+        Assert.Equal(2, result.Created);
+        Assert.Equal(0, result.Discarded);
+        Assert.DoesNotContain(result.Questions, q => q.Answer == "1969");
+        Assert.Equal(2, _generator.Requests.Count);
+    }
+
+    [Fact]
     public async Task GenerateAsync_SkipsDuplicatesReturnedByDifferentCalls()
     {
         _options.QuestionsPerRequest = 2;

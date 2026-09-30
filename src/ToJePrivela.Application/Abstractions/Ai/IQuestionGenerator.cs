@@ -1,8 +1,9 @@
 namespace ToJePrivela.Application.Abstractions.Ai;
 
 /// <summary>
-/// Port implemented by the AI layer. Each method is a single call to the provider; retries, batching
-/// and duplicate handling belong to the caller. The question language is the AI layer's own setting.
+/// Port implemented by the AI layer. Each method is a single call to the provider; retries, batching,
+/// duplicate handling and deciding which questions are usable belong to the caller. The question
+/// language is the AI layer's own setting.
 /// </summary>
 public interface IQuestionGenerator
 {
@@ -12,7 +13,7 @@ public interface IQuestionGenerator
         int count,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Returns at most <see cref="QuestionGenerationRequest.Count"/> questions the domain would accept.</summary>
+    /// <summary>Returns every well-formed question the provider sent, trimmed but not otherwise judged.</summary>
     Task<IReadOnlyList<GeneratedQuestion>> GenerateAsync(
         QuestionGenerationRequest request,
         CancellationToken cancellationToken = default);

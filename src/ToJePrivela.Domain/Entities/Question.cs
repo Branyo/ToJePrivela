@@ -34,6 +34,14 @@ public class Question
         CreatedAt = createdAt;
     }
 
+    /// <summary>Whether the constructor would accept <paramref name="text"/>, without throwing.</summary>
+    public static bool IsValidText(string? text) =>
+        text?.Trim().Length is >= TextMinLength and <= TextMaxLength;
+
+    /// <summary>Whether the constructor would accept <paramref name="answer"/>, without throwing.</summary>
+    public static bool IsValidAnswer(string? answer) =>
+        !string.IsNullOrWhiteSpace(answer) && Guard.IsNumeric(answer);
+
     public int Id { get; private set; }
 
     public string Text { get; private set; }
