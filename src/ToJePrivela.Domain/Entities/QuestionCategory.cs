@@ -8,6 +8,9 @@ public class QuestionCategory
     public const int NameMinLength = 2;
     public const int NameMaxLength = 32;
 
+    /// <summary>The form a name is stored and looked up in; the unique index compares it case-insensitively.</summary>
+    public static string NormalizeName(string name) => name.Trim();
+
     private QuestionCategory()
     {
         Name = string.Empty;

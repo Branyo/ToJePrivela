@@ -54,9 +54,11 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
         }
 
         // Both checks run before generation, so a rejected request never pays for AI calls.
-        if (await _categories.GetByNameAsync(request.Name, cancellationToken) is not null)
+        var name = QuestionCategory.NormalizeName(request.Name);
+
+        if (await _categories.GetByNameAsync(name, cancellationToken) is not null)
         {
-            return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(request.Name));
+            return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(name));
         }
 
         if (request.AddedByPlayerId is int playerId && !await _players.ExistsAsync(playerId, cancellationToken))
@@ -82,7 +84,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
         catch (UniqueConstraintException)
         {
             // Another request created the same name while this one was generating.
-            return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(request.Name));
+            return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(name));
         }
 
         return Result.Success(QuestionCategoryMapper.ToCreatedDto(category, generation));

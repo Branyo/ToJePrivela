@@ -15,12 +15,6 @@ public interface IQuestionRepository : IRepository<Question>
     /// </summary>
     Task<IReadOnlyList<int>> GetLeastViewedIdsAsync(IReadOnlyCollection<int> categoryIds, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Discards unsaved changes and reads the question's current values again;
-    /// false when it no longer exists.
-    /// </summary>
-    Task<bool> ReloadAsync(Question question, CancellationToken cancellationToken = default);
-
     Task AddRangeAsync(IEnumerable<Question> questions, CancellationToken cancellationToken = default);
 
     void RemoveRange(IEnumerable<Question> questions);

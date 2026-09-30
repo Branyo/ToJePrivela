@@ -60,8 +60,7 @@ public class PlayerServiceTests
     public async Task CreateAsync_AssignsAnAvatarPickedAgainstTheExistingPlayers()
     {
         _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
-        _players.GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns([new Player("Duri", "🐼"), new Player("Jozo", "🦊")]);
+        _players.GetAvatarsAsync(Arg.Any<CancellationToken>()).Returns(["🐼", "🦊"]);
 
         var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "Brano" });
 
@@ -82,6 +81,43 @@ public class PlayerServiceTests
         Assert.Equal(ErrorType.Conflict, result.Error.Type);
         await _players.DidNotReceive().AddAsync(Arg.Any<Player>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_LooksUpTheNameTheWayItWillBeStored()
+    {
+        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns(new Player("Brano", "🦊"));
+
+        var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "  Brano  " });
+
+        Assert.Equal("Player.NameTaken", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReportsANameTakenByAConcurrentRequest()
+    {
+        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetAvatarsAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<int>(_ => throw new UniqueConstraintException("duplicate", new Exception()));
+
+        var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "Brano" });
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        Assert.Equal("Player.NameTaken", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReportsANameTakenByAConcurrentRequest()
+    {
+        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Player(1, "Duri"));
+        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<int>(_ => throw new UniqueConstraintException("duplicate", new Exception()));
+
+        var result = await _sut.UpdateAsync(1, new UpdatePlayerRequest { Name = "Brano" });
+
+        Assert.Equal("Player.NameTaken", result.Error.Code);
     }
 
     [Fact]

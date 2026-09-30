@@ -10,8 +10,8 @@ public class QuestionCategoryRepositoryTests : IDisposable
     [Theory]
     [InlineData("Sport")]
     [InlineData("sport")]
-    [InlineData(" SPORT ")]
-    public async Task GetByNameAsync_IgnoresCaseAndSurroundingSpace(string name)
+    [InlineData("SPORT")]
+    public async Task GetByNameAsync_IgnoresCase(string name)
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionCategoryRepository(context);

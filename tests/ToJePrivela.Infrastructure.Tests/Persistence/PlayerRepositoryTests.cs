@@ -12,8 +12,7 @@ public class PlayerRepositoryTests : IDisposable
     [InlineData("Brano")]
     [InlineData("brano")]
     [InlineData("BRANO")]
-    [InlineData("  Brano  ")]
-    public async Task GetByNameAsync_IgnoresCaseAndSurroundingSpace(string name)
+    public async Task GetByNameAsync_IgnoresCase(string name)
     {
         await using var context = _database.CreateContext();
         var sut = new PlayerRepository(context);
@@ -97,6 +96,30 @@ public class PlayerRepositoryTests : IDisposable
         var sut = new PlayerRepository(context);
 
         Assert.Equal(3, (await sut.GetAllAsync()).Count);
+    }
+
+    [Fact]
+    public async Task ExistsAsync_AnswersWithoutLoadingThePlayer()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new PlayerRepository(context);
+
+        Assert.True(await sut.ExistsAsync(1));
+        Assert.False(await sut.ExistsAsync(999));
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task GetAvatarsAsync_ReturnsOneAvatarPerPlayer()
+    {
+        await using var context = _database.CreateContext();
+
+        var sut = new PlayerRepository(context);
+        var players = await sut.GetAllAsync();
+
+        var avatars = await sut.GetAvatarsAsync();
+
+        Assert.Equal(players.Select(p => p.Avatar).Order(), avatars.Order());
     }
 
     public void Dispose() => _database.Dispose();
