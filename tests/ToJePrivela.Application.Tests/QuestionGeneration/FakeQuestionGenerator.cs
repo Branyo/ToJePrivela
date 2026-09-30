@@ -35,7 +35,7 @@ public sealed class FakeQuestionGenerator : IQuestionGenerator
     public IReadOnlyList<GeneratedQuestion> Fresh(int count) =>
         Enumerable.Range(0, count)
             .Select(_ => Interlocked.Increment(ref _nextNumber))
-            .Select(number => new GeneratedQuestion($"Generated question number {number}?", number.ToString()))
+            .Select(number => new GeneratedQuestion($"Generated question number {number}?", (number + 1000).ToString()))
             .ToList();
 
     public Task<IReadOnlyList<string>> GenerateSubtopicsAsync(string category, int count, CancellationToken cancellationToken = default)

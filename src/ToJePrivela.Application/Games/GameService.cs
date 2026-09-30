@@ -84,7 +84,17 @@ public sealed class GameService : IGameService
             return Result.Failure(GameErrors.NotFound(id));
         }
 
-        game.Reschedule(request.Started, request.Finished);
+        if (request.Started is not DateTime started)
+        {
+            return Result.Failure(GameErrors.StartRequired(id));
+        }
+
+        if (game.IsFinished && request.Finished is null)
+        {
+            return Result.Failure(GameErrors.CannotReopen(id));
+        }
+
+        game.Reschedule(started, request.Finished);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
@@ -112,14 +122,11 @@ public sealed class GameService : IGameService
             return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, request.PlayerId));
         }
 
-        if (game.BadPointsMode == BadPointsMode.Question && request.BadPoints is not null)
+        if (game.RequiresChosenBadPoints != request.BadPoints.HasValue)
         {
-            return Result.Failure<GameDetailsDto>(GameErrors.BadPointsNotAllowed(id));
-        }
-
-        if (game.BadPointsMode == BadPointsMode.Chooser && request.BadPoints is null)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.BadPointsRequired(id));
+            return Result.Failure<GameDetailsDto>(game.RequiresChosenBadPoints
+                ? GameErrors.BadPointsRequired(id)
+                : GameErrors.BadPointsNotAllowed(id));
         }
 
         var question = await _questions.GetByIdAsync(request.QuestionId, cancellationToken);
@@ -129,9 +136,7 @@ public sealed class GameService : IGameService
             return Result.Failure<GameDetailsDto>(GameErrors.UnknownQuestion(request.QuestionId));
         }
 
-        var badPoints = request.BadPoints ?? question.BadPoints;
-
-        game.AwardBadCard(request.PlayerId, badPoints, _timeProvider.GetUtcNow().UtcDateTime);
+        game.AwardBadCard(request.PlayerId, question, request.BadPoints, _timeProvider.GetUtcNow().UtcDateTime);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success(GameMapper.ToDetailsDto(game));

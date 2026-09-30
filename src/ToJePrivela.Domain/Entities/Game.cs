@@ -61,6 +61,12 @@ public class Game
 
     public bool HasPlayer(int playerId) => _gamePlayers.Any(gp => gp.PlayerId == playerId);
 
+    /// <summary>
+    /// Whether a bad card needs the bad points the round's starting player chose: required in a
+    /// <see cref="BadPointsMode.Chooser"/> game, not allowed in a <see cref="BadPointsMode.Question"/> one.
+    /// </summary>
+    public bool RequiresChosenBadPoints => BadPointsMode == BadPointsMode.Chooser;
+
     public void Finish(DateTime finishedAt)
     {
         if (IsFinished)
@@ -77,14 +83,17 @@ public class Game
     }
 
     /// <summary>
-    /// Gives the player a bad card worth <paramref name="badPoints"/>; the game finishes when that
-    /// player reaches <see cref="BadCardLimit"/> cards.
+    /// Gives the player a bad card for <paramref name="question"/>, worth what <see cref="BadPointsMode"/>
+    /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game.
+    /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards.
     /// </summary>
-    public GamePlayer AwardBadCard(int playerId, int badPoints, DateTime awardedAt)
+    public GamePlayer AwardBadCard(int playerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {
+        ArgumentNullException.ThrowIfNull(question);
+
         var gamePlayer = RunningGamePlayer(playerId);
 
-        gamePlayer.AddBadCard(badPoints);
+        gamePlayer.AddBadCard(BadCardWorth(question, chosenBadPoints));
 
         if (gamePlayer.BadCards >= BadCardLimit)
         {
@@ -117,10 +126,18 @@ public class Game
         return gamePlayer;
     }
 
-    /// <summary>Overwrites the schedule; used by the update endpoint.</summary>
-    public void Reschedule(DateTime? started, DateTime? finished)
+    /// <summary>
+    /// Corrects when the game started and finished. A running game may be given its end here, but a
+    /// finished game can never be reopened: it may have ended because a player reached the limit.
+    /// </summary>
+    public void Reschedule(DateTime started, DateTime? finished)
     {
-        if (started is not null && finished is not null && finished < started)
+        if (IsFinished && finished is null)
+        {
+            throw new DomainException("A finished game cannot be reopened.");
+        }
+
+        if (finished < started)
         {
             throw new DomainException("Game cannot be finished before it started.");
         }
@@ -128,6 +145,17 @@ public class Game
         Started = started;
         Finished = finished;
     }
+
+    private int BadCardWorth(Question question, int? chosenBadPoints) =>
+        (RequiresChosenBadPoints, chosenBadPoints) switch
+        {
+            (true, int chosen) => chosen,
+            (true, null) => throw new DomainException(
+                "This game has its bad points chosen before each question, so the card needs them."),
+            (false, null) => question.BadPoints,
+            (false, _) => throw new DomainException(
+                "This game takes bad points from the question, so they cannot be chosen.")
+        };
 
     private GamePlayer RunningGamePlayer(int playerId)
     {
