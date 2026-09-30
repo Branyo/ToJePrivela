@@ -30,13 +30,13 @@ public sealed class GameService : IGameService
 
     public async Task<Result<IReadOnlyList<GameDto>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var games = await _games.GetAllWithDetailsAsync(cancellationToken);
+        var games = await _games.GetAllAsync(cancellationToken);
         return Result.Success(GameMapper.ToDtos(games));
     }
 
     public async Task<Result<GameDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(id, cancellationToken);
 
         return game is null
             ? Result.Failure<GameDto>(GameErrors.NotFound(id))
@@ -45,7 +45,7 @@ public sealed class GameService : IGameService
 
     public async Task<Result<GameDetailsDto>> GetDetailsAsync(int id, CancellationToken cancellationToken = default)
     {
-        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(id, cancellationToken);
 
         return game is null
             ? Result.Failure<GameDetailsDto>(GameErrors.NotFound(id))
@@ -94,9 +94,9 @@ public sealed class GameService : IGameService
             return Result.Failure(GameErrors.StartRequired(id));
         }
 
-        if (game.IsFinished && request.Finished is null)
+        if (game.CheckReschedule(started, request.Finished) is { } violation)
         {
-            return Result.Failure(GameErrors.CannotReopen(id));
+            return Result.Failure(GameErrors.From(violation, id));
         }
 
         game.Reschedule(started, request.Finished);
@@ -115,28 +115,16 @@ public sealed class GameService : IGameService
             return Result.Failure<GameDetailsDto>(invalid);
         }
 
-        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(id, cancellationToken);
 
         if (game is null)
         {
             return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
         }
 
-        if (game.IsFinished)
+        if (game.CheckAwardBadCard(request.PlayerId, request.BadPoints) is { } violation)
         {
-            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
-        }
-
-        if (!game.HasPlayer(request.PlayerId))
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, request.PlayerId));
-        }
-
-        if (game.RequiresChosenBadPoints != request.BadPoints.HasValue)
-        {
-            return Result.Failure<GameDetailsDto>(game.RequiresChosenBadPoints
-                ? GameErrors.BadPointsRequired(id)
-                : GameErrors.BadPointsNotAllowed(id));
+            return Result.Failure<GameDetailsDto>(GameErrors.From(violation, id, request.PlayerId));
         }
 
         var question = await _questions.GetByIdAsync(request.QuestionId, cancellationToken);
@@ -155,89 +143,32 @@ public sealed class GameService : IGameService
     public async Task<Result<GameDetailsDto>> AwardDoubleAsync(
         int id,
         AwardDoubleRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (RequestValidator.Validate(request) is { } invalid)
-        {
-            return Result.Failure<GameDetailsDto>(invalid);
-        }
+        CancellationToken cancellationToken = default) =>
+        RequestValidator.Validate(request) is { } invalid
+            ? Result.Failure<GameDetailsDto>(invalid)
+            : await ChangeAsync(
+                id,
+                game => game.CheckAwardDouble(request.PlayerId),
+                game => game.AwardDouble(request.PlayerId),
+                request.PlayerId,
+                cancellationToken);
 
-        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
-
-        if (game is null)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
-        }
-
-        if (game.IsFinished)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
-        }
-
-        if (!game.HasPlayer(request.PlayerId))
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, request.PlayerId));
-        }
-
-        game.AwardDouble(request.PlayerId);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success(GameMapper.ToDetailsDto(game));
-    }
-
-    public async Task<Result<GameDetailsDto>> RemoveDoubleAsync(
+    public Task<Result<GameDetailsDto>> RemoveDoubleAsync(
         int id,
         int playerId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        ChangeAsync(
+            id,
+            game => game.CheckRemoveDouble(playerId),
+            game => game.RemoveDouble(playerId),
+            playerId,
+            cancellationToken);
+
+    public Task<Result<GameDetailsDto>> FinishAsync(int id, CancellationToken cancellationToken = default)
     {
-        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        if (game is null)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
-        }
-
-        if (game.IsFinished)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
-        }
-
-        var gamePlayer = game.GamePlayers.FirstOrDefault(gp => gp.PlayerId == playerId);
-
-        if (gamePlayer is null)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.PlayerNotInGame(id, playerId));
-        }
-
-        if (gamePlayer.Doubles == 0)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.NoDoubleToRemove(id, playerId));
-        }
-
-        game.RemoveDouble(playerId);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success(GameMapper.ToDetailsDto(game));
-    }
-
-    public async Task<Result<GameDetailsDto>> FinishAsync(int id, CancellationToken cancellationToken = default)
-    {
-        var game = await _games.GetWithDetailsAsync(id, cancellationToken);
-
-        if (game is null)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
-        }
-
-        if (game.IsFinished)
-        {
-            return Result.Failure<GameDetailsDto>(GameErrors.AlreadyFinished(id));
-        }
-
-        game.Finish(_timeProvider.GetUtcNow().UtcDateTime);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success(GameMapper.ToDetailsDto(game));
+        return ChangeAsync(id, game => game.CheckFinish(now), game => game.Finish(now), playerId: null, cancellationToken);
     }
 
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -253,5 +184,34 @@ public sealed class GameService : IGameService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Loads the game, lets the domain check the rule, applies the change and saves: the shape every
+    /// in-game action shares, so the rule itself lives only in <see cref="Game"/>.
+    /// </summary>
+    private async Task<Result<GameDetailsDto>> ChangeAsync(
+        int id,
+        Func<Game, GameRuleViolation?> check,
+        Action<Game> change,
+        int? playerId,
+        CancellationToken cancellationToken)
+    {
+        var game = await _games.GetByIdAsync(id, cancellationToken);
+
+        if (game is null)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.NotFound(id));
+        }
+
+        if (check(game) is { } violation)
+        {
+            return Result.Failure<GameDetailsDto>(GameErrors.From(violation, id, playerId));
+        }
+
+        change(game);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(GameMapper.ToDetailsDto(game));
     }
 }

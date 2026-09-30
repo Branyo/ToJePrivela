@@ -1,4 +1,5 @@
 using ToJePrivela.Application.Common;
+using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Games;
 
@@ -34,6 +35,22 @@ public static class GameErrors
 
     public static Error CannotReopen(int gameId) =>
         Error.Conflict("Game.CannotReopen", $"Game {gameId} is finished and cannot be reopened.");
+
+    public static Error EndsBeforeStart(int gameId) =>
+        Error.Validation("Game.EndsBeforeStart", $"Game {gameId} cannot be finished before it started.");
+
+    /// <summary>The error for a rule the domain reported; the rule itself lives in <see cref="Game"/>.</summary>
+    public static Error From(GameRuleViolation violation, int gameId, int? playerId = null) => violation switch
+    {
+        GameRuleViolation.AlreadyFinished => AlreadyFinished(gameId),
+        GameRuleViolation.PlayerNotInGame => PlayerNotInGame(gameId, playerId ?? 0),
+        GameRuleViolation.NoDoubleToRemove => NoDoubleToRemove(gameId, playerId ?? 0),
+        GameRuleViolation.ChosenBadPointsRequired => BadPointsRequired(gameId),
+        GameRuleViolation.ChosenBadPointsNotAllowed => BadPointsNotAllowed(gameId),
+        GameRuleViolation.CannotReopen => CannotReopen(gameId),
+        GameRuleViolation.EndsBeforeStart => EndsBeforeStart(gameId),
+        _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
+    };
 
     public static Error UnknownQuestion(int questionId) =>
         Error.Validation("Game.UnknownQuestion", $"Question with id {questionId} does not exist.");
