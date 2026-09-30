@@ -96,7 +96,26 @@
       </section>
 
       <section class="panel">
-        <h2 class="panel__title"><span class="step-number">3</span> {{ 'setup.categories.title' | translate }}</h2>
+        <h2 class="panel__title"><span class="step-number">3</span> {{ 'setup.badPoints.title' | translate }}</h2>
+        <div class="modes" role="radiogroup" [attr.aria-label]="'setup.badPoints.title' | translate">
+          @for (mode of badPointsModes; track mode) {
+            <button
+              type="button"
+              role="radio"
+              class="mode"
+              [class.mode--on]="badPointsMode() === mode"
+              [attr.aria-checked]="badPointsMode() === mode"
+              (click)="badPointsMode.set(mode)"
+            >
+              <strong class="mode__name">{{ 'setup.badPoints.' + mode + '.name' | translate }}</strong>
+              <span class="mode__text muted">{{ 'setup.badPoints.' + mode + '.text' | translate }}</span>
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel__title"><span class="step-number">4</span> {{ 'setup.categories.title' | translate }}</h2>
         @if (categories().length === 0) {
           <p class="muted">{{ 'setup.categories.empty' | translate }}</p>
         } @else {

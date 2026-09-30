@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GamesApi } from '../../core/api/games-api';
 import {
+  BadPointsMode,
   DEFAULT_BAD_CARD_LIMIT,
   MAX_BAD_CARD_LIMIT,
   MAX_PLAYERS,
@@ -50,6 +51,8 @@ export class Setup {
   protected readonly selectedIds = signal<number[]>([]);
   protected readonly newName = signal('');
   protected readonly badCardLimit = signal(DEFAULT_BAD_CARD_LIMIT);
+  protected readonly badPointsMode = signal<BadPointsMode>('Question');
+  protected readonly badPointsModes: readonly BadPointsMode[] = ['Question', 'Chooser'];
 
   protected readonly categories = signal<QuestionCategory[]>([]);
   protected readonly questionCounts = signal<ReadonlyMap<number, number>>(new Map());
@@ -228,7 +231,7 @@ export class Setup {
 
     this.starting.set(true);
     this.error.set(null);
-    this.gamesApi.create(this.selectedIds(), this.badCardLimit()).subscribe({
+    this.gamesApi.create(this.selectedIds(), this.badCardLimit(), this.badPointsMode()).subscribe({
       next: (game) => {
         const categories = this.selectedCategoryIds();
         void this.router.navigate(['/games', game.id], {

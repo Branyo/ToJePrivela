@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { MAX_BAD_POINTS, MIN_BAD_POINTS } from '../../core/api/models';
 import { DEFAULT_LANGUAGE, LanguageService, localeOf } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { BadCard } from '../../shared/bad-card';
@@ -63,6 +64,7 @@ export class Play implements OnInit, OnDestroy {
   protected readonly doubledPlayerId = signal<number | null>(null);
   protected readonly confirmingEnd = signal(false);
   protected readonly formatAnswer = formatAnswer;
+  protected readonly badPointOptions = Array.from({ length: MAX_BAD_POINTS - MIN_BAD_POINTS + 1 }, (_, i) => MIN_BAD_POINTS + i);
 
   private timers: ReturnType<typeof setTimeout>[] = [];
 
@@ -89,7 +91,7 @@ export class Play implements OnInit, OnDestroy {
   protected award(playerId: number, seat: number): void {
     const from = this.cardSource()?.nativeElement as HTMLElement | undefined;
     const to = this.seatButtons()[seat]?.nativeElement;
-    const points = this.store.question()?.badPoints ?? 0;
+    const points = this.store.badPoints();
 
     const landing = from && to ? flyCard(from, to, points) : Promise.resolve();
     void landing.then(() => {

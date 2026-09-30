@@ -55,7 +55,7 @@ export class Summary implements OnInit {
     }
 
     this.rematching.set(true);
-    this.gamesApi.create(game.players.map((p) => p.playerId), game.badCardLimit).subscribe({
+    this.gamesApi.create(game.players.map((p) => p.playerId), game.badCardLimit, game.badPointsMode).subscribe({
       next: (created) => {
         void this.router.navigate(['/games', created.id], {
           queryParams: this.categories() ? { categories: this.categories() } : {},

@@ -7,11 +7,18 @@ export interface Player {
   avatar: string;
 }
 
+/**
+ * Where a game's bad cards take their worth from: `Question` uses the question's stored bad points, `Chooser` lets the
+ * round's starting player set them (1–5) after seeing only the category.
+ */
+export type BadPointsMode = 'Question' | 'Chooser';
+
 export interface Game {
   id: number;
   started: string | null;
   finished: string | null;
   badCardLimit: number;
+  badPointsMode: BadPointsMode;
   playerIds: number[];
 }
 
@@ -32,6 +39,7 @@ export interface GameDetails {
   started: string | null;
   finished: string | null;
   badCardLimit: number;
+  badPointsMode: BadPointsMode;
   players: GamePlayer[];
 }
 
@@ -69,3 +77,5 @@ export const MAX_PLAYERS = 12;
 export const MIN_BAD_CARD_LIMIT = 2;
 export const MAX_BAD_CARD_LIMIT = 10;
 export const DEFAULT_BAD_CARD_LIMIT = 3;
+export const MIN_BAD_POINTS = 1;
+export const MAX_BAD_POINTS = 5;

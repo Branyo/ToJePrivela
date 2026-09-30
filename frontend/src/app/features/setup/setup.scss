@@ -185,3 +185,40 @@
     margin: 0;
   }
 }
+
+.modes {
+  display: grid;
+  gap: 10px;
+}
+
+.mode {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s var(--bounce), background 0.15s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.mode--on {
+  background: var(--grape);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+
+  .mode__text {
+    color: rgb(255 255 255 / 0.85);
+  }
+}
+
+.mode__text {
+  font-size: 0.9rem;
+}

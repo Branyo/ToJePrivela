@@ -77,6 +77,17 @@
         "other": "bad cards for one player end the game"
       }
     },
+    "badPoints": {
+      "title": "Donkeys per card",
+      "Question": {
+        "name": "🃏 From the question",
+        "text": "Every question comes with its own 1–5 donkeys."
+      },
+      "Chooser": {
+        "name": "🎯 Starting player decides",
+        "text": "Before each question only its category is shown, and the starting player sets its worth, 1–5 donkeys."
+      }
+    },
     "categories": {
       "title": "Questions from",
       "empty": "No categories yet. Create the first one below.",
@@ -151,6 +162,11 @@
       "text": "Results are counted as they stand, and the player with the most donkeys after doubles loses.",
       "yes": "Yes, show results",
       "no": "Keep playing"
+    },
+    "choose": {
+      "title": "Starting player: how many donkeys is this question worth?",
+      "group": "Bad points for this question",
+      "hint": "Only the category is known so far. Tap a card and the question appears."
     }
   },
   "summary": {

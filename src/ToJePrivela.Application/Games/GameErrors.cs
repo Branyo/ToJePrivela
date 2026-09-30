@@ -19,6 +19,16 @@ public static class GameErrors
     public static Error NoDoubleToRemove(int gameId, int playerId) =>
         Error.Conflict("Game.NoDoubleToRemove", $"Player {playerId} has no double to take back in game {gameId}.");
 
+    public static Error BadPointsNotAllowed(int gameId) =>
+        Error.Validation(
+            "Game.BadPointsNotAllowed",
+            $"Game {gameId} takes bad points from the question, so they cannot be sent with the card.");
+
+    public static Error BadPointsRequired(int gameId) =>
+        Error.Validation(
+            "Game.BadPointsRequired",
+            $"Game {gameId} has its bad points set before each question, so the card needs them.");
+
     public static Error UnknownQuestion(int questionId) =>
         Error.Validation("Game.UnknownQuestion", $"Question with id {questionId} does not exist.");
 }
