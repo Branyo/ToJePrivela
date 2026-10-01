@@ -110,6 +110,21 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_RejectsAStartLaterThanNow()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime.AddHours(-2));
+        _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Started = Now.UtcDateTime.AddSeconds(1) });
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.StartsInFuture", result.Error.Code);
+        Assert.Equal(Now.UtcDateTime.AddHours(-2), game.Started);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UpdateAsync_RejectsAMissingRequest()
     {
         var result = await _sut.UpdateAsync(1, null!);

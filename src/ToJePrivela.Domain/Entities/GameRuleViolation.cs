@@ -12,7 +12,8 @@ public enum GameRuleViolation
     ChosenBadPointsRequired,
     ChosenBadPointsNotAllowed,
     CannotReopen,
-    EndsBeforeStart
+    EndsBeforeStart,
+    StartsInFuture
 }
 
 internal static class GameRuleViolationMessages
@@ -28,6 +29,7 @@ internal static class GameRuleViolationMessages
             "This game takes bad points from the question, so they cannot be chosen.",
         GameRuleViolation.CannotReopen => "A finished game cannot be reopened.",
         GameRuleViolation.EndsBeforeStart => "Game cannot be finished before it started.",
+        GameRuleViolation.StartsInFuture => "A game cannot start later than now.",
         _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
     };
 }
