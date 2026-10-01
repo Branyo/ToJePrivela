@@ -19,7 +19,7 @@ public class GameForgetPlayerTests
         Assert.True(game.IsCancelled);
         Assert.Equal(DeletedAt, game.Finished);
         Assert.Equal(GameRuleViolation.AlreadyFinished, game.CheckAwardDouble(1));
-        Assert.Equal(GameRuleViolation.CannotReopen, game.CheckReschedule(Start, null));
+        Assert.Equal(GameRuleViolation.AlreadyFinished, game.CheckFinish(DeletedAt));
     }
 
     [Fact]
