@@ -3,29 +3,20 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GamesApi } from '../../core/api/games-api';
-import {
-  BadPointsMode,
-  DEFAULT_BAD_CARD_LIMIT,
-  MAX_BAD_CARD_LIMIT,
-  MAX_PLAYERS,
-  MIN_BAD_CARD_LIMIT,
-  MIN_PLAYERS,
-  Player,
-  QuestionCategory,
-} from '../../core/api/models';
+import { BadPointsMode, Limit, Player, QuestionCategory } from '../../core/api/models';
 import { PlayersApi } from '../../core/api/players-api';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { QuestionsApi } from '../../core/api/questions-api';
+import { badPointsParams } from '../../core/rules/bad-points-params';
+import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { PlayerAvatar } from '../../shared/player-avatar';
 
-const NAME_MIN = 2;
-const NAME_MAX = 50;
-const CATEGORY_NAME_MIN = 2;
-const CATEGORY_NAME_MAX = 32;
-const QUESTIONS_MIN = 1;
-const QUESTIONS_MAX = 200;
+/** Without the backend's rules nothing is allowed; the screen's own requests report the outage. */
+const NOTHING: Limit = { min: 0, max: 0 };
+/** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
+const GENERATOR_MIN_QUESTIONS = 1;
 
 @Component({
   selector: 'app-setup',
@@ -41,16 +32,22 @@ export class Setup {
   private readonly questionsApi = inject(QuestionsApi);
   private readonly router = inject(Router);
   protected readonly i18n = inject(LanguageService);
+  private readonly rules = inject(GameRulesStore).rules;
 
-  protected readonly minPlayers = MIN_PLAYERS;
-  protected readonly maxPlayers = MAX_PLAYERS;
-  protected readonly minLimit = MIN_BAD_CARD_LIMIT;
-  protected readonly maxLimit = MAX_BAD_CARD_LIMIT;
+  protected readonly playerLimit = computed(() => this.rules()?.players ?? NOTHING);
+  protected readonly cardLimit = computed(() => this.rules()?.badCardLimit ?? NOTHING);
+  protected readonly playerNameLimit = computed(() => this.rules()?.playerName ?? NOTHING);
+  protected readonly categoryNameLimit = computed(() => this.rules()?.categoryName ?? NOTHING);
+  protected readonly badPoints = computed(() => badPointsParams(this.rules()));
+  protected readonly questionCountLimit = computed<Limit>(() => ({
+    min: GENERATOR_MIN_QUESTIONS,
+    max: this.rules()?.maxAiQuestionCount ?? 0,
+  }));
 
   protected readonly players = signal<Player[]>([]);
   protected readonly selectedIds = signal<number[]>([]);
   protected readonly newName = signal('');
-  protected readonly badCardLimit = signal(DEFAULT_BAD_CARD_LIMIT);
+  protected readonly badCardLimit = signal(this.rules()?.defaultBadCardLimit ?? 0);
   protected readonly badPointsMode = signal<BadPointsMode>('Question');
   protected readonly badPointsModes: readonly BadPointsMode[] = ['Question', 'Chooser'];
 
@@ -86,7 +83,7 @@ export class Setup {
 
   protected readonly limitCards = computed(() => Array.from({ length: this.badCardLimit() }));
 
-  protected readonly isFull = computed(() => this.selectedIds().length >= MAX_PLAYERS);
+  protected readonly isFull = computed(() => this.selectedIds().length >= this.playerLimit().max);
 
   /** Questions the chosen categories hold; all categories count when none is chosen. */
   protected readonly availableQuestions = computed(() => {
@@ -105,8 +102,9 @@ export class Setup {
 
   protected readonly startBlocker = computed<Message | null>(() => {
     const count = this.selectedIds().length;
-    if (count < MIN_PLAYERS) {
-      const missing = MIN_PLAYERS - count;
+    const min = this.playerLimit().min;
+    if (count < min) {
+      const missing = min - count;
       return { key: this.i18n.pluralKey('setup.errors.missingPlayers', missing), params: { count: missing } };
     }
     if (this.availableQuestions() === 0) {
@@ -122,12 +120,13 @@ export class Setup {
 
   protected addPlayer(): void {
     const name = this.newName().trim();
-    if (name.length < NAME_MIN || name.length > NAME_MAX) {
-      this.error.set({ key: 'setup.errors.nameLength', params: { min: NAME_MIN, max: NAME_MAX } });
+    const { min, max } = this.playerNameLimit();
+    if (name.length < min || name.length > max) {
+      this.error.set({ key: 'setup.errors.nameLength', params: { min, max } });
       return;
     }
     if (this.isFull()) {
-      this.error.set({ key: 'setup.errors.tableFull', params: { max: MAX_PLAYERS } });
+      this.error.set({ key: 'setup.errors.tableFull', params: { max: this.playerLimit().max } });
       return;
     }
 
@@ -176,7 +175,8 @@ export class Setup {
   }
 
   protected changeLimit(delta: number): void {
-    this.badCardLimit.update((limit) => Math.min(MAX_BAD_CARD_LIMIT, Math.max(MIN_BAD_CARD_LIMIT, limit + delta)));
+    const { min, max } = this.cardLimit();
+    this.badCardLimit.update((limit) => Math.min(max, Math.max(min, limit + delta)));
   }
 
   protected toggleCategory(id: number): void {
@@ -194,12 +194,14 @@ export class Setup {
   protected createCategory(): void {
     const name = this.newCategoryName().trim();
     const count = this.newCategoryCount();
-    if (name.length < CATEGORY_NAME_MIN || name.length > CATEGORY_NAME_MAX) {
-      this.error.set({ key: 'setup.errors.categoryNameLength', params: { min: CATEGORY_NAME_MIN, max: CATEGORY_NAME_MAX } });
+    const nameLimit = this.categoryNameLimit();
+    if (name.length < nameLimit.min || name.length > nameLimit.max) {
+      this.error.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
       return;
     }
-    if (!Number.isInteger(count) || count < QUESTIONS_MIN || count > QUESTIONS_MAX) {
-      this.error.set({ key: 'setup.errors.questionCount', params: { min: QUESTIONS_MIN, max: QUESTIONS_MAX } });
+    const countLimit = this.questionCountLimit();
+    if (!Number.isInteger(count) || count < countLimit.min || count > countLimit.max) {
+      this.error.set({ key: 'setup.errors.questionCount', params: { min: countLimit.min, max: countLimit.max } });
       return;
     }
 

@@ -82,7 +82,7 @@
             @switch (store.phase()) {
               @case ('choosing') {
                 <div class="picks" role="group" [attr.aria-label]="'play.choose.group' | translate">
-                  @for (points of badPointOptions; track points) {
+                  @for (points of badPointOptions(); track points) {
                     <button
                       type="button"
                       class="pick"

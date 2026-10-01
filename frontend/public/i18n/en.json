@@ -29,7 +29,7 @@
       "title": "How to play",
       "question": {
         "title": "A question pops up",
-        "text": "It always has a number for an answer, and a card with 1–5 donkeys."
+        "text": "It always has a number for an answer, and a card with {{min}}–{{max}} donkeys."
       },
       "estimate": {
         "title": "Raise the estimate",
@@ -81,11 +81,11 @@
       "title": "Donkeys per card",
       "Question": {
         "name": "🃏 From the question",
-        "text": "Every question comes with its own 1–5 donkeys."
+        "text": "Every question comes with its own {{min}}–{{max}} donkeys."
       },
       "Chooser": {
         "name": "🎯 Starting player decides",
-        "text": "Before each question only its category is shown, and the starting player sets its worth, 1–5 donkeys."
+        "text": "Before each question only its category is shown, and the starting player sets its worth, {{min}}–{{max}} donkeys."
       }
     },
     "categories": {
