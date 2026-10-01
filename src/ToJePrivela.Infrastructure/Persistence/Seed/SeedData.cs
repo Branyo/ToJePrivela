@@ -14,8 +14,8 @@ public static class SeedData
             new { Id = 3, Name = "Duri", NameKey = "duri", Avatar = "🐼" });
 
         modelBuilder.Entity<QuestionCategory>().HasData(
-            new { Id = 1, Name = "Cars", NameKey = "cars", AddedByPlayerId = (int?)1 },
-            new { Id = 2, Name = "Sport", NameKey = "sport", AddedByPlayerId = (int?)1 },
-            new { Id = 3, Name = "History", NameKey = "history", AddedByPlayerId = (int?)1 });
+            new { Id = 1, Name = "Cars", NameKey = "cars" },
+            new { Id = 2, Name = "Sport", NameKey = "sport" },
+            new { Id = 3, Name = "History", NameKey = "history" });
     }
 }

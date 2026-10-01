@@ -17,11 +17,10 @@ public class QuestionCategory
         NameKey = string.Empty;
     }
 
-    public QuestionCategory(string name, int? addedByPlayerId = null)
+    public QuestionCategory(string name)
     {
         Name = Guard.AgainstInvalidLength(name, nameof(name), NameMinLength, NameMaxLength);
         NameKey = NameKeys.Of(Name);
-        AddedByPlayerId = addedByPlayerId;
     }
 
     public int Id { get; private set; }
@@ -30,8 +29,4 @@ public class QuestionCategory
 
     /// <summary><see cref="Name"/> as <see cref="NameKeys.Of"/> compares it; unique among all categories.</summary>
     public string NameKey { get; private set; }
-
-    public int? AddedByPlayerId { get; private set; }
-
-    public Player? AddedByPlayer { get; private set; }
 }

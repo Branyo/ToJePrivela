@@ -154,5 +154,26 @@ public class PlayerRepositoryTests : IDisposable
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }
 
+    [Fact]
+    public async Task Remove_KeepsThePlayersSeatsAsUnknownPlayers()
+    {
+        await using (var context = _database.CreateContext())
+        {
+            context.Games.Add(new Game([1, 2], new DateTime(2026, 9, 22, 18, 0, 0, DateTimeKind.Utc)));
+            await context.SaveChangesAsync();
+        }
+
+        await using (var context = _database.CreateContext())
+        {
+            var sut = new PlayerRepository(context);
+            sut.Remove((await sut.GetByIdAsync(2))!);
+            await context.SaveChangesAsync();
+        }
+
+        await using var verification = _database.CreateContext();
+        var seats = await verification.GamePlayers.OrderBy(gp => gp.Id).ToListAsync();
+        Assert.Equal([(int?)1, null], seats.Select(gp => gp.PlayerId));
+    }
+
     public void Dispose() => _database.Dispose();
 }

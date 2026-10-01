@@ -18,8 +18,7 @@ public static class TestEntities
         QuestionSource source = QuestionSource.Manual) =>
         WithId(new Question(text, answer, category, badPoints, source, CreatedAt), id);
 
-    public static QuestionCategory Category(int id, string name, int? addedByPlayerId = null) =>
-        WithId(new QuestionCategory(name, addedByPlayerId), id);
+    public static QuestionCategory Category(int id, string name) => WithId(new QuestionCategory(name), id);
 
     public static Game Game(
         int id,

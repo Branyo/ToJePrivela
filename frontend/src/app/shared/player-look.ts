@@ -11,6 +11,9 @@ const COLORS = [
   '#00bbf9', '#fee440', '#80ed99', '#ffafcc', '#c77dff', '#f4a261',
 ];
 
+/** Shown for a player deleted since; not one of the animals a player can be given. */
+export const UNKNOWN_PLAYER_AVATAR = '👤';
+
 export interface PlayerLook {
   animal: string;
   color: string;

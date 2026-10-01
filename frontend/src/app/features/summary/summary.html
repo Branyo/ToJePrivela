@@ -1,4 +1,4 @@
-@if (game()?.finished) {
+@if (game()?.finished && !game()?.cancelled) {
   <app-confetti />
 }
 
@@ -9,7 +9,7 @@
 
   @if (game(); as g) {
     <header class="head">
-      <h1 class="head__title">{{ (g.finished ? 'summary.finished' : 'summary.running') | translate }}</h1>
+      <h1 class="head__title">{{ (g.cancelled ? 'summary.cancelled' : g.finished ? 'summary.finished' : 'summary.running') | translate }}</h1>
       <p class="muted">
         {{ 'common.gameNumber' | translate: { id: g.id } }} ·
         {{ 'summary.handedOut' | translate: { count: totalCards() } }}
@@ -17,13 +17,17 @@
     </header>
 
     <section class="spotlight panel">
-      @if (losers().length === 0) {
+      @if (g.cancelled) {
+        <span class="spotlight__emoji" aria-hidden="true">🚫</span>
+        <h2>{{ 'summary.cancelled' | translate }}</h2>
+        <p class="muted">{{ 'summary.cancelledText' | translate }}</p>
+      } @else if (losers().length === 0) {
         <span class="spotlight__emoji" aria-hidden="true">😇</span>
         <h2>{{ 'summary.nobody' | translate }}</h2>
         <p class="muted">{{ 'summary.wellBehaved' | translate }}</p>
       } @else {
         <div class="spotlight__avatars">
-          @for (loser of losers(); track loser.playerId) {
+          @for (loser of losers(); track $index) {
             <div class="spotlight__loser">
               <span class="crown" aria-hidden="true">🫏</span>
               <app-player-avatar [avatar]="loser.avatar" />
@@ -32,7 +36,7 @@
         </div>
         <h2 class="spotlight__title">
           @if (losers().length === 1) {
-            <span class="name">{{ losers()[0].name }}</span> {{ 'summary.bigDonkey' | translate }}
+            <span class="name">{{ losers()[0].name ?? ('common.unknownPlayer' | translate) }}</span> {{ 'summary.bigDonkey' | translate }}
           } @else {
             {{ 'summary.tie' | translate }}
             <span class="name">{{ loserNames() }}</span>
@@ -53,11 +57,13 @@
     <section class="panel">
       <h2 class="panel__title">{{ 'summary.board' | translate }}</h2>
       <ol class="board">
-        @for (player of ranking(); track player.playerId; let i = $index) {
+        @for (player of ranking(); track $index; let i = $index) {
           <li class="row" [class.row--loser]="player.isLoser" [style.animation-delay.ms]="i * 80">
             <span class="row__rank">{{ player.rank }}.</span>
             <app-player-avatar class="row__avatar" [avatar]="player.avatar" />
-            <span class="row__name">{{ player.name }}</span>
+            <span class="row__name" [class.row__name--unknown]="player.playerId === null">{{
+              player.name ?? ('common.unknownPlayer' | translate)
+            }}</span>
             <span class="row__bar" aria-hidden="true">
               <span class="row__fill" [style.width.%]="barWidth(player.finalBadPoints)"></span>
             </span>
@@ -71,9 +77,11 @@
 
     <div class="actions">
       @if (g.finished) {
-        <button type="button" class="btn btn--fun btn--big" [disabled]="rematching()" (click)="rematch()">
-          {{ 'summary.rematch' | translate }}
-        </button>
+        @if (canRematch()) {
+          <button type="button" class="btn btn--fun btn--big" [disabled]="rematching()" (click)="rematch()">
+            {{ 'summary.rematch' | translate }}
+          </button>
+        }
       } @else {
         <a class="btn btn--primary btn--big" [routerLink]="['/games', g.id]">{{ 'summary.back' | translate }}</a>
       }

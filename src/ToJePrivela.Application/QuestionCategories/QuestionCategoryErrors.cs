@@ -9,7 +9,4 @@ public static class QuestionCategoryErrors
 
     public static Error NameTaken(string name) =>
         Error.Conflict("QuestionCategory.NameTaken", $"Question category with name '{name}' already exists.");
-
-    public static Error UnknownPlayer(int playerId) =>
-        Error.Validation("QuestionCategory.UnknownPlayer", $"Player with id {playerId} was not found.");
 }

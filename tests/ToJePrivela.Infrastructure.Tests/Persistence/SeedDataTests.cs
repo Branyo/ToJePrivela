@@ -34,7 +34,6 @@ public class SeedDataTests : IDisposable
         var categories = await context.QuestionCategories.OrderBy(c => c.Id).ToListAsync();
 
         Assert.Equal(["Cars", "Sport", "History"], categories.Select(c => c.Name));
-        Assert.All(categories, category => Assert.Equal(1, category.AddedByPlayerId));
     }
 
     [Fact]

@@ -50,7 +50,7 @@ export class Home {
       .filter((game) => game.finished === null)
       .sort((a, b) => b.id - a.id)
       .slice(0, 5)
-      .map((game) => ({ game, names: game.playerIds.map((id) => names.get(id) ?? '?') }));
+      .map((game) => ({ game, names: game.playerIds.map((id) => (id === null ? undefined : names.get(id)) ?? '?') }));
   });
 
   constructor() {

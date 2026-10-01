@@ -16,6 +16,11 @@ public sealed class GameRepository : Repository<Game>, IGameRepository
     public override async Task<IReadOnlyList<Game>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await WithPlayers().ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Game>> GetByPlayerAsync(int playerId, CancellationToken cancellationToken = default) =>
+        await WithPlayers()
+            .Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId))
+            .ToListAsync(cancellationToken);
+
     private IQueryable<Game> WithPlayers() =>
         Set.Include(g => g.GamePlayers).ThenInclude(gp => gp.Player);
 }

@@ -19,13 +19,12 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task GetCategories_ReturnsTheSeededCategoriesWithTheirAuthor()
+    public async Task GetCategories_ReturnsTheSeededCategories()
     {
         var categories = await _client.GetFromJsonAsync<List<QuestionCategoryDto>>("/api/question-categories");
 
         var seeded = categories!.Where(category => category.Id <= 3).ToList();
         Assert.Equal(["Cars", "Sport", "History"], seeded.Select(category => category.Name));
-        Assert.All(seeded, category => Assert.Equal("Admin", category.AddedByPlayer?.Name));
     }
 
     [Fact]
@@ -33,7 +32,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     {
         var name = NewName();
 
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name, addedByPlayerId = 1, questionCount = 0 });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name, questionCount = 0 });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
@@ -99,16 +98,6 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
         var response = await _client.PostAsJsonAsync("/api/question-categories", new { name = "sport", questionCount = 0 });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task PostCategory_RejectsAnUnknownAuthor()
-    {
-        var response = await _client.PostAsJsonAsync(
-            "/api/question-categories",
-            new { name = NewName(), addedByPlayerId = 9999, questionCount = 0 });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

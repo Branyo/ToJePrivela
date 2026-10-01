@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { playerLook } from './player-look';
+import { UNKNOWN_PLAYER_AVATAR, playerLook } from './player-look';
 
 @Component({
   selector: 'app-player-avatar',
@@ -25,7 +25,7 @@ import { playerLook } from './player-look';
   },
 })
 export class PlayerAvatar {
-  /** The animal the server assigned to the player. */
-  readonly avatar = input.required<string>();
-  protected readonly look = computed(() => playerLook(this.avatar()));
+  /** The animal the server assigned to the player; `null` for a player deleted since. */
+  readonly avatar = input.required<string | null>();
+  protected readonly look = computed(() => playerLook(this.avatar() ?? UNKNOWN_PLAYER_AVATAR));
 }

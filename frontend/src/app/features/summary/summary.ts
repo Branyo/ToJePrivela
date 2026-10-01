@@ -32,7 +32,13 @@ export class Summary implements OnInit {
 
   protected readonly ranking = computed(() => rankPlayers(seatPlayers(this.game()?.players ?? []), this.i18n.locale()));
   protected readonly losers = computed(() => this.ranking().filter((player) => player.isLoser));
-  protected readonly loserNames = computed(() => this.losers().map((p) => p.name).join(` ${this.i18n.instant('common.and')} `));
+  protected readonly loserNames = computed(() =>
+    this.losers()
+      .map((p) => p.name ?? this.i18n.instant('common.unknownPlayer'))
+      .join(` ${this.i18n.instant('common.and')} `),
+  );
+  /** A rematch needs every player of this game; a deleted one cannot be seated again. */
+  protected readonly canRematch = computed(() => this.game()?.players.every((p) => p.playerId !== null) ?? false);
   protected readonly maxPoints = computed(() => Math.max(1, ...this.ranking().map((p) => p.finalBadPoints)));
   protected readonly totalCards = computed(() => this.ranking().reduce((sum, p) => sum + p.badCards, 0));
 
@@ -50,12 +56,13 @@ export class Summary implements OnInit {
 
   protected rematch(): void {
     const game = this.game();
-    if (!game || this.rematching()) {
+    if (!game || this.rematching() || !this.canRematch()) {
       return;
     }
 
     this.rematching.set(true);
-    this.gamesApi.create(game.players.map((p) => p.playerId), game.badCardLimit, game.badPointsMode).subscribe({
+    const playerIds = game.players.flatMap((p) => (p.playerId === null ? [] : [p.playerId]));
+    this.gamesApi.create(playerIds, game.badCardLimit, game.badPointsMode).subscribe({
       next: (created) => {
         void this.router.navigate(['/games', created.id], {
           queryParams: this.categories() ? { categories: this.categories() } : {},

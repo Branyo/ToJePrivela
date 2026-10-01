@@ -127,6 +127,11 @@
   font-weight: 600;
 }
 
+.row__name--unknown {
+  font-style: italic;
+  opacity: 0.7;
+}
+
 .row__bar {
   height: 16px;
   border: 2px solid var(--ink);
