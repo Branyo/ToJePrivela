@@ -160,6 +160,36 @@ public class Game
         Finished = finished;
     }
 
+    /// <summary>
+    /// Where every player stands, worst first: most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus
+    /// doubles), a tie broken by the number of bad cards. Whoever stands first loses, several players on a full
+    /// tie; nobody loses while nobody holds a card. Players who tie keep their seat order (player id).
+    /// </summary>
+    public IReadOnlyList<GameStanding> Standings()
+    {
+        var ordered = _gamePlayers
+            .OrderByDescending(gp => gp.FinalBadPoints)
+            .ThenByDescending(gp => gp.BadCards)
+            .ThenBy(gp => gp.PlayerId)
+            .ToList();
+
+        var anyCards = ordered.Any(gp => gp.BadCards > 0);
+        var standings = new List<GameStanding>(ordered.Count);
+
+        for (var index = 0; index < ordered.Count; index++)
+        {
+            var player = ordered[index];
+            var rank = index > 0 && SameStanding(ordered[index - 1], player) ? standings[index - 1].Rank : index + 1;
+
+            standings.Add(new GameStanding(player, rank, anyCards && SameStanding(ordered[0], player)));
+        }
+
+        return standings;
+    }
+
+    private static bool SameStanding(GamePlayer a, GamePlayer b) =>
+        a.FinalBadPoints == b.FinalBadPoints && a.BadCards == b.BadCards;
+
     private GameRuleViolation? CheckRunningPlayer(int playerId) =>
         IsFinished ? GameRuleViolation.AlreadyFinished
         : !HasPlayer(playerId) ? GameRuleViolation.PlayerNotInGame

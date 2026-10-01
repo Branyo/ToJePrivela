@@ -131,6 +131,8 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         var player = details.Players.Single(p => p.PlayerId == 2);
         Assert.Equal((1, 4), (player.BadCards, player.BadPoints));
         Assert.Null(details.Finished);
+        Assert.Equal((1, true), (player.Rank, player.IsLoser));
+        Assert.Equal((2, false), details.Players.Where(p => p.PlayerId != 2).Select(p => (p.Rank, p.IsLoser)).Single());
 
         var second = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
         Assert.NotNull((await second.Content.ReadFromJsonAsync<GameDetailsDto>())!.Finished);

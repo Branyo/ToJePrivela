@@ -32,6 +32,10 @@ export interface GamePlayer {
   doubles: number;
   /** `badPoints` minus one per double: this is what decides the loser. */
   finalBadPoints: number;
+  /** 1-based, decided by the server; players who stand equal share it. */
+  rank: number;
+  /** The server's verdict: most final bad points, ties broken by cards; several on a full tie, nobody without cards. */
+  isLoser: boolean;
 }
 
 export interface GameDetails {

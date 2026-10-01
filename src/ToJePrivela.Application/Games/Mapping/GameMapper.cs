@@ -15,20 +15,26 @@ public static class GameMapper
 
     public static IReadOnlyList<GameDto> ToDtos(IEnumerable<Game> games) => games.Select(ToDto).ToList();
 
+    /// <summary>Players stay in seat order (player id); each carries the rank the game gives them.</summary>
     public static GameDetailsDto ToDetailsDto(Game game) => new(
         game.Id,
         game.Started,
         game.Finished,
         game.BadCardLimit,
         game.BadPointsMode.ToString(),
-        game.GamePlayers
-            .Select(gp => new GamePlayerDto(
-                gp.PlayerId,
-                gp.Player?.Name ?? string.Empty,
-                gp.Player?.Avatar ?? string.Empty,
-                gp.BadPoints,
-                gp.BadCards,
-                gp.Doubles,
-                gp.FinalBadPoints))
+        game.Standings()
+            .OrderBy(standing => standing.Player.PlayerId)
+            .Select(ToDto)
             .ToList());
+
+    private static GamePlayerDto ToDto(GameStanding standing) => new(
+        standing.Player.PlayerId,
+        standing.Player.Player?.Name ?? string.Empty,
+        standing.Player.Player?.Avatar ?? string.Empty,
+        standing.Player.BadPoints,
+        standing.Player.BadCards,
+        standing.Player.Doubles,
+        standing.Player.FinalBadPoints,
+        standing.Rank,
+        standing.IsLoser);
 }
