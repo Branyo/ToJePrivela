@@ -19,6 +19,6 @@ public sealed class UpdateQuestionRequest
     public int CategoryId { get; init; }
 
     /// <summary>The current bad points are kept when left out.</summary>
-    [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between 1 and 5.")]
+    [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between {1} and {2}.")]
     public int? BadPoints { get; init; }
 }
