@@ -13,13 +13,13 @@ public static class RequestValidator
     {
         if (request is null)
         {
-            return Error.Validation("Request.Missing", "The request is required.");
+            return RequestErrors.Missing;
         }
 
         var results = new List<ValidationResult>();
 
         return Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true)
             ? null
-            : Error.Validation("Request.Invalid", string.Join(" ", results.Select(result => result.ErrorMessage)));
+            : RequestErrors.Invalid(results.Select(result => result.ErrorMessage ?? string.Empty));
     }
 }

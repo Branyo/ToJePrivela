@@ -110,6 +110,16 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_RejectsAMissingRequest()
+    {
+        var result = await _sut.UpdateAsync(1, null!);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Request.Missing", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UpdateAsync_RequiresTheStart()
     {
         _games.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));

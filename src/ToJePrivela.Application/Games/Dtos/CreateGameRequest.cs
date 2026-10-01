@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ToJePrivela.Application.Common.Validation;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Games.Dtos;
@@ -6,8 +7,7 @@ namespace ToJePrivela.Application.Games.Dtos;
 public sealed class CreateGameRequest
 {
     [Required]
-    [MinLength(Game.MinPlayers, ErrorMessage = "Game must have at least 2 players.")]
-    [MaxLength(Game.MaxPlayers, ErrorMessage = "Game can have maximum of 12 players.")]
+    [DistinctCount(Game.MinPlayers, Game.MaxPlayers, ErrorMessage = "A game needs from {1} to {2} different players.")]
     public IList<int> PlayerIds { get; init; } = [];
 
     /// <summary>Bad cards that end the game; <see cref="Game.DefaultBadCardLimit"/> when left out.</summary>

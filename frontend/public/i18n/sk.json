@@ -203,6 +203,9 @@
     "generic": "Niečo sa pokazilo. Skúste to znova.",
     "unreachable": "Herný server je nedostupný. Beží API?",
     "api": {
+      "Concurrency": {
+        "Conflict": "Medzitým to zmenil niekto iný. Načítajte stránku znova a skúste to ešte raz."
+      },
       "Game": {
         "NotFound": "Táto hra neexistuje.",
         "AlreadyFinished": "Táto hra sa už skončila.",

@@ -18,10 +18,9 @@ export function toProblem(error: unknown): Problem {
     return { status: 0, code: null, message: { key: 'errors.unreachable' } };
   }
 
-  const body = error.error as { detail?: string; title?: string; code?: string; errors?: Record<string, string[]> } | null;
-  const validation = body?.errors ? Object.values(body.errors).flat()[0] : undefined;
+  const body = error.error as { detail?: string; title?: string; code?: string } | null;
   const code = body?.code ?? null;
-  const text = body?.detail ?? validation ?? body?.title;
+  const text = body?.detail ?? body?.title;
 
   return {
     status: error.status,
