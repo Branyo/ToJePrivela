@@ -45,6 +45,19 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PostCategory_AnswersWithTheAuthor()
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/api/question-categories",
+            new { name = NewName(), addedByPlayerId = 2, questionCount = 0 });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<CreatedQuestionCategoryDto>();
+        Assert.Equal(2, created!.AddedByPlayer?.Id);
+        Assert.Equal("Brano", created.AddedByPlayer?.Name);
+    }
+
+    [Fact]
     public async Task PostCategory_StoresTheGeneratedQuestions()
     {
         var created = await CreateCategoryAsync(questionCount: 3);

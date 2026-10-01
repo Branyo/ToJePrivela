@@ -2,6 +2,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
+using ToJePrivela.Application.Players.Dtos;
 using ToJePrivela.Application.QuestionCategories;
 using ToJePrivela.Application.QuestionCategories.Dtos;
 using ToJePrivela.Application.QuestionGeneration;
@@ -75,12 +76,13 @@ public class QuestionCategoryServiceTests
     [Fact]
     public async Task CreateAsync_StoresTheCategoryWithItsGeneratedQuestionsInOneSave()
     {
-        _players.ExistsAsync(1, Arg.Any<CancellationToken>()).Returns(true);
+        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Player(1, "Admin"));
 
         var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport", AddedByPlayerId = 1, QuestionCount = 3 });
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Sport", result.Value.Name);
+        Assert.Equal(new PlayerDto(1, "Admin", "🦊"), result.Value.AddedByPlayer);
         Assert.Equal(new(3, 3, 0), result.Value.QuestionGeneration);
         await _categories.Received(1).AddAsync(Arg.Is<QuestionCategory>(c => c.Name == "Sport"), Arg.Any<CancellationToken>());
         await _questions.Received(1).AddRangeAsync(
@@ -141,7 +143,7 @@ public class QuestionCategoryServiceTests
     [Fact]
     public async Task CreateAsync_RejectsUnknownAuthorBeforeGenerating()
     {
-        _players.ExistsAsync(99, Arg.Any<CancellationToken>()).Returns(false);
+        _players.GetByIdAsync(99, Arg.Any<CancellationToken>()).Returns((Player?)null);
 
         var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport", AddedByPlayerId = 99, QuestionCount = 5 });
 
@@ -168,7 +170,7 @@ public class QuestionCategoryServiceTests
         var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport", QuestionCount = 0 });
 
         Assert.True(result.IsSuccess);
-        await _players.DidNotReceive().ExistsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await _players.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

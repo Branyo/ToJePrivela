@@ -61,12 +61,16 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
             return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(name));
         }
 
-        if (request.AddedByPlayerId is int playerId && !await _players.ExistsAsync(playerId, cancellationToken))
+        Player? addedBy = null;
+
+        if (request.AddedByPlayerId is int playerId
+            && (addedBy = await _players.GetByIdAsync(playerId, cancellationToken)) is null)
         {
             return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.UnknownPlayer(playerId));
         }
 
-        var category = QuestionCategoryMapper.ToEntity(request);
+        // The author is loaded, so the created category answers with it rather than with null.
+        var category = QuestionCategoryMapper.ToEntity(request, addedBy);
         var generation = await _questionGeneration.GenerateAsync(category, request.QuestionCount ?? 0, cancellationToken);
 
         if (generation.Failed)

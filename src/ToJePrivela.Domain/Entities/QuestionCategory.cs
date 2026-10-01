@@ -17,11 +17,13 @@ public class QuestionCategory
         NameKey = string.Empty;
     }
 
-    public QuestionCategory(string name, int? addedByPlayerId = null)
+    /// <param name="addedBy">The player who added the category, if any; kept as the loaded author too.</param>
+    public QuestionCategory(string name, Player? addedBy = null)
     {
         Name = Guard.AgainstInvalidLength(name, nameof(name), NameMinLength, NameMaxLength);
         NameKey = NameKeys.Of(Name);
-        AddedByPlayerId = addedByPlayerId;
+        AddedByPlayer = addedBy;
+        AddedByPlayerId = addedBy?.Id;
     }
 
     public int Id { get; private set; }
