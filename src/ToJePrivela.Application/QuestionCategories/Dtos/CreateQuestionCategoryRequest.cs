@@ -16,6 +16,6 @@ public sealed class CreateQuestionCategoryRequest
 
     /// <summary>AI questions generated together with the category; nullable so leaving it out is an error, not 0.</summary>
     [Required(ErrorMessage = "Question count is required; send 0 to create the category without questions.")]
-    [Range(0, QuestionGenerationOptions.MaxCount, ErrorMessage = "Question count should be between 0 and 200.")]
+    [Range(0, QuestionGenerationOptions.MaxCount, ErrorMessage = "Question count should be between {1} and {2}.")]
     public int? QuestionCount { get; init; }
 }

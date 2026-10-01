@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   OnDestroy,
   OnInit,
@@ -14,9 +15,9 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { MAX_BAD_POINTS, MIN_BAD_POINTS } from '../../core/api/models';
 import { DEFAULT_LANGUAGE, LanguageService, localeOf } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
+import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { BadCard } from '../../shared/bad-card';
 import { flyCard } from '../../shared/fly-card';
 import { PlayerAvatar } from '../../shared/player-avatar';
@@ -64,7 +65,12 @@ export class Play implements OnInit, OnDestroy {
   protected readonly doubledPlayerId = signal<number | null>(null);
   protected readonly confirmingEnd = signal(false);
   protected readonly formatAnswer = formatAnswer;
-  protected readonly badPointOptions = Array.from({ length: MAX_BAD_POINTS - MIN_BAD_POINTS + 1 }, (_, i) => MIN_BAD_POINTS + i);
+  private readonly rules = inject(GameRulesStore).rules;
+  /** Every worth the starting player may choose, from the backend's limits. */
+  protected readonly badPointOptions = computed(() => {
+    const limit = this.rules()?.badPoints;
+    return limit ? Array.from({ length: limit.max - limit.min + 1 }, (_, i) => limit.min + i) : [];
+  });
 
   private timers: ReturnType<typeof setTimeout>[] = [];
 

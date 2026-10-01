@@ -9,6 +9,7 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
 import { DEFAULT_LANGUAGE, LanguageService } from './core/i18n/language';
 import { TranslatedTitleStrategy } from './core/i18n/translated-title-strategy';
+import { GameRulesStore } from './core/rules/game-rules-store';
 
 // Date and number formats for every supported language; pipes pick one via `LanguageService.locale`.
 registerLocaleData(localeSk, 'sk-SK');
@@ -24,7 +25,7 @@ export const appConfig: ApplicationConfig = {
       fallbackLang: DEFAULT_LANGUAGE,
     }),
     { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
-    // The first screen renders only once its translations are there.
-    provideAppInitializer(() => inject(LanguageService).init()),
+    // The first screen renders only once its translations and the backend's limits are there.
+    provideAppInitializer(() => Promise.all([inject(LanguageService).init(), inject(GameRulesStore).load()])),
   ],
 };

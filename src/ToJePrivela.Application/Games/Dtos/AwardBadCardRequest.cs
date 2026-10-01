@@ -16,6 +16,6 @@ public sealed class AwardBadCardRequest
     [Range(1, int.MaxValue, ErrorMessage = "Question id is required.")]
     public int QuestionId { get; init; }
 
-    [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between 1 and 5.")]
+    [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between {1} and {2}.")]
     public int? BadPoints { get; init; }
 }

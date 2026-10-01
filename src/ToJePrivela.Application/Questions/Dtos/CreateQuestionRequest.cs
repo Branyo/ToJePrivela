@@ -19,6 +19,6 @@ public sealed class CreateQuestionRequest
     public int CategoryId { get; init; }
 
     /// <summary>Picked at random when left out.</summary>
-    [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between 1 and 5.")]
+    [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between {1} and {2}.")]
     public int? BadPoints { get; init; }
 }
