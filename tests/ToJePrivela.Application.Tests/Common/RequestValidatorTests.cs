@@ -31,4 +31,23 @@ public class RequestValidatorTests
         Assert.Contains("Category id", error.Message);
         Assert.Contains("Bad points", error.Message);
     }
+
+    [Fact]
+    public void Validate_RejectsWhatTheDomainWouldReject()
+    {
+        var error = RequestValidator.Validate(new CreateQuestionRequest { Text = "      ab      ", Answer = "eight", CategoryId = 1 });
+
+        Assert.Equal("Request.Invalid", error!.Code);
+        Assert.Contains("Question text should have from 8 to 512 characters.", error.Message);
+        Assert.Contains("Answer should be a number", error.Message);
+    }
+
+    [Fact]
+    public void Validate_CountsDifferentPlayersOnly()
+    {
+        var error = RequestValidator.Validate(new CreateGameRequest { PlayerIds = [1, 1] });
+
+        Assert.Equal("Request.Invalid", error!.Code);
+        Assert.Contains("A game needs from 2 to 12 different players.", error.Message);
+    }
 }

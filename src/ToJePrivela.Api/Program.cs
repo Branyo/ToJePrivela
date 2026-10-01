@@ -19,7 +19,9 @@ builder.Services.AddAiQuestionGeneration(builder.Configuration);
 
 // Enums travel as their names ("Chooser"), which is a wire-format concern, so it is set here rather than on the DTOs.
 builder.Services.AddControllers()
-    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+    // A body ASP.NET cannot read or validate is answered like a use case's Request.Invalid, code included.
+    .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = InvalidModelStateResponse.Create);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<ConcurrencyConflictExceptionHandler>();

@@ -82,6 +82,11 @@ public sealed class GameService : IGameService
 
     public async Task<Result> UpdateAsync(int id, UpdateGameRequest request, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure(invalid);
+        }
+
         var game = await _games.GetByIdAsync(id, cancellationToken);
 
         if (game is null)

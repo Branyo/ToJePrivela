@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ToJePrivela.Application.Common.Validation;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Domain.Entities;
 
@@ -7,8 +8,8 @@ namespace ToJePrivela.Application.QuestionCategories.Dtos;
 public sealed class CreateQuestionCategoryRequest
 {
     [Required]
-    [StringLength(QuestionCategory.NameMaxLength, MinimumLength = QuestionCategory.NameMinLength,
-        ErrorMessage = "Question category name should have from 2 to 32 characters.")]
+    [TrimmedLength(QuestionCategory.NameMinLength, QuestionCategory.NameMaxLength,
+        ErrorMessage = "Question category name should have from {1} to {2} characters.")]
     public string Name { get; init; } = default!;
 
     public int? AddedByPlayerId { get; init; }

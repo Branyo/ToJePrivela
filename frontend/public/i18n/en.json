@@ -193,6 +193,9 @@
     "generic": "Something went wrong. Please try again.",
     "unreachable": "The game server is not reachable. Is the API running?",
     "api": {
+      "Concurrency": {
+        "Conflict": "Someone else changed this in the meantime. Reload and try again."
+      },
       "Game": {
         "NotFound": "This game does not exist.",
         "AlreadyFinished": "This game is already over.",

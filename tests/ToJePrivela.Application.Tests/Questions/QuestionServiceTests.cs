@@ -57,6 +57,15 @@ public class QuestionServiceTests
     }
 
     [Fact]
+    public async Task GetRandomAsync_RejectsAMissingFilter()
+    {
+        var result = await _sut.GetRandomAsync(null!);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Request.Missing", result.Error.Code);
+    }
+
+    [Fact]
     public async Task GetRandomAsync_DoesNotCountAView()
     {
         var question = TestEntities.Question(8, ValidText, "2022", _history);

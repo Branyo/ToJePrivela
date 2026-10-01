@@ -55,6 +55,11 @@ public sealed class QuestionService : IQuestionService
 
     public async Task<Result<QuestionDto>> GetRandomAsync(RandomQuestionFilter filter, CancellationToken cancellationToken = default)
     {
+        if (RequestValidator.Validate(filter) is { } invalid)
+        {
+            return Result.Failure<QuestionDto>(invalid);
+        }
+
         var invalidIds = filter.CategoryIds.Where(id => id <= 0).Distinct().ToList();
 
         if (invalidIds.Count > 0)

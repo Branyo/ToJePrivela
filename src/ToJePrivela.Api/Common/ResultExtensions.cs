@@ -23,18 +23,22 @@ public static class ResultExtensions
 
     public static ObjectResult ToProblem(Error error)
     {
-        var statusCode = ToStatusCode(error.Type);
-
-        var problem = new ProblemDetails
-        {
-            Status = statusCode,
-            Title = ToTitle(error.Type),
-            Detail = error.Message,
-            Extensions = { ["code"] = error.Code }
-        };
-
-        return new ObjectResult(problem) { StatusCode = statusCode };
+        var problem = ToProblemDetails(error);
+        return new ObjectResult(problem) { StatusCode = problem.Status };
     }
+
+    /// <summary>
+    /// The one shape every error answer has, whether a use case, ASP.NET model validation or an exception
+    /// handler produced it: status and title from <see cref="Error.Type"/>, the message as detail and a
+    /// <c>code</c> extension the frontend translates.
+    /// </summary>
+    public static ProblemDetails ToProblemDetails(Error error) => new()
+    {
+        Status = ToStatusCode(error.Type),
+        Title = ToTitle(error.Type),
+        Detail = error.Message,
+        Extensions = { ["code"] = error.Code }
+    };
 
     private static int ToStatusCode(ErrorType type) => type switch
     {
