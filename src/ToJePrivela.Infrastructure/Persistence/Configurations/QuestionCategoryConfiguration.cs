@@ -15,7 +15,12 @@ public sealed class QuestionCategoryConfiguration : IEntityTypeConfiguration<Que
             .HasMaxLength(QuestionCategory.NameMaxLength)
             .UseCollation("NOCASE");
 
-        builder.HasIndex(qc => qc.Name).IsUnique();
+        // NOCASE folds ASCII only ("Š" and "š" differ), so uniqueness rests on the Unicode-aware key.
+        builder.Property(qc => qc.NameKey)
+            .IsRequired()
+            .HasMaxLength(QuestionCategory.NameMaxLength);
+
+        builder.HasIndex(qc => qc.NameKey).IsUnique();
 
         builder.HasOne(qc => qc.AddedByPlayer)
             .WithMany()

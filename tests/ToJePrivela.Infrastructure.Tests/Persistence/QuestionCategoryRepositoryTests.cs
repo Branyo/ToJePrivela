@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence.Repositories;
 
@@ -77,6 +78,38 @@ public class QuestionCategoryRepositoryTests : IDisposable
         var stored = await sut.GetByNameAsync("Music");
         Assert.NotNull(stored);
         Assert.Null(stored!.AddedByPlayerId);
+    }
+
+    [Theory]
+    [InlineData("Šport")]
+    [InlineData("šport")]
+    [InlineData("ŠPORT")]
+    public async Task GetByNameAsync_IgnoresCaseOfAccentedLetters(string name)
+    {
+        await using (var context = _database.CreateContext())
+        {
+            await new QuestionCategoryRepository(context).AddAsync(new QuestionCategory("Šport"));
+            await context.SaveChangesAsync();
+        }
+
+        await using var lookup = _database.CreateContext();
+        var found = await new QuestionCategoryRepository(lookup).GetByNameAsync(name);
+
+        Assert.NotNull(found);
+        Assert.Equal("Šport", found!.Name);
+    }
+
+    [Fact]
+    public async Task SaveChanges_RejectsANameDifferingOnlyInTheCaseOfAnAccentedLetter()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionCategoryRepository(context);
+
+        await sut.AddAsync(new QuestionCategory("Šport"));
+        await context.SaveChangesAsync();
+        await sut.AddAsync(new QuestionCategory("šport"));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }
 
     public void Dispose() => _database.Dispose();

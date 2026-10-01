@@ -4,7 +4,7 @@ namespace ToJePrivela.Application.Abstractions.Persistence;
 
 public interface IQuestionCategoryRepository : IRepository<QuestionCategory>
 {
-    /// <param name="name">Already normalized with <see cref="QuestionCategory.NormalizeName"/>; compared case-insensitively.</param>
+    /// <param name="name">Compared by <see cref="QuestionCategory.NameKey"/>: case-insensitively, accented letters included.</param>
     Task<QuestionCategory?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 
     /// <summary>The given ids that no category has, in ascending order.</summary>

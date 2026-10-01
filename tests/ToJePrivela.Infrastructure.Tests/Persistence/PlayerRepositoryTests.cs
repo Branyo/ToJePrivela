@@ -122,5 +122,37 @@ public class PlayerRepositoryTests : IDisposable
         Assert.Equal(players.Select(p => p.Avatar).Order(), avatars.Order());
     }
 
+    [Theory]
+    [InlineData("Štefan")]
+    [InlineData("štefan")]
+    [InlineData("ŠTEFAN")]
+    public async Task GetByNameAsync_IgnoresCaseOfAccentedLetters(string name)
+    {
+        await using (var context = _database.CreateContext())
+        {
+            await new PlayerRepository(context).AddAsync(new Player("Štefan", "🦊"));
+            await context.SaveChangesAsync();
+        }
+
+        await using var lookup = _database.CreateContext();
+        var found = await new PlayerRepository(lookup).GetByNameAsync(name);
+
+        Assert.NotNull(found);
+        Assert.Equal("Štefan", found!.Name);
+    }
+
+    [Fact]
+    public async Task SaveChanges_RejectsANameDifferingOnlyInTheCaseOfAnAccentedLetter()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new PlayerRepository(context);
+
+        await sut.AddAsync(new Player("Štefan", "🦊"));
+        await context.SaveChangesAsync();
+        await sut.AddAsync(new Player("štefan", "🦊"));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+    }
+
     public void Dispose() => _database.Dispose();
 }

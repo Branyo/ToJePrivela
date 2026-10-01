@@ -4,7 +4,7 @@ namespace ToJePrivela.Application.Abstractions.Persistence;
 
 public interface IPlayerRepository : IRepository<Player>
 {
-    /// <param name="name">Already normalized with <see cref="Player.NormalizeName"/>; compared case-insensitively.</param>
+    /// <param name="name">Compared by <see cref="Player.NameKey"/>: case-insensitively, accented letters included.</param>
     Task<Player?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 
     /// <summary>The avatar of every player, one entry per player.</summary>

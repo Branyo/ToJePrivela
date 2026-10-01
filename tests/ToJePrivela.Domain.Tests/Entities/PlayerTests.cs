@@ -73,6 +73,16 @@ public class PlayerTests
     }
 
     [Fact]
+    public void NameKey_FollowsTheName()
+    {
+        var player = new Player("Štefan", "🦊");
+        Assert.Equal("štefan", player.NameKey);
+
+        player.Rename("ĽUBO");
+        Assert.Equal("ľubo", player.NameKey);
+    }
+
+    [Fact]
     public void Rename_RejectsInvalidName()
     {
         var player = new Player("Brano", "🦊");
