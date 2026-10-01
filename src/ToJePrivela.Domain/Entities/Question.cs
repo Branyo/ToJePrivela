@@ -31,7 +31,7 @@ public class Question
         Category = category;
         CategoryId = category.Id;
         Source = source;
-        CreatedAt = createdAt;
+        CreatedAt = UtcTime.Normalize(createdAt);
     }
 
     /// <summary>Whether the constructor would accept <paramref name="text"/>, without throwing.</summary>
@@ -95,7 +95,7 @@ public class Question
     public void MarkViewed(DateTime viewedAt)
     {
         ViewCount++;
-        LastViewedAt = viewedAt;
+        LastViewedAt = UtcTime.Normalize(viewedAt);
         Version++;
     }
 }

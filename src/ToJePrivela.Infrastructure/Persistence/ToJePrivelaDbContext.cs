@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Domain.Entities;
+using ToJePrivela.Infrastructure.Persistence.Conversions;
 using ToJePrivela.Infrastructure.Persistence.Seed;
 
 namespace ToJePrivela.Infrastructure.Persistence;
@@ -26,5 +27,11 @@ public class ToJePrivelaDbContext : DbContext
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ToJePrivelaDbContext).Assembly);
         modelBuilder.ApplySeedData();
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
     }
 }

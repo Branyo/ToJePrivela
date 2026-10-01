@@ -39,7 +39,7 @@ public class Game
 
         BadCardLimit = Guard.AgainstOutOfRange(badCardLimit, nameof(badCardLimit), MinBadCardLimit, MaxBadCardLimit);
         BadPointsMode = badPointsMode;
-        Started = startedAt;
+        Started = UtcTime.Normalize(startedAt);
         _gamePlayers.AddRange(distinctIds.Select(id => new GamePlayer(id)));
     }
 
@@ -69,7 +69,7 @@ public class Game
 
     public GameRuleViolation? CheckFinish(DateTime finishedAt) =>
         IsFinished ? GameRuleViolation.AlreadyFinished
-        : finishedAt < Started ? GameRuleViolation.EndsBeforeStart
+        : UtcTime.Normalize(finishedAt) < Started ? GameRuleViolation.EndsBeforeStart
         : null;
 
     public GameRuleViolation? CheckAwardBadCard(int playerId, int? chosenBadPoints) =>
@@ -89,14 +89,14 @@ public class Game
 
     public GameRuleViolation? CheckReschedule(DateTime started, DateTime? finished) =>
         IsFinished && finished is null ? GameRuleViolation.CannotReopen
-        : finished < started ? GameRuleViolation.EndsBeforeStart
+        : UtcTime.Normalize(finished) < UtcTime.Normalize(started) ? GameRuleViolation.EndsBeforeStart
         : null;
 
     public void Finish(DateTime finishedAt)
     {
         ThrowIfBroken(CheckFinish(finishedAt));
 
-        Finished = finishedAt;
+        Finished = UtcTime.Normalize(finishedAt);
     }
 
     /// <summary>
@@ -151,13 +151,14 @@ public class Game
     /// <summary>
     /// Corrects when the game started and finished. A running game may be given its end here, but a
     /// finished game can never be reopened: it may have ended because a player reached the limit.
+    /// Both times are kept in UTC (see <see cref="UtcTime"/>).
     /// </summary>
     public void Reschedule(DateTime started, DateTime? finished)
     {
         ThrowIfBroken(CheckReschedule(started, finished));
 
-        Started = started;
-        Finished = finished;
+        Started = UtcTime.Normalize(started);
+        Finished = UtcTime.Normalize(finished);
     }
 
     private GameRuleViolation? CheckRunningPlayer(int playerId) =>
