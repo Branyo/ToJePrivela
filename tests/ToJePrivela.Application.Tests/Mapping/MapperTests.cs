@@ -65,9 +65,7 @@ public class MapperTests
     [Fact]
     public void QuestionCategoryMapper_MapsAuthorWhenLoaded()
     {
-        var category = TestEntities.Category(1, "Sport", addedByPlayerId: 2);
-        typeof(QuestionCategory).GetProperty(nameof(QuestionCategory.AddedByPlayer))!
-            .SetValue(category, TestEntities.Player(2, "Duri"));
+        var category = TestEntities.Category(1, "Sport", addedBy: TestEntities.Player(2, "Duri"));
 
         var dto = QuestionCategoryMapper.ToDto(category);
 
@@ -77,9 +75,9 @@ public class MapperTests
     }
 
     [Fact]
-    public void QuestionCategoryMapper_LeavesAuthorNullWhenNotLoaded()
+    public void QuestionCategoryMapper_LeavesAuthorNullWithoutOne()
     {
-        var dto = QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Sport", addedByPlayerId: 2));
+        var dto = QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Sport"));
 
         Assert.Null(dto.AddedByPlayer);
     }
@@ -88,10 +86,12 @@ public class MapperTests
     public void QuestionCategoryMapper_BuildsEntityFromRequest()
     {
         var category = QuestionCategoryMapper.ToEntity(
-            new CreateQuestionCategoryRequest { Name = "Sport", AddedByPlayerId = 3 });
+            new CreateQuestionCategoryRequest { Name = "Sport", AddedByPlayerId = 3 },
+            TestEntities.Player(3, "Duri"));
 
         Assert.Equal("Sport", category.Name);
         Assert.Equal(3, category.AddedByPlayerId);
+        Assert.Equal("Duri", category.AddedByPlayer!.Name);
     }
 
     [Fact]

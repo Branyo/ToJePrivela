@@ -22,6 +22,6 @@ public static class QuestionCategoryMapper
         category.AddedByPlayer is null ? null : PlayerMapper.ToDto(category.AddedByPlayer),
         QuestionGenerationMapper.ToSummaryDto(generation));
 
-    public static QuestionCategory ToEntity(CreateQuestionCategoryRequest request) =>
-        new(request.Name, request.AddedByPlayerId);
+    public static QuestionCategory ToEntity(CreateQuestionCategoryRequest request, Player? addedBy) =>
+        new(request.Name, addedBy);
 }

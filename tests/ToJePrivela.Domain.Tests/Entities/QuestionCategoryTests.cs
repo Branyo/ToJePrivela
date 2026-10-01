@@ -8,10 +8,14 @@ public class QuestionCategoryTests
     [Fact]
     public void Constructor_KeepsNameAndAuthor()
     {
-        var category = new QuestionCategory(" Sport ", addedByPlayerId: 7);
+        var author = new Player("Duri", "🦊");
+        typeof(Player).GetProperty(nameof(Player.Id))!.SetValue(author, 7);
+
+        var category = new QuestionCategory(" Sport ", author);
 
         Assert.Equal("Sport", category.Name);
         Assert.Equal(7, category.AddedByPlayerId);
+        Assert.Same(author, category.AddedByPlayer);
     }
 
     [Fact]
