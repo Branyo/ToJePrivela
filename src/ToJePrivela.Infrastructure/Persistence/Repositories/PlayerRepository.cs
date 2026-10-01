@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Infrastructure.Persistence.Repositories;
@@ -10,9 +11,11 @@ public sealed class PlayerRepository : Repository<Player>, IPlayerRepository
     {
     }
 
-    /// <summary>Case-insensitive through the NOCASE collation on Player.Name.</summary>
-    public async Task<Player?> GetByNameAsync(string name, CancellationToken cancellationToken = default) =>
-        await Set.FirstOrDefaultAsync(p => p.Name == name, cancellationToken);
+    public async Task<Player?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        var key = NameKeys.Of(name);
+        return await Set.FirstOrDefaultAsync(p => p.NameKey == key, cancellationToken);
+    }
 
     public async Task<IReadOnlyList<string>> GetAvatarsAsync(CancellationToken cancellationToken = default) =>
         await Set.Select(p => p.Avatar).ToListAsync(cancellationToken);

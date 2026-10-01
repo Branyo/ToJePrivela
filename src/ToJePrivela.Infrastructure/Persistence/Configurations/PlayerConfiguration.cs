@@ -16,7 +16,12 @@ public sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
             .HasMaxLength(Player.NameMaxLength)
             .UseCollation("NOCASE");
 
-        builder.HasIndex(p => p.Name).IsUnique();
+        // NOCASE folds ASCII only ("Š" and "š" differ), so uniqueness rests on the Unicode-aware key.
+        builder.Property(p => p.NameKey)
+            .IsRequired()
+            .HasMaxLength(Player.NameMaxLength);
+
+        builder.HasIndex(p => p.NameKey).IsUnique();
 
         builder.Property(p => p.Avatar)
             .IsRequired()

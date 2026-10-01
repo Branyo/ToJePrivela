@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Infrastructure.Persistence.Repositories;
@@ -16,9 +17,11 @@ public sealed class QuestionCategoryRepository : Repository<QuestionCategory>, I
     public override async Task<QuestionCategory?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
         await Set.Include(qc => qc.AddedByPlayer).FirstOrDefaultAsync(qc => qc.Id == id, cancellationToken);
 
-    /// <summary>Case-insensitive through the NOCASE collation on QuestionCategory.Name.</summary>
-    public async Task<QuestionCategory?> GetByNameAsync(string name, CancellationToken cancellationToken = default) =>
-        await Set.FirstOrDefaultAsync(qc => qc.Name == name, cancellationToken);
+    public async Task<QuestionCategory?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        var key = NameKeys.Of(name);
+        return await Set.FirstOrDefaultAsync(qc => qc.NameKey == key, cancellationToken);
+    }
 
     public async Task<IReadOnlyList<int>> GetMissingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default)
     {

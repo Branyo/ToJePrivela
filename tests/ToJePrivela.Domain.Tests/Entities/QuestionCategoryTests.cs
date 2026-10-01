@@ -15,6 +15,12 @@ public class QuestionCategoryTests
     }
 
     [Fact]
+    public void Constructor_KeepsTheNameKey()
+    {
+        Assert.Equal("šport", new QuestionCategory(" Šport ").NameKey);
+    }
+
+    [Fact]
     public void Constructor_AllowsNoAuthor()
     {
         var category = new QuestionCategory("Sport");

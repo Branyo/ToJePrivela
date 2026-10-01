@@ -74,6 +74,16 @@ public class PlayersEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PostPlayer_RejectsANameDifferingOnlyInTheCaseOfAnAccentedLetter()
+    {
+        var first = await _client.PostAsJsonAsync("/api/players", new { name = "Ľudmila" });
+        var second = await _client.PostAsJsonAsync("/api/players", new { name = "ľudmila" });
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
     public async Task PostPlayer_RejectsTooShortName()
     {
         var response = await _client.PostAsJsonAsync("/api/players", new { name = "A" });
