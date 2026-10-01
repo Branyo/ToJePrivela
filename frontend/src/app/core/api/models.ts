@@ -88,10 +88,21 @@ export interface Question {
   lastViewedAt: string | null;
 }
 
-export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 12;
-export const MIN_BAD_CARD_LIMIT = 2;
-export const MAX_BAD_CARD_LIMIT = 10;
-export const DEFAULT_BAD_CARD_LIMIT = 3;
-export const MIN_BAD_POINTS = 1;
-export const MAX_BAD_POINTS = 5;
+/** Inclusive bounds of a number or of a text's length. */
+export interface Limit {
+  min: number;
+  max: number;
+}
+
+/** The limits the backend enforces (`GET /api/rules`); the client never keeps its own copies. */
+export interface GameRules {
+  players: Limit;
+  badCardLimit: Limit;
+  defaultBadCardLimit: number;
+  badPoints: Limit;
+  playerName: Limit;
+  categoryName: Limit;
+  maxAiQuestionCount: number;
+  /** Every avatar a player can be given, in a fixed order. */
+  avatars: string[];
+}

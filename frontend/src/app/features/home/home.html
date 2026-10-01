@@ -37,7 +37,7 @@
         <li class="rule" [style.--tilt]="rule.tilt" [style.--bg]="rule.color">
           <span class="rule__icon">{{ rule.icon }}</span>
           <strong>{{ 'home.rules.' + rule.key + '.title' | translate }}</strong>
-          <span>{{ 'home.rules.' + rule.key + '.text' | translate }}</span>
+          <span>{{ 'home.rules.' + rule.key + '.text' | translate: badPoints() }}</span>
         </li>
       }
     </ol>

@@ -1,10 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import { GamesApi } from '../../core/api/games-api';
-import { GameDetails, GamePlayer, MAX_BAD_POINTS, MIN_BAD_POINTS, Question, isKnownPlayer } from '../../core/api/models';
+import { GameDetails, GamePlayer, Question, isKnownPlayer } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { Message } from '../../core/i18n/language';
 import { QuestionsApi } from '../../core/api/questions-api';
+import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { seatPlayers } from '../../shared/ranking';
 
 export type PlayPhase =
@@ -25,6 +26,7 @@ export type PlayPhase =
 export class PlayStore {
   private readonly gamesApi = inject(GamesApi);
   private readonly questionsApi = inject(QuestionsApi);
+  private readonly rules = inject(GameRulesStore).rules;
 
   private gameId = 0;
   private categoryIds: readonly number[] = [];
@@ -107,7 +109,8 @@ export class PlayStore {
 
   /** The starting player set the question's worth; now its text is shown. */
   choose(badPoints: number): void {
-    if (this.phase() !== 'choosing' || !Number.isInteger(badPoints) || badPoints < MIN_BAD_POINTS || badPoints > MAX_BAD_POINTS) {
+    const limit = this.rules()?.badPoints;
+    if (this.phase() !== 'choosing' || !limit || !Number.isInteger(badPoints) || badPoints < limit.min || badPoints > limit.max) {
       return;
     }
 

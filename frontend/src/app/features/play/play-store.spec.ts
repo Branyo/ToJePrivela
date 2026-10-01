@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { GameDetails, Question } from '../../core/api/models';
+import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { TEST_RULES } from '../../core/rules/testing';
 import { PlayStore } from './play-store';
 
 const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
@@ -42,6 +44,7 @@ describe('PlayStore', () => {
     TestBed.configureTestingModule({
       providers: [PlayStore, provideHttpClient(), provideHttpClientTesting()],
     });
+    TestBed.inject(GameRulesStore).rules.set(TEST_RULES);
     store = TestBed.inject(PlayStore);
     http = TestBed.inject(HttpTestingController);
   });
@@ -107,6 +110,17 @@ describe('PlayStore', () => {
     store.choose(2);
     expect(store.phase()).toBe('asking');
     expect(store.badPoints()).toBe(2);
+  });
+
+  it('in a chooser game accepts only worths within the served limits', async () => {
+    TestBed.inject(GameRulesStore).rules.set({ ...TEST_RULES, badPoints: { min: 1, max: 3 } });
+    await startWithQuestion([], game({ badPointsMode: 'Chooser' }));
+
+    store.choose(4);
+    expect(store.phase()).toBe('choosing');
+
+    store.choose(3);
+    expect(store.phase()).toBe('asking');
   });
 
   it('in a chooser game sends the chosen bad points with the card and asks again for the next question', async () => {

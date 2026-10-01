@@ -50,4 +50,12 @@ public class RequestValidatorTests
         Assert.Equal("Request.Invalid", error!.Code);
         Assert.Contains("A game needs from 2 to 12 different players.", error.Message);
     }
+
+    [Fact]
+    public void Validate_PutsTheLimitsIntoTheMessages()
+    {
+        var error = RequestValidator.Validate(new CreateGameRequest { PlayerIds = [1, 2], BadCardLimit = 99 });
+
+        Assert.Equal("Bad card limit should be between 2 and 10.", error!.Message);
+    }
 }

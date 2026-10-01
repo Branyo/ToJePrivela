@@ -9,6 +9,8 @@ import { PlayersApi } from '../../core/api/players-api';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
+import { badPointsParams } from '../../core/rules/bad-points-params';
+import { GameRulesStore } from '../../core/rules/game-rules-store';
 
 interface RunningGame {
   game: Game;
@@ -38,6 +40,8 @@ export class Home {
   private readonly playersApi = inject(PlayersApi);
   protected readonly i18n = inject(LanguageService);
   protected readonly rules = RULES;
+  private readonly gameRules = inject(GameRulesStore).rules;
+  protected readonly badPoints = computed(() => badPointsParams(this.gameRules()));
 
   private readonly games = signal<Game[]>([]);
   private readonly players = signal<Player[]>([]);

@@ -30,7 +30,7 @@
       "title": "Ako sa hrá",
       "question": {
         "title": "Padne otázka",
-        "text": "Odpoveďou je vždy číslo a k otázke patrí karta s 1 až 5 somármi."
+        "text": "Odpoveďou je vždy číslo a k otázke patrí karta s {{min}} až {{max}} somármi."
       },
       "estimate": {
         "title": "Prihadzujte odhady",
@@ -84,11 +84,11 @@
       "title": "Počet zlých bodov/somárov na karte",
       "Question": {
         "name": "🃏 Podľa otázky",
-        "text": "Počet somárov (1-5) sa zobrazí automaticky."
+        "text": "Počet somárov ({{min}}–{{max}}) sa zobrazí automaticky."
       },
       "Chooser": {
         "name": "🎯 Určí začínajúci hráč",
-        "text": "Pred každou otázkou sa ukáže iba jej kategória a začínajúci hráč určí, koľko somárov (1–5) bude stáť."
+        "text": "Pred každou otázkou sa ukáže iba jej kategória a začínajúci hráč určí, koľko somárov ({{min}}–{{max}}) bude stáť."
       }
     },
     "categories": {
