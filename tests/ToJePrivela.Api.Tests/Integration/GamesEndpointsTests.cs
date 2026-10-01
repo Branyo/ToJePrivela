@@ -73,6 +73,31 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task GetGame_ReturnsTheStartInUtc()
+    {
+        var game = await CreateGameAsync();
+
+        var json = await _client.GetStringAsync($"/api/games/{game.Id}");
+
+        Assert.Matches("\"started\":\"[^\"]+Z\"", json);
+    }
+
+    [Fact]
+    public async Task PutGame_StoresATimeSentWithAnOffsetInUtc()
+    {
+        var game = await CreateGameAsync();
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/games/{game.Id}",
+            new { started = "2026-09-30T10:00:00+02:00" });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var json = await _client.GetStringAsync($"/api/games/{game.Id}");
+        Assert.Contains("\"started\":\"2026-09-30T08:00:00Z\"", json);
+    }
+
+    [Fact]
     public async Task PutGame_RejectsAnEndBeforeTheStart()
     {
         var game = await CreateGameAsync();

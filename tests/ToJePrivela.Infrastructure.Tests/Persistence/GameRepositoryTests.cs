@@ -62,6 +62,18 @@ public class GameRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetByIdAsync_ReturnsTheTimesMarkedAsUtc()
+    {
+        var gameId = await SeedGameAsync([1, 2]);
+
+        await using var context = _database.CreateContext();
+        var game = (await new GameRepository(context).GetByIdAsync(gameId))!;
+
+        Assert.Equal(Start, game.Started);
+        Assert.Equal(DateTimeKind.Utc, game.Started!.Value.Kind);
+    }
+
+    [Fact]
     public async Task SaveChanges_StoresTheDoublesOfAPlayer()
     {
         var gameId = await SeedGameAsync([1, 2]);

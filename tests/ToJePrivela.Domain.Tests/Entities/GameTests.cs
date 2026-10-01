@@ -101,6 +101,30 @@ public class GameTests
     }
 
     [Fact]
+    public void Reschedule_StoresTimesSentWithAnOffsetInUtc()
+    {
+        var game = new Game([1, 2], Start);
+        var started = new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.FromHours(2));
+
+        game.Reschedule(started.LocalDateTime, started.AddHours(1).LocalDateTime);
+
+        Assert.Equal(new DateTime(2026, 9, 30, 8, 0, 0, DateTimeKind.Utc), game.Started);
+        Assert.Equal(DateTimeKind.Utc, game.Started!.Value.Kind);
+        Assert.Equal(new DateTime(2026, 9, 30, 9, 0, 0, DateTimeKind.Utc), game.Finished);
+    }
+
+    [Fact]
+    public void CheckReschedule_ComparesTimesWithDifferentOffsetsInUtc()
+    {
+        var game = new Game([1, 2], Start);
+        var started = new DateTime(2026, 9, 30, 8, 0, 0, DateTimeKind.Utc);
+        var finishedLater = new DateTimeOffset(2026, 9, 30, 9, 30, 0, TimeSpan.FromHours(2)).LocalDateTime;
+
+        // 09:30+02:00 is 07:30 UTC, before the start, although its local clock reading is later.
+        Assert.Equal(GameRuleViolation.EndsBeforeStart, game.CheckReschedule(started, finishedLater));
+    }
+
+    [Fact]
     public void Reschedule_RejectsEndBeforeStart()
     {
         var game = new Game([1, 2], Start);
