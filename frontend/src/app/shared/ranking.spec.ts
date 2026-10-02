@@ -19,6 +19,12 @@ describe('seatPlayers', () => {
 
     expect(seated.map((p) => p.playerId)).toEqual([2, 5, 7]);
   });
+
+  it('seats players deleted since last', () => {
+    const seated = seatPlayers([{ ...player(7, 'C', 1), playerId: null }, player(5, 'B', 1), player(2, 'A', 1)]);
+
+    expect(seated.map((p) => p.playerId)).toEqual([2, 5, null]);
+  });
 });
 
 describe('rankPlayers', () => {
@@ -38,6 +44,12 @@ describe('rankPlayers', () => {
     const ranked = rankPlayers([player(1, 'Ana', 2), player(2, 'Bo', 1, true)]);
 
     expect(ranked.filter((p) => p.isLoser).map((p) => p.name)).toEqual(['Bo']);
+  });
+
+  it('orders an unknown player within a shared rank without a name', () => {
+    const ranked = rankPlayers([player(1, 'Ana', 1), { ...player(2, 'Bo', 1), playerId: null, name: null }]);
+
+    expect(ranked.map((p) => p.name)).toEqual([null, 'Ana']);
   });
 
   it('handles an empty table', () => {

@@ -43,31 +43,18 @@ public class QuestionCategoryRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetByIdAsync_LoadsTheAuthor()
-    {
-        await using var context = _database.CreateContext();
-        var sut = new QuestionCategoryRepository(context);
-
-        var category = await sut.GetByIdAsync(1);
-
-        Assert.NotNull(category!.AddedByPlayer);
-        Assert.Equal("Admin", category.AddedByPlayer!.Name);
-    }
-
-    [Fact]
-    public async Task GetAllAsync_LoadsTheAuthorOfEveryCategory()
+    public async Task GetAllAsync_ReturnsEveryCategory()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionCategoryRepository(context);
 
         var categories = await sut.GetAllAsync();
 
-        Assert.Equal(3, categories.Count);
-        Assert.All(categories, category => Assert.NotNull(category.AddedByPlayer));
+        Assert.Equal(["Cars", "Sport", "History"], categories.OrderBy(c => c.Id).Select(c => c.Name));
     }
 
     [Fact]
-    public async Task AddAsync_StoresACategoryWithoutAuthor()
+    public async Task AddAsync_StoresTheCategory()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionCategoryRepository(context);
@@ -77,7 +64,7 @@ public class QuestionCategoryRepositoryTests : IDisposable
 
         var stored = await sut.GetByNameAsync("Music");
         Assert.NotNull(stored);
-        Assert.Null(stored!.AddedByPlayerId);
+        Assert.Equal("music", stored!.NameKey);
     }
 
     [Theory]

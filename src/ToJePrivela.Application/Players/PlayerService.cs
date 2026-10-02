@@ -9,14 +9,23 @@ namespace ToJePrivela.Application.Players;
 public sealed class PlayerService : IPlayerService
 {
     private readonly IPlayerRepository _players;
+    private readonly IGameRepository _games;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAvatarPicker _avatarPicker;
+    private readonly TimeProvider _timeProvider;
 
-    public PlayerService(IPlayerRepository players, IUnitOfWork unitOfWork, IAvatarPicker avatarPicker)
+    public PlayerService(
+        IPlayerRepository players,
+        IGameRepository games,
+        IUnitOfWork unitOfWork,
+        IAvatarPicker avatarPicker,
+        TimeProvider timeProvider)
     {
         _players = players;
+        _games = games;
         _unitOfWork = unitOfWork;
         _avatarPicker = avatarPicker;
+        _timeProvider = timeProvider;
     }
 
     public async Task<Result<IReadOnlyList<PlayerDto>>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -103,6 +112,10 @@ public sealed class PlayerService : IPlayerService
         return Result.Success();
     }
 
+    /// <summary>
+    /// Deletes the player but keeps every game they played: their seat becomes an unknown player, and a game
+    /// still running is cancelled, since it cannot go on without them.
+    /// </summary>
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         var player = await _players.GetByIdAsync(id, cancellationToken);
@@ -110,6 +123,13 @@ public sealed class PlayerService : IPlayerService
         if (player is null)
         {
             return Result.Failure(PlayerErrors.NotFound(id));
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        foreach (var game in await _games.GetByPlayerAsync(id, cancellationToken))
+        {
+            game.ForgetPlayer(id, now);
         }
 
         _players.Remove(player);

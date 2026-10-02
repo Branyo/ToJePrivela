@@ -109,5 +109,5 @@ public class GameStandingsTests
     }
 
     private static int[] Losers(IReadOnlyList<GameStanding> standings) =>
-        standings.Where(s => s.IsLoser).Select(s => s.Player.PlayerId).ToArray();
+        standings.Where(s => s.IsLoser).Select(s => s.Player.PlayerId!.Value).ToArray();
 }

@@ -16,7 +16,6 @@ public class QuestionCategoryServiceTests
 
     private readonly IQuestionCategoryRepository _categories = Substitute.For<IQuestionCategoryRepository>();
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
-    private readonly IPlayerRepository _players = Substitute.For<IPlayerRepository>();
     private readonly IQuestionGenerationService _generation = Substitute.For<IQuestionGenerationService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly QuestionCategoryService _sut;
@@ -27,7 +26,7 @@ public class QuestionCategoryServiceTests
         _generation.GenerateAsync(Arg.Any<QuestionCategory>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(call => Generated(call.Arg<QuestionCategory>(), call.Arg<int>(), created: call.Arg<int>()));
 
-        _sut = new QuestionCategoryService(_categories, _questions, _players, _generation, _unitOfWork);
+        _sut = new QuestionCategoryService(_categories, _questions, _generation, _unitOfWork);
     }
 
     [Fact]
@@ -40,7 +39,6 @@ public class QuestionCategoryServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(["Sport", "History"], result.Value.Select(c => c.Name));
-        Assert.All(result.Value, c => Assert.Null(c.AddedByPlayer));
     }
 
     [Fact]
@@ -75,9 +73,7 @@ public class QuestionCategoryServiceTests
     [Fact]
     public async Task CreateAsync_StoresTheCategoryWithItsGeneratedQuestionsInOneSave()
     {
-        _players.ExistsAsync(1, Arg.Any<CancellationToken>()).Returns(true);
-
-        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport", AddedByPlayerId = 1, QuestionCount = 3 });
+        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport", QuestionCount = 3 });
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Sport", result.Value.Name);
@@ -139,18 +135,6 @@ public class QuestionCategoryServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_RejectsUnknownAuthorBeforeGenerating()
-    {
-        _players.ExistsAsync(99, Arg.Any<CancellationToken>()).Returns(false);
-
-        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport", AddedByPlayerId = 99, QuestionCount = 5 });
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(ErrorType.Validation, result.Error.Type);
-        await _generation.DidNotReceive().GenerateAsync(Arg.Any<QuestionCategory>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
     public async Task CreateAsync_ReportsAConflictWhenTheNameWasTakenDuringGeneration()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
@@ -160,15 +144,6 @@ public class QuestionCategoryServiceTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.Conflict, result.Error.Type);
-    }
-
-    [Fact]
-    public async Task CreateAsync_AllowsMissingAuthor()
-    {
-        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { Name = "Sport", QuestionCount = 0 });
-
-        Assert.True(result.IsSuccess);
-        await _players.DidNotReceive().ExistsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

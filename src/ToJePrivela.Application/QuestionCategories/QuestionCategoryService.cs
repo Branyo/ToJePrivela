@@ -13,20 +13,17 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
 {
     private readonly IQuestionCategoryRepository _categories;
     private readonly IQuestionRepository _questions;
-    private readonly IPlayerRepository _players;
     private readonly IQuestionGenerationService _questionGeneration;
     private readonly IUnitOfWork _unitOfWork;
 
     public QuestionCategoryService(
         IQuestionCategoryRepository categories,
         IQuestionRepository questions,
-        IPlayerRepository players,
         IQuestionGenerationService questionGeneration,
         IUnitOfWork unitOfWork)
     {
         _categories = categories;
         _questions = questions;
-        _players = players;
         _questionGeneration = questionGeneration;
         _unitOfWork = unitOfWork;
     }
@@ -53,17 +50,12 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
             return Result.Failure<CreatedQuestionCategoryDto>(invalid);
         }
 
-        // Both checks run before generation, so a rejected request never pays for AI calls.
+        // Checked before generation, so a rejected request never pays for AI calls.
         var name = QuestionCategory.NormalizeName(request.Name);
 
         if (await _categories.GetByNameAsync(name, cancellationToken) is not null)
         {
             return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(name));
-        }
-
-        if (request.AddedByPlayerId is int playerId && !await _players.ExistsAsync(playerId, cancellationToken))
-        {
-            return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.UnknownPlayer(playerId));
         }
 
         var category = QuestionCategoryMapper.ToEntity(request);

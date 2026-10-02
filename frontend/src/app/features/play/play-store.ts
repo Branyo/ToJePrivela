@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import { GamesApi } from '../../core/api/games-api';
-import { GameDetails, GamePlayer, Question } from '../../core/api/models';
+import { GameDetails, GamePlayer, Question, isKnownPlayer } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { Message } from '../../core/i18n/language';
 import { QuestionsApi } from '../../core/api/questions-api';
@@ -41,7 +41,11 @@ export class PlayStore {
   /** What the starting player set for the current question in a `Chooser` game; `null` until then. */
   readonly chosenBadPoints = signal<number | null>(null);
 
-  readonly seats = computed(() => seatPlayers(this.game()?.players ?? []));
+  /**
+   * The players to play with. Deleting a player cancels their running games, so a game played here only ever
+   * holds known players; an unknown one shows up only in a finished game, which goes straight to its summary.
+   */
+  readonly seats = computed(() => seatPlayers((this.game()?.players ?? []).filter(isKnownPlayer)));
   readonly badCardLimit = computed(() => this.game()?.badCardLimit ?? 0);
   readonly cardSlots = computed(() => Array.from({ length: this.badCardLimit() }));
   readonly choosesBadPoints = computed(() => this.game()?.badPointsMode === 'Chooser');

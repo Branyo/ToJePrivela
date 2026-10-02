@@ -18,7 +18,8 @@
     "and": "&",
     "gameNumber": "Game #{{id}}",
     "newGame": "🎲 New game",
-    "badPoints": "{{points}} bad points"
+    "badPoints": "{{points}} bad points",
+    "unknownPlayer": "Unknown player"
   },
   "home": {
     "tagline": "The guessing party game where going too far earns you donkeys.",
@@ -172,6 +173,8 @@
   "summary": {
     "finished": "Game over!",
     "running": "Scores so far",
+    "cancelled": "Game cancelled",
+    "cancelledText": "A player was deleted, so this game ended without a result.",
     "handedOut": "{{count}} donkey cards handed out",
     "nobody": "Nobody got a single donkey.",
     "wellBehaved": "Suspiciously well-behaved table…",
@@ -210,8 +213,7 @@
       },
       "QuestionCategory": {
         "NotFound": "This category does not exist.",
-        "NameTaken": "A category with this name already exists.",
-        "UnknownPlayer": "This player does not exist."
+        "NameTaken": "A category with this name already exists."
       },
       "QuestionGeneration": {
         "Failed": "No questions could be generated. Please try again."

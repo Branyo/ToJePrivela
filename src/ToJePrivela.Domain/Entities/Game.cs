@@ -59,6 +59,9 @@ public class Game
 
     public bool IsFinished => Finished is not null;
 
+    /// <summary>Ended without a result because one of its players was deleted; nobody lost it.</summary>
+    public bool IsCancelled { get; private set; }
+
     public bool HasPlayer(int playerId) => _gamePlayers.Any(gp => gp.PlayerId == playerId);
 
     /// <summary>
@@ -162,19 +165,40 @@ public class Game
     }
 
     /// <summary>
+    /// The player is being deleted: their seat stays as an unknown player, so the game keeps its history. A game
+    /// still running cannot be played on without them, so it is cancelled at <paramref name="at"/> (or at its
+    /// start, should that lie later) and can never be resumed.
+    /// </summary>
+    public void ForgetPlayer(int playerId, DateTime at)
+    {
+        var gamePlayer = FindPlayer(playerId) ?? throw new DomainException(
+            GameRuleViolationMessages.Describe(GameRuleViolation.PlayerNotInGame));
+
+        if (!IsFinished)
+        {
+            var cancelledAt = UtcTime.Normalize(at);
+            Finished = Started > cancelledAt ? Started : cancelledAt;
+            IsCancelled = true;
+        }
+
+        gamePlayer.ForgetPlayer();
+    }
+
+    /// <summary>
     /// Where every player stands, worst first: most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus
     /// doubles), a tie broken by the number of bad cards. Whoever stands first loses, several players on a full
-    /// tie; nobody loses while nobody holds a card. Players who tie keep their seat order (player id).
+    /// tie; nobody loses while nobody holds a card, nor in a cancelled game. Players who tie keep their seat order
+    /// (player id, unknown players last).
     /// </summary>
     public IReadOnlyList<GameStanding> Standings()
     {
         var ordered = _gamePlayers
             .OrderByDescending(gp => gp.FinalBadPoints)
             .ThenByDescending(gp => gp.BadCards)
-            .ThenBy(gp => gp.PlayerId)
+            .ThenBy(gp => gp.PlayerId ?? int.MaxValue)
             .ToList();
 
-        var anyCards = ordered.Any(gp => gp.BadCards > 0);
+        var anyLoser = !IsCancelled && ordered.Any(gp => gp.BadCards > 0);
         var standings = new List<GameStanding>(ordered.Count);
 
         for (var index = 0; index < ordered.Count; index++)
@@ -182,7 +206,7 @@ public class Game
             var player = ordered[index];
             var rank = index > 0 && SameStanding(ordered[index - 1], player) ? standings[index - 1].Rank : index + 1;
 
-            standings.Add(new GameStanding(player, rank, anyCards && SameStanding(ordered[0], player)));
+            standings.Add(new GameStanding(player, rank, anyLoser && SameStanding(ordered[0], player)));
         }
 
         return standings;

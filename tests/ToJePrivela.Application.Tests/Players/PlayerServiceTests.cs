@@ -10,14 +10,17 @@ namespace ToJePrivela.Application.Tests.Players;
 
 public class PlayerServiceTests
 {
+    private static readonly DateTimeOffset Now = new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+
     private readonly IPlayerRepository _players = Substitute.For<IPlayerRepository>();
+    private readonly IGameRepository _games = Substitute.For<IGameRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly FixedAvatarPicker _avatarPicker = new("🐙");
     private readonly PlayerService _sut;
 
     public PlayerServiceTests()
     {
-        _sut = new PlayerService(_players, _unitOfWork, _avatarPicker);
+        _sut = new PlayerService(_players, _games, _unitOfWork, _avatarPicker, new FixedTimeProvider(Now));
     }
 
     [Fact]
@@ -184,6 +187,31 @@ public class PlayerServiceTests
         var result = await _sut.DeleteAsync(1);
 
         Assert.True(result.IsSuccess);
+        _players.Received(1).Remove(player);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_KeepsThePlayersGamesAndCancelsTheRunningOnes()
+    {
+        var player = TestEntities.Player(1, "Brano");
+        var running = TestEntities.Game(10, [1, 2], Now.UtcDateTime.AddHours(-1));
+        var finished = TestEntities.Game(11, [1, 3], Now.UtcDateTime.AddDays(-1));
+        finished.Finish(Now.UtcDateTime.AddDays(-1).AddHours(1));
+        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(player);
+        _games.GetByPlayerAsync(1, Arg.Any<CancellationToken>()).Returns([running, finished]);
+
+        var result = await _sut.DeleteAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(running.IsCancelled);
+        Assert.Equal(Now.UtcDateTime, running.Finished);
+        Assert.False(finished.IsCancelled);
+        Assert.All([running, finished], game =>
+        {
+            Assert.False(game.HasPlayer(1));
+            Assert.Single(game.GamePlayers, gp => gp.IsUnknownPlayer);
+        });
         _players.Received(1).Remove(player);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }

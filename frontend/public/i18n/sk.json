@@ -18,7 +18,8 @@
     "and": "a",
     "gameNumber": "Hra č. {{id}}",
     "newGame": "🎲 Nová hra",
-    "badPoints": "Trestné body: {{points}}"
+    "badPoints": "Trestné body: {{points}}",
+    "unknownPlayer": "Neznámy hráč"
   },
   "home": {
     "tagline": "Spoločenská hra na odhady, v ktorej sa prehnané tipy trestajú somármi.",
@@ -180,6 +181,8 @@
   "summary": {
     "finished": "Koniec hry!",
     "running": "Priebežné skóre",
+    "cancelled": "Hra zrušená",
+    "cancelledText": "Jeden z hráčov bol vymazaný, preto sa hra skončila bez výsledku.",
     "handedOut": "rozdané somárske karty: {{count}}",
     "nobody": "Nikto nedostal ani jedného somára.",
     "wellBehaved": "Podozrivo slušný stôl…",
@@ -220,8 +223,7 @@
       },
       "QuestionCategory": {
         "NotFound": "Táto kategória neexistuje.",
-        "NameTaken": "Kategória s týmto názvom už existuje.",
-        "UnknownPlayer": "Tento hráč neexistuje."
+        "NameTaken": "Kategória s týmto názvom už existuje."
       },
       "QuestionGeneration": {
         "Failed": "Nepodarilo sa vygenerovať žiadne otázky. Skúste to znova."

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { GameRulesStore } from '../core/rules/game-rules-store';
-import { playerLook } from './player-look';
+import { UNKNOWN_PLAYER_AVATAR, playerLook } from './player-look';
 
 @Component({
   selector: 'app-player-avatar',
@@ -26,8 +26,8 @@ import { playerLook } from './player-look';
   },
 })
 export class PlayerAvatar {
-  /** The animal the server assigned to the player. */
-  readonly avatar = input.required<string>();
+  /** The animal the server assigned to the player; `null` for a player deleted since. */
+  readonly avatar = input.required<string | null>();
   private readonly rules = inject(GameRulesStore).rules;
-  protected readonly look = computed(() => playerLook(this.avatar(), this.rules()?.avatars ?? []));
+  protected readonly look = computed(() => playerLook(this.avatar() ?? UNKNOWN_PLAYER_AVATAR, this.rules()?.avatars ?? []));
 }

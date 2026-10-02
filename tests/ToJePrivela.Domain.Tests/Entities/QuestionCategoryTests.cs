@@ -6,26 +6,15 @@ namespace ToJePrivela.Domain.Tests.Entities;
 public class QuestionCategoryTests
 {
     [Fact]
-    public void Constructor_KeepsNameAndAuthor()
+    public void Constructor_KeepsTheTrimmedName()
     {
-        var category = new QuestionCategory(" Sport ", addedByPlayerId: 7);
-
-        Assert.Equal("Sport", category.Name);
-        Assert.Equal(7, category.AddedByPlayerId);
+        Assert.Equal("Sport", new QuestionCategory(" Sport ").Name);
     }
 
     [Fact]
     public void Constructor_KeepsTheNameKey()
     {
         Assert.Equal("šport", new QuestionCategory(" Šport ").NameKey);
-    }
-
-    [Fact]
-    public void Constructor_AllowsNoAuthor()
-    {
-        var category = new QuestionCategory("Sport");
-
-        Assert.Null(category.AddedByPlayerId);
     }
 
     [Theory]

@@ -21,10 +21,5 @@ public sealed class QuestionCategoryConfiguration : IEntityTypeConfiguration<Que
             .HasMaxLength(QuestionCategory.NameMaxLength);
 
         builder.HasIndex(qc => qc.NameKey).IsUnique();
-
-        builder.HasOne(qc => qc.AddedByPlayer)
-            .WithMany()
-            .HasForeignKey(qc => qc.AddedByPlayerId)
-            .OnDelete(DeleteBehavior.ClientSetNull);
     }
 }

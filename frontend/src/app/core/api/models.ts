@@ -19,13 +19,17 @@ export interface Game {
   finished: string | null;
   badCardLimit: number;
   badPointsMode: BadPointsMode;
-  playerIds: number[];
+  /** Ended without a result because one of its players was deleted. */
+  cancelled: boolean;
+  /** In seat order; `null` for a player deleted since. */
+  playerIds: (number | null)[];
 }
 
+/** `playerId`, `name` and `avatar` are `null` for a player deleted since: an unknown player whose score stays. */
 export interface GamePlayer {
-  playerId: number;
-  name: string;
-  avatar: string;
+  playerId: number | null;
+  name: string | null;
+  avatar: string | null;
   badPoints: number;
   badCards: number;
   /** Doubles that held; each takes one bad point off `finalBadPoints`. */
@@ -38,19 +42,27 @@ export interface GamePlayer {
   isLoser: boolean;
 }
 
+/** A player who still exists; every player of a running game is one. */
+export type KnownGamePlayer = GamePlayer & { playerId: number; name: string; avatar: string };
+
+export function isKnownPlayer(player: GamePlayer): player is KnownGamePlayer {
+  return player.playerId !== null;
+}
+
 export interface GameDetails {
   id: number;
   started: string | null;
   finished: string | null;
   badCardLimit: number;
   badPointsMode: BadPointsMode;
+  /** Ended without a result (and without a loser) because one of its players was deleted. */
+  cancelled: boolean;
   players: GamePlayer[];
 }
 
 export interface QuestionCategory {
   id: number;
   name: string;
-  addedByPlayer: Player | null;
 }
 
 export interface QuestionGenerationSummary {

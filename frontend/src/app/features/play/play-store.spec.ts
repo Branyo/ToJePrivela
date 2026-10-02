@@ -12,6 +12,7 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   finished: null,
   badCardLimit: 3,
   badPointsMode: 'Question',
+  cancelled: false,
   players: [
     { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
     { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
@@ -80,6 +81,20 @@ describe('PlayStore', () => {
     await flush();
     http.expectOne('/api/questions/42/views').flush(question);
     await started;
+  });
+
+  it('seats only players who still exist', async () => {
+    await startWithQuestion(
+      [],
+      game({
+        players: [
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
+          { playerId: null, name: null, avatar: null, badPoints: 3, badCards: 1, doubles: 0, finalBadPoints: 3, rank: 1, isLoser: false },
+        ],
+      }),
+    );
+
+    expect(store.seats().map((p) => p.playerId)).toEqual([2]);
   });
 
   it('in a chooser game shows only the category until the starting player sets the bad points', async () => {

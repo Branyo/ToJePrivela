@@ -20,6 +20,7 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(BadPointsModeMaxLength);
+        builder.Property(g => g.IsCancelled).HasDefaultValue(false);
         builder.Ignore(g => g.IsFinished);
 
         builder.Metadata
