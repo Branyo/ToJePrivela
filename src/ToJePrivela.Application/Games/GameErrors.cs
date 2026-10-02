@@ -39,6 +39,9 @@ public static class GameErrors
     public static Error EndsBeforeStart(int gameId) =>
         Error.Validation("Game.EndsBeforeStart", $"Game {gameId} cannot be finished before it started.");
 
+    public static Error StartsInFuture(int gameId) =>
+        Error.Validation("Game.StartsInFuture", $"Game {gameId} cannot start later than now.");
+
     /// <summary>The error for a rule the domain reported; the rule itself lives in <see cref="Game"/>.</summary>
     public static Error From(GameRuleViolation violation, int gameId, int? playerId = null) => violation switch
     {
@@ -49,6 +52,7 @@ public static class GameErrors
         GameRuleViolation.ChosenBadPointsNotAllowed => BadPointsNotAllowed(gameId),
         GameRuleViolation.CannotReopen => CannotReopen(gameId),
         GameRuleViolation.EndsBeforeStart => EndsBeforeStart(gameId),
+        GameRuleViolation.StartsInFuture => StartsInFuture(gameId),
         _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
     };
 

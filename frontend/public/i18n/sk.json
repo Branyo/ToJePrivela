@@ -215,7 +215,8 @@
         "UnknownPlayers": "Niektorí hráči neexistujú.",
         "PlayerNotInGame": "Tento hráč v hre nehrá.",
         "UnknownQuestion": "Táto otázka neexistuje.",
-        "NoDoubleToRemove": "Tento hráč nemá žiadny zdvojovač na ubratie."
+        "NoDoubleToRemove": "Tento hráč nemá žiadny zdvojovač na ubratie.",
+        "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz."
       },
       "Player": {
         "NotFound": "Tento hráč neexistuje.",

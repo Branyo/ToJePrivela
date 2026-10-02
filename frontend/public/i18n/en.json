@@ -205,7 +205,8 @@
         "UnknownPlayers": "Some of the players do not exist.",
         "PlayerNotInGame": "This player is not in the game.",
         "UnknownQuestion": "This question does not exist.",
-        "NoDoubleToRemove": "This player has no double to take back."
+        "NoDoubleToRemove": "This player has no double to take back.",
+        "StartsInFuture": "A game cannot start later than now."
       },
       "Player": {
         "NotFound": "This player does not exist.",

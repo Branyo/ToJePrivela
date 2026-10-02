@@ -98,6 +98,21 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PutGame_RejectsAStartInTheFuture()
+    {
+        var game = await CreateGameAsync();
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/games/{game.Id}",
+            new { started = DateTime.UtcNow.AddMinutes(5) });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Game.StartsInFuture", await ProblemResponse.CodeOf(response));
+        var stored = await _client.GetFromJsonAsync<GameDto>($"/api/games/{game.Id}");
+        Assert.Equal(game.Started, stored!.Started);
+    }
+
+    [Fact]
     public async Task PutGame_RejectsAnEndBeforeTheStart()
     {
         var game = await CreateGameAsync();

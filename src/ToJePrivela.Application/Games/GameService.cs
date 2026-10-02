@@ -99,12 +99,14 @@ public sealed class GameService : IGameService
             return Result.Failure(GameErrors.StartRequired(id));
         }
 
-        if (game.CheckReschedule(started, request.Finished) is { } violation)
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        if (game.CheckReschedule(started, request.Finished, now) is { } violation)
         {
             return Result.Failure(GameErrors.From(violation, id));
         }
 
-        game.Reschedule(started, request.Finished);
+        game.Reschedule(started, request.Finished, now);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

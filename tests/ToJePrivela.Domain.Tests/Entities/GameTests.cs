@@ -6,6 +6,7 @@ namespace ToJePrivela.Domain.Tests.Entities;
 public class GameTests
 {
     private static readonly DateTime Start = new(2026, 9, 22, 18, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Now = new(2026, 10, 1, 12, 0, 0, DateTimeKind.Utc);
 
     private static Question QuestionWorth(int badPoints) =>
         new("How many wheels does a car have?", "4", new QuestionCategory("Cars"), badPoints, QuestionSource.Manual, Start);
@@ -94,7 +95,7 @@ public class GameTests
         var newStart = Start.AddDays(-1);
         var newEnd = Start.AddDays(-1).AddHours(2);
 
-        game.Reschedule(newStart, newEnd);
+        game.Reschedule(newStart, newEnd, Now);
 
         Assert.Equal(newStart, game.Started);
         Assert.Equal(newEnd, game.Finished);
@@ -106,7 +107,7 @@ public class GameTests
         var game = new Game([1, 2], Start);
         var started = new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.FromHours(2));
 
-        game.Reschedule(started.LocalDateTime, started.AddHours(1).LocalDateTime);
+        game.Reschedule(started.LocalDateTime, started.AddHours(1).LocalDateTime, Now);
 
         Assert.Equal(new DateTime(2026, 9, 30, 8, 0, 0, DateTimeKind.Utc), game.Started);
         Assert.Equal(DateTimeKind.Utc, game.Started!.Value.Kind);
@@ -121,7 +122,37 @@ public class GameTests
         var finishedLater = new DateTimeOffset(2026, 9, 30, 9, 30, 0, TimeSpan.FromHours(2)).LocalDateTime;
 
         // 09:30+02:00 is 07:30 UTC, before the start, although its local clock reading is later.
-        Assert.Equal(GameRuleViolation.EndsBeforeStart, game.CheckReschedule(started, finishedLater));
+        Assert.Equal(GameRuleViolation.EndsBeforeStart, game.CheckReschedule(started, finishedLater, Now));
+    }
+
+    [Fact]
+    public void Reschedule_RejectsAStartLaterThanNow()
+    {
+        var game = new Game([1, 2], Start);
+
+        Assert.Equal(GameRuleViolation.StartsInFuture, game.CheckReschedule(Now.AddMinutes(1), null, Now));
+        Assert.Throws<DomainException>(() => game.Reschedule(Now.AddMinutes(1), null, Now));
+        Assert.Equal(Start, game.Started);
+    }
+
+    [Fact]
+    public void Reschedule_AcceptsAStartOfExactlyNow()
+    {
+        var game = new Game([1, 2], Start);
+
+        game.Reschedule(Now, null, Now);
+
+        Assert.Equal(Now, game.Started);
+    }
+
+    [Fact]
+    public void CheckReschedule_ComparesTheStartWithNowInUtc()
+    {
+        var game = new Game([1, 2], Start);
+        var laterLocalReading = new DateTimeOffset(2026, 10, 1, 13, 0, 0, TimeSpan.FromHours(2)).LocalDateTime;
+
+        // 13:00+02:00 is 11:00 UTC, before now (12:00 UTC), although its clock reading is later.
+        Assert.Null(game.CheckReschedule(laterLocalReading, null, Now));
     }
 
     [Fact]
@@ -129,7 +160,7 @@ public class GameTests
     {
         var game = new Game([1, 2], Start);
 
-        Assert.Throws<DomainException>(() => game.Reschedule(Start, Start.AddHours(-1)));
+        Assert.Throws<DomainException>(() => game.Reschedule(Start, Start.AddHours(-1), Now));
     }
 
     [Fact]
@@ -137,7 +168,7 @@ public class GameTests
     {
         var game = new Game([1, 2], Start);
 
-        game.Reschedule(Start, Start.AddHours(1));
+        game.Reschedule(Start, Start.AddHours(1), Now);
 
         Assert.True(game.IsFinished);
     }
@@ -148,7 +179,7 @@ public class GameTests
         var game = new Game([1, 2], Start);
         game.Finish(Start.AddHours(1));
 
-        game.Reschedule(Start, Start.AddHours(2));
+        game.Reschedule(Start, Start.AddHours(2), Now);
 
         Assert.Equal(Start.AddHours(2), game.Finished);
     }
@@ -160,7 +191,7 @@ public class GameTests
         game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(5));
         game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(6));
 
-        Assert.Throws<DomainException>(() => game.Reschedule(Start, null));
+        Assert.Throws<DomainException>(() => game.Reschedule(Start, null, Now));
         Assert.Equal(Start.AddMinutes(6), game.Finished);
     }
 
@@ -178,8 +209,8 @@ public class GameTests
         Assert.Equal(GameRuleViolation.AlreadyFinished, finished.CheckAwardDouble(1));
         Assert.Equal(GameRuleViolation.AlreadyFinished, finished.CheckFinish(Start.AddHours(2)));
         Assert.Equal(GameRuleViolation.EndsBeforeStart, chooser.CheckFinish(Start.AddHours(-1)));
-        Assert.Equal(GameRuleViolation.CannotReopen, finished.CheckReschedule(Start, null));
-        Assert.Equal(GameRuleViolation.EndsBeforeStart, chooser.CheckReschedule(Start, Start.AddHours(-1)));
+        Assert.Equal(GameRuleViolation.CannotReopen, finished.CheckReschedule(Start, null, Now));
+        Assert.Equal(GameRuleViolation.EndsBeforeStart, chooser.CheckReschedule(Start, Start.AddHours(-1), Now));
         Assert.All(chooser.GamePlayers, gp => Assert.Equal((0, 0), (gp.BadCards, gp.Doubles)));
         Assert.False(chooser.IsFinished);
     }
@@ -194,7 +225,7 @@ public class GameTests
         Assert.Null(game.CheckAwardDouble(2));
         Assert.Null(game.CheckRemoveDouble(1));
         Assert.Null(game.CheckFinish(Start.AddHours(1)));
-        Assert.Null(game.CheckReschedule(Start, null));
+        Assert.Null(game.CheckReschedule(Start, null, Now));
     }
 
     [Fact]

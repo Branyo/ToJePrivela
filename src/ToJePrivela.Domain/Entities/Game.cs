@@ -90,8 +90,10 @@ public class Game
         CheckRunningPlayer(playerId)
         ?? (FindPlayer(playerId)!.Doubles == 0 ? GameRuleViolation.NoDoubleToRemove : null);
 
-    public GameRuleViolation? CheckReschedule(DateTime started, DateTime? finished) =>
+    /// <param name="now">The current time: a game that has not started yet cannot be on record.</param>
+    public GameRuleViolation? CheckReschedule(DateTime started, DateTime? finished, DateTime now) =>
         IsFinished && finished is null ? GameRuleViolation.CannotReopen
+        : UtcTime.Normalize(started) > UtcTime.Normalize(now) ? GameRuleViolation.StartsInFuture
         : UtcTime.Normalize(finished) < UtcTime.Normalize(started) ? GameRuleViolation.EndsBeforeStart
         : null;
 
@@ -153,12 +155,12 @@ public class Game
 
     /// <summary>
     /// Corrects when the game started and finished. A running game may be given its end here, but a
-    /// finished game can never be reopened: it may have ended because a player reached the limit.
-    /// Both times are kept in UTC (see <see cref="UtcTime"/>).
+    /// finished game can never be reopened: it may have ended because a player reached the limit. The start can
+    /// never lie after <paramref name="now"/>. Both times are kept in UTC (see <see cref="UtcTime"/>).
     /// </summary>
-    public void Reschedule(DateTime started, DateTime? finished)
+    public void Reschedule(DateTime started, DateTime? finished, DateTime now)
     {
-        ThrowIfBroken(CheckReschedule(started, finished));
+        ThrowIfBroken(CheckReschedule(started, finished, now));
 
         Started = UtcTime.Normalize(started);
         Finished = UtcTime.Normalize(finished);
