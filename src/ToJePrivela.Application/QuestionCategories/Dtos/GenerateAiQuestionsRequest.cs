@@ -6,6 +6,6 @@ namespace ToJePrivela.Application.QuestionCategories.Dtos;
 public sealed class GenerateAiQuestionsRequest
 {
     [Required(ErrorMessage = "Question count is required.")]
-    [Range(1, QuestionGenerationOptions.MaxCount, ErrorMessage = "Question count should be between 1 and 200.")]
+    [Range(1, QuestionGenerationOptions.MaxCount, ErrorMessage = "Question count should be between {1} and {2}.")]
     public int? Count { get; init; }
 }

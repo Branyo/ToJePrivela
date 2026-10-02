@@ -9,8 +9,8 @@
     <section class="panel">
       <h2 class="panel__title">
         <span class="step-number">1</span> {{ 'setup.players.title' | translate }}
-        <span class="counter" [class.counter--ok]="selectedIds().length >= minPlayers">
-          {{ selectedIds().length }} / {{ maxPlayers }}
+        <span class="counter" [class.counter--ok]="selectedIds().length >= playerLimit().min">
+          {{ selectedIds().length }} / {{ playerLimit().max }}
         </span>
       </h2>
 
@@ -19,7 +19,7 @@
           class="text-input"
           [placeholder]="'setup.players.namePlaceholder' | translate"
           [attr.aria-label]="'setup.players.name' | translate"
-          maxlength="50"
+          [attr.maxlength]="playerNameLimit().max"
           [value]="newName()"
           (input)="onNameInput($event)"
           [disabled]="isFull()"
@@ -70,7 +70,7 @@
             type="button"
             class="icon-btn"
             [attr.aria-label]="'setup.limit.fewer' | translate"
-            [disabled]="badCardLimit() <= minLimit"
+            [disabled]="badCardLimit() <= cardLimit().min"
             (click)="changeLimit(-1)"
           >
             −
@@ -84,7 +84,7 @@
             type="button"
             class="icon-btn"
             [attr.aria-label]="'setup.limit.more' | translate"
-            [disabled]="badCardLimit() >= maxLimit"
+            [disabled]="badCardLimit() >= cardLimit().max"
             (click)="changeLimit(1)"
           >
             +
@@ -108,7 +108,7 @@
               (click)="badPointsMode.set(mode)"
             >
               <strong class="mode__name">{{ 'setup.badPoints.' + mode + '.name' | translate }}</strong>
-              <span class="mode__text muted">{{ 'setup.badPoints.' + mode + '.text' | translate }}</span>
+              <span class="mode__text muted">{{ 'setup.badPoints.' + mode + '.text' | translate: badPoints() }}</span>
             </button>
           }
         </div>
@@ -148,7 +148,7 @@
               class="text-input"
               [placeholder]="'setup.generator.namePlaceholder' | translate"
               [attr.aria-label]="'setup.generator.name' | translate"
-              maxlength="32"
+              [attr.maxlength]="categoryNameLimit().max"
               [value]="newCategoryName()"
               (input)="onCategoryNameInput($event)"
               [disabled]="generating()"
@@ -156,8 +156,8 @@
             <input
               class="text-input generator__count"
               type="number"
-              min="1"
-              max="200"
+              [attr.min]="questionCountLimit().min"
+              [attr.max]="questionCountLimit().max"
               [attr.aria-label]="'setup.generator.count' | translate"
               [value]="newCategoryCount()"
               (input)="onCategoryCountInput($event)"

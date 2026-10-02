@@ -5,6 +5,7 @@ using ToJePrivela.Application.Players;
 using ToJePrivela.Application.QuestionCategories;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.Questions;
+using ToJePrivela.Application.Rules;
 
 namespace ToJePrivela.Application;
 
@@ -21,6 +22,7 @@ public static class DependencyInjection
         services.AddSingleton<IBadPointsPicker, RandomBadPointsPicker>();
         services.AddSingleton<IQuestionPicker, RandomQuestionPicker>();
         services.AddSingleton<IAvatarPicker, RandomAvatarPicker>();
+        services.AddSingleton<IGameRulesService, GameRulesService>();
         services.AddScoped<IPlayerService, PlayerService>();
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IQuestionService, QuestionService>();
