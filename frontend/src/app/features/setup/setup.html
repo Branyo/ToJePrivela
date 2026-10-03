@@ -140,41 +140,6 @@
             }}
           </p>
         }
-
-        <details class="generator" [open]="categories().length === 0">
-          <summary>{{ 'setup.generator.title' | translate }}</summary>
-          <form class="generator__form" (submit)="$event.preventDefault(); createCategory()">
-            <input
-              class="text-input"
-              [placeholder]="'setup.generator.namePlaceholder' | translate"
-              [attr.aria-label]="'setup.generator.name' | translate"
-              [attr.maxlength]="categoryNameLimit().max"
-              [value]="newCategoryName()"
-              (input)="onCategoryNameInput($event)"
-              [disabled]="generating()"
-            />
-            <input
-              class="text-input generator__count"
-              type="number"
-              [attr.min]="questionCountLimit().min"
-              [attr.max]="questionCountLimit().max"
-              [attr.aria-label]="'setup.generator.count' | translate"
-              [value]="newCategoryCount()"
-              (input)="onCategoryCountInput($event)"
-              [disabled]="generating()"
-            />
-            <button type="submit" class="btn btn--sky" [disabled]="generating() || newCategoryName().trim().length === 0">
-              @if (generating()) {
-                <span class="spinner" aria-hidden="true">🤔</span> {{ 'setup.generator.thinking' | translate }}
-              } @else {
-                {{ 'setup.generator.generate' | translate }}
-              }
-            </button>
-          </form>
-          @if (generated(); as message) {
-            <p class="generator__done">{{ message | message }}</p>
-          }
-        </details>
       </section>
 
       <div class="start">
@@ -187,6 +152,9 @@
         </button>
         @if (startBlocker(); as blocker) {
           <p class="muted">{{ blocker | message }}</p>
+          @if (isAdmin() && availableQuestions() === 0) {
+            <a routerLink="/admin" class="btn btn--sky">🛠️ {{ 'app.admin' | translate }}</a>
+          }
         }
       </div>
     </div>

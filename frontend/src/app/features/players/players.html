@@ -1,0 +1,67 @@
+<section class="page players">
+  <div class="head">
+    <h1>{{ 'players.title' | translate }}</h1>
+    <a routerLink="/new" class="btn btn--fun">{{ 'home.start' | translate }}</a>
+  </div>
+  <p class="muted">{{ 'players.text' | translate }}</p>
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  <section class="panel">
+    <form class="add-row" (submit)="$event.preventDefault(); add()">
+      <input
+        class="text-input"
+        [placeholder]="'setup.players.namePlaceholder' | translate"
+        [attr.aria-label]="'setup.players.name' | translate"
+        [attr.maxlength]="nameLimit().max"
+        [value]="newName()"
+        (input)="onNameInput($event)"
+        [disabled]="adding()"
+      />
+      <button type="submit" class="btn btn--primary" [disabled]="adding() || newName().trim().length === 0">
+        {{ 'setup.players.add' | translate }}
+      </button>
+    </form>
+
+    @if (players() === null) {
+      <p class="muted">{{ 'players.loading' | translate }}</p>
+    } @else if (sorted().length === 0) {
+      <p class="muted">{{ 'players.empty' | translate }}</p>
+    } @else {
+      <ul class="list">
+        @for (player of sorted(); track player.id) {
+          <li class="row" [class.row--confirming]="confirmingId() === player.id">
+            <app-player-avatar [avatar]="player.avatar" />
+            <span class="row__name">{{ player.name }}</span>
+
+            @if (confirmingId() === player.id) {
+              <span class="row__question">{{ 'players.confirm' | translate }}</span>
+              <button
+                type="button"
+                class="btn btn--danger row__action"
+                [disabled]="deletingId() === player.id"
+                (click)="delete(player.id)"
+              >
+                {{ 'players.delete' | translate }}
+              </button>
+              <button type="button" class="btn btn--ghost row__action" (click)="cancelDelete()">
+                {{ 'players.keep' | translate }}
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="icon-btn row__remove"
+                [attr.aria-label]="'players.deleteName' | translate: { name: player.name }"
+                (click)="askToDelete(player.id)"
+              >
+                🗑️
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</section>

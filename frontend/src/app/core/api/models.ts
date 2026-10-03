@@ -106,3 +106,37 @@ export interface GameRules {
   /** Every avatar a player can be given, in a fixed order. */
   avatars: string[];
 }
+
+export type IdentityProvider = 'Google' | 'Facebook';
+
+/** A login: one identity at Google or Facebook. Players and games belong to it. */
+export interface Account {
+  id: number;
+  provider: IdentityProvider;
+  displayName: string;
+  email: string | null;
+  /** Admins manage the shared questions and categories, AI generation included. */
+  isAdmin: boolean;
+}
+
+/** A provider the backend is configured for, with the public id its browser SDK is initialised with. */
+export interface SignInProvider {
+  provider: IdentityProvider;
+  clientId: string;
+}
+
+export interface SignedIn {
+  /** Sent as `Authorization: Bearer …` with every request until `expiresAt`. */
+  accessToken: string;
+  expiresAt: string;
+  account: Account;
+}
+
+export interface GeneratedAiQuestions {
+  summary: QuestionGenerationSummary;
+  questions: Question[];
+}
+
+export interface DeletedAiQuestions {
+  deleted: number;
+}
