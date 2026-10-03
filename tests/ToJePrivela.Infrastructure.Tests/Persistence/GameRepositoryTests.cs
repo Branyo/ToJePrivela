@@ -18,7 +18,7 @@ public class GameRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new GameRepository(context);
 
-        var game = await sut.GetByIdAsync(gameId);
+        var game = await sut.GetByIdAsync(TestAccountId, gameId);
 
         Assert.NotNull(game);
         Assert.Equal(["Admin", "Brano"], game!.GamePlayers.Select(gp => gp.Player!.Name).Order());
@@ -30,7 +30,7 @@ public class GameRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new GameRepository(context);
 
-        Assert.Null(await sut.GetByIdAsync(404));
+        Assert.Null(await sut.GetByIdAsync(TestAccountId, 404));
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class GameRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new GameRepository(context);
 
-        var games = await sut.GetAllAsync();
+        var games = await sut.GetAllAsync(TestAccountId);
 
         Assert.Equal(2, games.Count);
         Assert.All(games, game => Assert.All(game.GamePlayers, gp => Assert.NotNull(gp.Player)));
@@ -67,7 +67,7 @@ public class GameRepositoryTests : IDisposable
         var gameId = await SeedGameAsync([1, 2]);
 
         await using var context = _database.CreateContext();
-        var game = (await new GameRepository(context).GetByIdAsync(gameId))!;
+        var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
 
         Assert.Equal(Start, game.Started);
         Assert.Equal(DateTimeKind.Utc, game.Started!.Value.Kind);
@@ -80,7 +80,7 @@ public class GameRepositoryTests : IDisposable
 
         await using (var context = _database.CreateContext())
         {
-            var game = (await new GameRepository(context).GetByIdAsync(gameId))!;
+            var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
             game.AwardDouble(2);
             game.AwardDouble(2);
             await context.SaveChangesAsync();
@@ -100,7 +100,7 @@ public class GameRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new GameRepository(context);
 
-        sut.Remove((await sut.GetByIdAsync(gameId))!);
+        sut.Remove((await sut.GetByIdAsync(TestAccountId, gameId))!);
         await context.SaveChangesAsync();
 
         await using var verification = _database.CreateContext();
@@ -125,11 +125,36 @@ public class GameRepositoryTests : IDisposable
         Assert.Equal(finished, (await verification.Games.FirstAsync(g => g.Id == gameId)).Finished);
     }
 
-    private async Task<int> SeedGameAsync(int[] playerIds)
+    [Fact]
+    public async Task Reads_NeverReachTheGamesOfAnotherAccount()
+    {
+        int otherAccountId;
+
+        await using (var context = _database.CreateContext())
+        {
+            var account = Account.Register(IdentityProvider.Facebook, "other", null, "Other", Start);
+            context.Accounts.Add(account);
+            await context.SaveChangesAsync();
+            otherAccountId = account.Id;
+        }
+
+        var mine = await SeedGameAsync([1, 2]);
+        var theirs = await SeedGameAsync([1, 2], otherAccountId);
+
+        await using var lookup = _database.CreateContext();
+        var sut = new GameRepository(lookup);
+
+        Assert.Null(await sut.GetByIdAsync(TestAccountId, theirs));
+        Assert.Equal([mine], (await sut.GetAllAsync(TestAccountId)).Select(g => g.Id));
+        Assert.Equal([mine], (await sut.GetByPlayerAsync(TestAccountId, 1)).Select(g => g.Id));
+        Assert.Equal([theirs], (await sut.GetAllAsync(otherAccountId)).Select(g => g.Id));
+    }
+
+    private async Task<int> SeedGameAsync(int[] playerIds, int accountId = TestAccountId)
     {
         await using var context = _database.CreateContext();
 
-        var game = new Game(playerIds, Start);
+        var game = new Game(accountId, playerIds, Start);
         context.Games.Add(game);
         await context.SaveChangesAsync();
 

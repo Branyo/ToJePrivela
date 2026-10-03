@@ -7,7 +7,7 @@ public static class TestEntities
 {
     public static readonly DateTime CreatedAt = new(2026, 9, 24, 10, 0, 0, DateTimeKind.Utc);
 
-    public static Player Player(int id, string name) => WithId(new Player(name, "🦊"), id);
+    public static Player Player(int id, string name) => WithId(new Player(TestAccountId, name, "🦊"), id);
 
     public static Question Question(
         int id,
@@ -26,7 +26,7 @@ public static class TestEntities
         DateTime started,
         int badCardLimit = Domain.Entities.Game.DefaultBadCardLimit,
         BadPointsMode badPointsMode = BadPointsMode.Question) =>
-        WithId(new Game(playerIds, started, badCardLimit, badPointsMode), id);
+        WithId(new Game(TestAccountId, playerIds, started, badCardLimit, badPointsMode), id);
 
     public static Account Account(int id, string externalId = "sub", bool isAdmin = false)
     {

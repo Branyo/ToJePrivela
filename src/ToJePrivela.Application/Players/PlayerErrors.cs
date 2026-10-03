@@ -8,5 +8,5 @@ public static class PlayerErrors
         Error.NotFound("Player.NotFound", $"Player with id {id} was not found.");
 
     public static Error NameTaken(string name) =>
-        Error.Conflict("Player.NameTaken", $"Player with name '{name}' already exists.");
+        Error.Conflict("Player.NameTaken", $"You already have a player named '{name}'.");
 }

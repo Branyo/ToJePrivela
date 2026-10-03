@@ -21,7 +21,13 @@ public sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
             .IsRequired()
             .HasMaxLength(Player.NameMaxLength);
 
-        builder.HasIndex(p => p.NameKey).IsUnique();
+        // Names are unique per account: two logins may each have their own "Brano".
+        builder.HasIndex(p => new { p.AccountId, p.NameKey }).IsUnique();
+
+        builder.HasOne<Account>()
+            .WithMany()
+            .HasForeignKey(p => p.AccountId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(p => p.Avatar)
             .IsRequired()

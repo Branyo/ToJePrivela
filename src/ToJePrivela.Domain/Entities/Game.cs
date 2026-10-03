@@ -16,7 +16,9 @@ public class Game
     {
     }
 
+    /// <param name="accountId">The account (login) the game is played under; its players belong to it too.</param>
     public Game(
+        int accountId,
         IEnumerable<int> playerIds,
         DateTime startedAt,
         int badCardLimit = DefaultBadCardLimit,
@@ -37,6 +39,7 @@ public class Game
             throw new DomainException($"Unknown bad points mode {badPointsMode}.");
         }
 
+        AccountId = Guard.AgainstOutOfRange(accountId, nameof(accountId), 1, int.MaxValue);
         BadCardLimit = Guard.AgainstOutOfRange(badCardLimit, nameof(badCardLimit), MinBadCardLimit, MaxBadCardLimit);
         BadPointsMode = badPointsMode;
         Started = UtcTime.Normalize(startedAt);
@@ -44,6 +47,9 @@ public class Game
     }
 
     public int Id { get; private set; }
+
+    /// <summary>The account (login) the game was played under; only that login sees it.</summary>
+    public int AccountId { get; private set; }
 
     public DateTime? Started { get; private set; }
 

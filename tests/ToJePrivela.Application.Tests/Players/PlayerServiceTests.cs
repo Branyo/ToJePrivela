@@ -20,14 +20,14 @@ public class PlayerServiceTests
 
     public PlayerServiceTests()
     {
-        _sut = new PlayerService(_players, _games, _unitOfWork, _avatarPicker, new FixedTimeProvider(Now));
+        _sut = new PlayerService(_players, _games, _unitOfWork, _avatarPicker, new FixedTimeProvider(Now), new FixedCurrentAccount(TestAccountId));
     }
 
     [Fact]
     public async Task GetAllAsync_MapsEveryPlayer()
     {
-        _players.GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns([new Player("Brano", "🦊"), new Player("Duri", "🦊")]);
+        _players.GetAllAsync(TestAccountId, Arg.Any<CancellationToken>())
+            .Returns([new Player(TestAccountId, "Brano", "🦊"), new Player(TestAccountId, "Duri", "🦊")]);
 
         var result = await _sut.GetAllAsync();
 
@@ -38,7 +38,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task GetByIdAsync_ReturnsNotFoundForUnknownPlayer()
     {
-        _players.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetByIdAsync(TestAccountId, 7, Arg.Any<CancellationToken>()).Returns((Player?)null);
 
         var result = await _sut.GetByIdAsync(7);
 
@@ -49,7 +49,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task CreateAsync_StoresThePlayer()
     {
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetByNameAsync(TestAccountId, "Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
 
         var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "Brano" });
 
@@ -62,8 +62,8 @@ public class PlayerServiceTests
     [Fact]
     public async Task CreateAsync_AssignsAnAvatarPickedAgainstTheExistingPlayers()
     {
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
-        _players.GetAvatarsAsync(Arg.Any<CancellationToken>()).Returns(["🐼", "🦊"]);
+        _players.GetByNameAsync(TestAccountId, "Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetAvatarsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns(["🐼", "🦊"]);
 
         var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "Brano" });
 
@@ -76,7 +76,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task CreateAsync_RejectsDuplicateName()
     {
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns(new Player("Brano", "🦊"));
+        _players.GetByNameAsync(TestAccountId, "Brano", Arg.Any<CancellationToken>()).Returns(new Player(TestAccountId, "Brano", "🦊"));
 
         var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "Brano" });
 
@@ -89,7 +89,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task CreateAsync_LooksUpTheNameTheWayItWillBeStored()
     {
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns(new Player("Brano", "🦊"));
+        _players.GetByNameAsync(TestAccountId, "Brano", Arg.Any<CancellationToken>()).Returns(new Player(TestAccountId, "Brano", "🦊"));
 
         var result = await _sut.CreateAsync(new CreatePlayerRequest { Name = "  Brano  " });
 
@@ -99,8 +99,8 @@ public class PlayerServiceTests
     [Fact]
     public async Task CreateAsync_ReportsANameTakenByAConcurrentRequest()
     {
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
-        _players.GetAvatarsAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _players.GetByNameAsync(TestAccountId, "Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetAvatarsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns([]);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns<int>(_ => throw new UniqueConstraintException("duplicate", new Exception()));
 
@@ -113,8 +113,8 @@ public class PlayerServiceTests
     [Fact]
     public async Task UpdateAsync_ReportsANameTakenByAConcurrentRequest()
     {
-        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(TestEntities.Player(1, "Duri"));
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Player(1, "Duri"));
+        _players.GetByNameAsync(TestAccountId, "Brano", Arg.Any<CancellationToken>()).Returns((Player?)null);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns<int>(_ => throw new UniqueConstraintException("duplicate", new Exception()));
 
@@ -126,7 +126,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task UpdateAsync_ReturnsNotFoundForUnknownPlayer()
     {
-        _players.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetByIdAsync(TestAccountId, 7, Arg.Any<CancellationToken>()).Returns((Player?)null);
 
         var result = await _sut.UpdateAsync(7, new UpdatePlayerRequest { Name = "Duri" });
 
@@ -140,8 +140,8 @@ public class PlayerServiceTests
         var player = TestEntities.Player(1, "Brano");
         var other = TestEntities.Player(2, "Duri");
 
-        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(player);
-        _players.GetByNameAsync("Duri", Arg.Any<CancellationToken>()).Returns(other);
+        _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
+        _players.GetByNameAsync(TestAccountId, "Duri", Arg.Any<CancellationToken>()).Returns(other);
 
         var result = await _sut.UpdateAsync(1, new UpdatePlayerRequest { Name = "Duri" });
 
@@ -155,8 +155,8 @@ public class PlayerServiceTests
     {
         var player = TestEntities.Player(1, "Brano");
 
-        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(player);
-        _players.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns(player);
+        _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
+        _players.GetByNameAsync(TestAccountId, "Brano", Arg.Any<CancellationToken>()).Returns(player);
 
         var result = await _sut.UpdateAsync(1, new UpdatePlayerRequest { Name = "Brano" });
 
@@ -169,8 +169,8 @@ public class PlayerServiceTests
     {
         var player = TestEntities.Player(1, "Brano");
 
-        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(player);
-        _players.GetByNameAsync("Jozo", Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
+        _players.GetByNameAsync(TestAccountId, "Jozo", Arg.Any<CancellationToken>()).Returns((Player?)null);
 
         var result = await _sut.UpdateAsync(1, new UpdatePlayerRequest { Name = "Jozo" });
 
@@ -182,7 +182,7 @@ public class PlayerServiceTests
     public async Task DeleteAsync_RemovesThePlayer()
     {
         var player = TestEntities.Player(1, "Brano");
-        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(player);
+        _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
 
         var result = await _sut.DeleteAsync(1);
 
@@ -198,8 +198,8 @@ public class PlayerServiceTests
         var running = TestEntities.Game(10, [1, 2], Now.UtcDateTime.AddHours(-1));
         var finished = TestEntities.Game(11, [1, 3], Now.UtcDateTime.AddDays(-1));
         finished.Finish(Now.UtcDateTime.AddDays(-1).AddHours(1));
-        _players.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(player);
-        _games.GetByPlayerAsync(1, Arg.Any<CancellationToken>()).Returns([running, finished]);
+        _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
+        _games.GetByPlayerAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns([running, finished]);
 
         var result = await _sut.DeleteAsync(1);
 
@@ -219,7 +219,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task DeleteAsync_ReturnsNotFoundForUnknownPlayer()
     {
-        _players.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _players.GetByIdAsync(TestAccountId, 7, Arg.Any<CancellationToken>()).Returns((Player?)null);
 
         var result = await _sut.DeleteAsync(7);
 
