@@ -11,13 +11,31 @@ npm run build
 ```
 
 The dev server proxies `/api` to `http://localhost:5178` (`proxy.conf.json`), so no CORS setup is
-needed while developing. No sign-in: players are just names.
+needed while developing.
+
+## Signing in
+
+Every screen but `/sign-in` needs a signed-in account (`signedInGuard`); the sign-in screen offers the
+providers the API is configured for (`GET /api/auth/providers`). Google Identity Services draws its own
+button and returns an ID token; the Facebook JS SDK opens its login popup and returns an access token.
+Both SDKs are loaded only on the sign-in screen (`ProviderSdks`). The token goes to
+`POST /api/auth/sign-in`, and the API's own access token that comes back is kept by `AuthStore` (in
+`localStorage` until it expires) and sent with every `/api` request by `authInterceptor`. A 401 drops the
+session and returns to sign-in with a `returnUrl`.
+
+Players and games belong to the signed-in login. Admins (`account.isAdmin`) also get `/admin`
+(`adminGuard`), where they create categories, add or delete AI questions and delete categories; the API
+enforces the same rule, the guard only hides a screen that would fail.
+
+For local development, set `Authentication:Google:ClientId` (an OAuth web client with
+`http://localhost:4200` as an authorised JavaScript origin) and/or `Authentication:Facebook:AppId` +
+`AppSecret` for the API — see the backend README.
 
 ## How a game runs
 
 1. **Setup** (`/new`): add 2–12 players (new names or regulars), pick how many bad cards end the game
-   (1–10, default 3), and optionally pick question categories (none = all). A category with AI questions
-   can be created right there, which a fresh database needs because it ships without questions.
+   (1–10, default 3), and optionally pick question categories (none = all). A fresh database ships
+   without questions; an admin creates categories with AI questions on `/admin`.
 2. **Play** (`/games/:id?categories=1,2`): a question is drawn from the least viewed ones and counted as
    shown. Players estimate out loud; whoever says "to je priveľa!" taps the button to reveal the answer
    and then taps the player who takes the donkey card, which flies over to that seat. **Skip** (before or
@@ -31,11 +49,15 @@ needed while developing. No sign-in: players are just names.
 ```
 src/app/
   core/api/        typed HTTP clients mirroring the backend DTOs, ProblemDetails → message
+  core/auth/       AuthStore (session), authInterceptor, guards, ProviderSdks (Google/Facebook)
   core/i18n/       LanguageService, MessagePipe, translated page titles
   shared/          ranking + seat order, flying-card animation, bad card, avatar, confetti
   features/
+    sign-in/       Google and Facebook sign-in
     home/          landing page, running games, rules
-    setup/         players, card limit, categories, AI category generation
+    setup/         players, card limit, categories
+    players/       the login's players: add, delete
+    admin/         categories and AI question generation (admins only)
     play/          PlayStore (round state machine) + game screen
     summary/       loser spotlight and scoreboard
 ```

@@ -1,23 +1,41 @@
 <header class="topbar">
+  @if (auth.account(); as account) {
+    <nav class="nav" [attr.aria-label]="'app.menu' | translate">
+      <a routerLink="/players" routerLinkActive="chip--on" class="chip nav__link">👥 {{ 'app.players' | translate }}</a>
+      @if (account.isAdmin) {
+        <a routerLink="/admin" routerLinkActive="chip--on" class="chip nav__link">🛠️ {{ 'app.admin' | translate }}</a>
+      }
+    </nav>
+  }
+
   <a routerLink="/" class="logo" [attr.aria-label]="'app.home' | translate">
     <span class="logo__donkey">🫏</span>
     <span>{{ 'app.name' | translate }}</span>
   </a>
 
-  <div class="languages" role="group" [attr.aria-label]="'app.language' | translate">
-    @for (code of i18n.languages; track code) {
-      <button
-        type="button"
-        class="chip languages__option"
-        [class.chip--on]="i18n.language() === code"
-        [attr.aria-pressed]="i18n.language() === code"
-        [attr.lang]="code"
-        [title]="'languages.' + code | translate"
-        (click)="i18n.use(code)"
-      >
-        {{ code.toUpperCase() }}
-      </button>
+  <div class="side">
+    @if (auth.account(); as account) {
+      <div class="account">
+        <span class="account__name" [title]="account.email ?? account.displayName">{{ account.displayName }}</span>
+        <button type="button" class="chip account__out" (click)="signOut()">{{ 'app.signOut' | translate }}</button>
+      </div>
     }
+
+    <div class="languages" role="group" [attr.aria-label]="'app.language' | translate">
+      @for (code of i18n.languages; track code) {
+        <button
+          type="button"
+          class="chip languages__option"
+          [class.chip--on]="i18n.language() === code"
+          [attr.aria-pressed]="i18n.language() === code"
+          [attr.lang]="code"
+          [title]="'languages.' + code | translate"
+          (click)="i18n.use(code)"
+        >
+          {{ code.toUpperCase() }}
+        </button>
+      }
+    </div>
   </div>
 </header>
 

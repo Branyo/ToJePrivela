@@ -1,0 +1,69 @@
+.sign-in {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+}
+
+.card {
+  width: min(440px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.card__donkey {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: var(--border);
+  border-radius: 50%;
+  background: var(--sun);
+  box-shadow: var(--shadow-sm);
+  font-size: 2.8rem;
+  transform: rotate(-6deg);
+}
+
+.card__title {
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+}
+
+.card__text {
+  margin: 0;
+}
+
+.providers {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+
+.providers--busy {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.providers__google {
+  min-height: 44px;
+}
+
+.providers__facebook {
+  --btn-bg: #1877f2;
+  color: #fff;
+  gap: 10px;
+}
+
+.providers__f {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  color: #1877f2;
+  font-weight: 800;
+  line-height: 1;
+}

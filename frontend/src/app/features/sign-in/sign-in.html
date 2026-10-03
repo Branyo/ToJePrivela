@@ -1,0 +1,39 @@
+<section class="page sign-in">
+  <div class="card panel">
+    <div class="card__donkey" aria-hidden="true">🫏</div>
+    <h1 class="card__title">{{ 'signIn.title' | translate }}</h1>
+    <p class="muted card__text">{{ 'signIn.text' | translate }}</p>
+
+    @if (error(); as message) {
+      <p class="error-banner" role="alert">{{ message | message }}</p>
+    }
+
+    @if (providers(); as list) {
+      @if (list.length === 0) {
+        <p class="muted">{{ 'signIn.noProviders' | translate }}</p>
+      }
+
+      <div class="providers" [class.providers--busy]="busy()" [attr.aria-busy]="busy()">
+        @if (google()) {
+          <div class="providers__google" #googleButton></div>
+        }
+        @if (facebook()) {
+          <button
+            type="button"
+            class="btn providers__facebook"
+            [disabled]="busy() || !facebookReady()"
+            (click)="signInWithFacebook()"
+          >
+            <span class="providers__f" aria-hidden="true">f</span> {{ 'signIn.facebook' | translate }}
+          </button>
+        }
+      </div>
+
+      @if (busy()) {
+        <p class="muted">{{ 'signIn.signingIn' | translate }}</p>
+      }
+    } @else if (!error()) {
+      <p class="muted">{{ 'signIn.loading' | translate }}</p>
+    }
+  </div>
+</section>
