@@ -11,6 +11,8 @@ public class ToJePrivelaDbContext : DbContext
     {
     }
 
+    public DbSet<Account> Accounts => Set<Account>();
+
     public DbSet<Player> Players => Set<Player>();
 
     public DbSet<Game> Games => Set<Game>();

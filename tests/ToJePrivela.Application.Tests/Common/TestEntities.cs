@@ -28,6 +28,24 @@ public static class TestEntities
         BadPointsMode badPointsMode = BadPointsMode.Question) =>
         WithId(new Game(playerIds, started, badCardLimit, badPointsMode), id);
 
+    public static Account Account(int id, string externalId = "sub", bool isAdmin = false)
+    {
+        var account = WithId(
+            Domain.Entities.Account.Register(IdentityProvider.Google, externalId, $"{externalId}@example.com", externalId, CreatedAt),
+            id);
+
+        if (isAdmin)
+        {
+            account.GrantAdmin();
+        }
+
+        return account;
+    }
+
+    /// <summary>The account the migration inserts; the domain itself never creates one.</summary>
+    public static Account ReservedAccount() =>
+        WithId((Account)Activator.CreateInstance(typeof(Account), nonPublic: true)!, Domain.Entities.Account.ReservedId);
+
     private static TEntity WithId<TEntity>(TEntity entity, int id)
     {
         typeof(TEntity).GetProperty("Id")!.SetValue(entity, id);
