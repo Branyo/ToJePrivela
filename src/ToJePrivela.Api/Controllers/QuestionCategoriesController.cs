@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using ToJePrivela.Api.Common;
@@ -6,7 +7,10 @@ using ToJePrivela.Application.QuestionCategories.Dtos;
 
 namespace ToJePrivela.Api.Controllers;
 
-/// <summary>Categories are immutable: there is no PUT, delete and create a new one instead.</summary>
+/// <summary>
+/// Categories are immutable: there is no PUT, delete and create a new one instead. Every signed-in account reads them;
+/// only an admin changes them or generates AI questions.
+/// </summary>
 [ApiController]
 [Route("api/question-categories")]
 [Produces("application/json")]
@@ -32,6 +36,8 @@ public sealed class QuestionCategoriesController : ControllerBase
 
     /// <summary>Creates the category and generates its AI questions; nothing is stored when generation fails.</summary>
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [EnableRateLimiting(AiRateLimitOptions.PolicyName)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -46,6 +52,8 @@ public sealed class QuestionCategoriesController : ControllerBase
 
     /// <summary>Deletes the category together with all of its questions.</summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeleteQuestionCategory(int id, CancellationToken cancellationToken) =>
@@ -53,6 +61,8 @@ public sealed class QuestionCategoriesController : ControllerBase
 
     /// <summary>Generates AI questions and adds them to the category, skipping ones it already has.</summary>
     [HttpPost("{id:int}/ai-questions")]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [EnableRateLimiting(AiRateLimitOptions.PolicyName)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -67,6 +77,8 @@ public sealed class QuestionCategoriesController : ControllerBase
 
     /// <summary>Deletes the category's AI questions; manually added or edited ones stay.</summary>
     [HttpDelete("{id:int}/ai-questions")]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DeletedAiQuestionsDto>> DeleteAiQuestions(int id, CancellationToken cancellationToken) =>

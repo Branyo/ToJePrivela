@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ToJePrivela.Api.Common;
 using ToJePrivela.Application.Questions;
@@ -5,6 +6,7 @@ using ToJePrivela.Application.Questions.Dtos;
 
 namespace ToJePrivela.Api.Controllers;
 
+/// <summary>Every signed-in account plays with the same questions; only an admin adds, edits or deletes them.</summary>
 [ApiController]
 [Route("api/questions")]
 [Produces("application/json")]
@@ -52,6 +54,8 @@ public sealed class QuestionsController : ControllerBase
         (await _questions.GetByIdAsync(id, cancellationToken)).ToActionResult();
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<QuestionDto>> CreateQuestion(
@@ -61,6 +65,8 @@ public sealed class QuestionsController : ControllerBase
             .ToCreatedResult(nameof(GetQuestion), question => new { id = question.Id });
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> UpdateQuestion(
@@ -70,6 +76,8 @@ public sealed class QuestionsController : ControllerBase
         (await _questions.UpdateAsync(id, request, cancellationToken)).ToActionResult();
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeleteQuestion(int id, CancellationToken cancellationToken) =>

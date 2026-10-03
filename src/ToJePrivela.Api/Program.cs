@@ -6,6 +6,7 @@ using ToJePrivela.Ai;
 using ToJePrivela.Api.Common;
 using ToJePrivela.Api.Middleware;
 using ToJePrivela.Application;
+using ToJePrivela.Identity;
 using ToJePrivela.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,8 @@ builder.Host.UseSerilog((context, configuration) =>
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAiQuestionGeneration(builder.Configuration);
+builder.Services.AddIdentityProviders(builder.Configuration);
+builder.Services.AddAccessTokenAuthentication();
 
 // Enums travel as their names ("Chooser"), which is a wire-format concern, so it is set here rather than on the DTOs.
 builder.Services.AddControllers()
@@ -27,12 +30,28 @@ builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<ConcurrencyConflictExceptionHandler>();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options => options.SwaggerDoc("v1", new OpenApiInfo
+builder.Services.AddSwaggerGen(options =>
 {
-    Title = "ToJePrivela API",
-    Version = "v1",
-    Description = "Backend for the Slovak trivia game."
-}));
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "ToJePrivela API",
+        Version = "v1",
+        Description = "Backend for the Slovak trivia game."
+    });
+
+    // Lets Swagger UI send the access token from POST /api/auth/sign-in.
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "The accessToken returned by POST /api/auth/sign-in."
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
 
 var corsOptions = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new CorsOptions();
 
@@ -71,6 +90,7 @@ var isTesting = app.Environment.IsEnvironment("Testing");
 if (!isTesting)
 {
     await app.Services.InitializeDatabaseAsync();
+    await app.Services.ProvisionAdminAccountsAsync();
 }
 
 app.UseExceptionHandler();
@@ -89,6 +109,7 @@ if (!isTesting)
 }
 
 app.UseCors(CorsOptions.PolicyName);
+app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();

@@ -52,6 +52,8 @@ public class ResultExtensionsTests
     [InlineData(ErrorType.NotFound, StatusCodes.Status404NotFound)]
     [InlineData(ErrorType.Conflict, StatusCodes.Status409Conflict)]
     [InlineData(ErrorType.Unavailable, StatusCodes.Status503ServiceUnavailable)]
+    [InlineData(ErrorType.Unauthorized, StatusCodes.Status401Unauthorized)]
+    [InlineData(ErrorType.Forbidden, StatusCodes.Status403Forbidden)]
     [InlineData(ErrorType.Failure, StatusCodes.Status500InternalServerError)]
     public void EveryErrorTypeMapsToItsStatusCode(ErrorType type, int expectedStatusCode)
     {
