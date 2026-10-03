@@ -10,7 +10,7 @@ public class GameStandingsTests
 
     private static readonly DateTime Start = new(2026, 9, 22, 18, 0, 0, DateTimeKind.Utc);
 
-    private readonly Game _game = new([Ana, Bo, Cy], Start, badCardLimit: Game.MaxBadCardLimit);
+    private readonly Game _game = new(TestAccountId, [Ana, Bo, Cy], Start, badCardLimit: Game.MaxBadCardLimit);
 
     [Fact]
     public void Standings_PutTheMostBadPointsFirstAndMakeThatPlayerTheLoser()

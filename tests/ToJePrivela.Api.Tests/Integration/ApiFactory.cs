@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,7 +44,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>Not configured (no client id), so Facebook sign-in is not offered.</summary>
     public IExternalIdentityVerifier FacebookVerifier { get; } = Substitute.For<IExternalIdentityVerifier>();
 
-    /// <summary>A signed-in admin; every client signs in as this account unless a test asks for another.</summary>
+    /// <summary>
+    /// A signed-in admin owning the seeded players; every client signs in as this account unless a test asks for another.
+    /// </summary>
     public Account Admin { get; private set; } = default!;
 
     /// <summary>A signed-in account without admin rights.</summary>
@@ -117,11 +120,13 @@ public class ApiFactory : WebApplicationFactory<Program>
         var context = scope.ServiceProvider.GetRequiredService<ToJePrivelaDbContext>();
         context.Database.Migrate();
 
+        // Like the first configured admin, the test admin takes over the reserved account and its seeded players.
         var now = DateTime.UtcNow;
-        Admin = Account.Register(IdentityProvider.Google, "test-admin", "admin@test.local", "Test admin", now);
-        Admin.GrantAdmin();
+        Admin = context.Accounts.Single(account => account.Id == Account.ReservedId);
+        Admin.ProvisionFor(IdentityProvider.Google, "admin@test.local");
+        Admin.SignIn("test-admin", "admin@test.local", "Test admin", now);
         Member = Account.Register(IdentityProvider.Google, "test-member", "member@test.local", "Test member", now);
-        context.Accounts.AddRange(Admin, Member);
+        context.Accounts.Add(Member);
         context.SaveChanges();
 
         return host;
@@ -139,6 +144,8 @@ public class ApiFactory : WebApplicationFactory<Program>
 
         if (disposing && File.Exists(_databasePath))
         {
+            // Pooled connections keep the file open.
+            SqliteConnection.ClearAllPools();
             File.Delete(_databasePath);
         }
     }

@@ -11,7 +11,7 @@ public class GameForgetPlayerTests
     [Fact]
     public void ForgetPlayer_CancelsARunningGameSoItCanNeverBeResumed()
     {
-        var game = new Game([1, 2, 3], Start);
+        var game = new Game(TestAccountId, [1, 2, 3], Start);
 
         game.ForgetPlayer(2, DeletedAt);
 
@@ -25,7 +25,7 @@ public class GameForgetPlayerTests
     [Fact]
     public void ForgetPlayer_KeepsTheSeatAndItsScoresAsAnUnknownPlayer()
     {
-        var game = new Game([1, 2], Start);
+        var game = new Game(TestAccountId, [1, 2], Start);
         game.AwardBadCard(2, Question(4), null, Start);
         game.AwardDouble(2);
 
@@ -41,7 +41,7 @@ public class GameForgetPlayerTests
     [Fact]
     public void ForgetPlayer_GivesACancelledGameNoLoser()
     {
-        var game = new Game([1, 2], Start);
+        var game = new Game(TestAccountId, [1, 2], Start);
         game.AwardBadCard(1, Question(5), null, Start);
 
         game.ForgetPlayer(2, DeletedAt);
@@ -52,7 +52,7 @@ public class GameForgetPlayerTests
     [Fact]
     public void ForgetPlayer_LeavesAFinishedGameAndItsResultAlone()
     {
-        var game = new Game([1, 2], Start, badCardLimit: 2);
+        var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
         game.AwardBadCard(2, Question(3), null, Start);
         game.AwardBadCard(2, Question(3), null, Start.AddMinutes(30));
         var finished = game.Finished;
@@ -68,7 +68,7 @@ public class GameForgetPlayerTests
     [Fact]
     public void ForgetPlayer_CanForgetSeveralPlayersOfOneGame()
     {
-        var game = new Game([1, 2, 3], Start);
+        var game = new Game(TestAccountId, [1, 2, 3], Start);
 
         game.ForgetPlayer(1, DeletedAt);
         game.ForgetPlayer(3, DeletedAt.AddDays(1));
@@ -80,7 +80,7 @@ public class GameForgetPlayerTests
     [Fact]
     public void ForgetPlayer_NeverEndsTheGameBeforeItStarted()
     {
-        var game = new Game([1, 2], Start);
+        var game = new Game(TestAccountId, [1, 2], Start);
 
         game.ForgetPlayer(1, Start.AddHours(-3));
 
@@ -90,7 +90,7 @@ public class GameForgetPlayerTests
     [Fact]
     public void ForgetPlayer_RejectsAPlayerOutsideTheGame()
     {
-        var game = new Game([1, 2], Start);
+        var game = new Game(TestAccountId, [1, 2], Start);
 
         Assert.Throws<DomainException>(() => game.ForgetPlayer(9, DeletedAt));
         Assert.False(game.IsFinished);
