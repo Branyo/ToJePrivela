@@ -2,7 +2,10 @@
   "app": {
     "name": "To je priveľa!",
     "home": "To je priveľa! – home",
-    "language": "Language"
+    "language": "Language",
+    "menu": "Menu",
+    "signOut": "Sign out",
+    "settings": "Settings"
   },
   "languages": {
     "sk": "Slovenčina",
@@ -11,7 +14,9 @@
   "titles": {
     "setup": "New game",
     "play": "Playing",
-    "summary": "Results"
+    "summary": "Results",
+    "signIn": "Sign in",
+    "settings": "Settings"
   },
   "common": {
     "dateTime": "d MMM, HH:mm",
@@ -115,11 +120,12 @@
         "one": "Add at least {{count}} more player.",
         "other": "Add at least {{count}} more players."
       },
-      "noQuestions": "There are no questions yet. Create a category with AI questions first.",
+      "noQuestions": "There are no questions yet. Ask an admin to add some.",
       "nameLength": "A name needs {{min}} to {{max}} characters.",
       "tableFull": "The table is full: {{max}} players at most.",
       "categoryNameLength": "A category name needs {{min}} to {{max}} characters.",
-      "questionCount": "Ask for {{min}} to {{max}} questions."
+      "questionCount": "Ask for {{min}} to {{max}} questions.",
+      "noQuestionsAdmin": "There are no questions yet. Create a category with AI questions first."
     }
   },
   "play": {
@@ -192,6 +198,70 @@
     "home": "🏠 Home",
     "loading": "Counting donkeys… 🫏🫏🫏"
   },
+  "signIn": {
+    "title": "Sign in to play",
+    "text": "Your players and games stay with your login. Everyone plays with the same questions.",
+    "name": "Login name",
+    "password": "Password",
+    "submit": "Sign in",
+    "signingIn": "Signing in…",
+    "newHint": "New here? Type the login name you want and press Sign in.",
+    "ask": {
+      "title": "New login?",
+      "text": "There is no login named \"{{name}}\" yet. Do you want to create it?",
+      "yes": "Yes, create it",
+      "no": "No"
+    },
+    "create": {
+      "title": "Create a login",
+      "repeat": "Repeat password",
+      "passwordHelp": "{{min}} to {{max}} characters.",
+      "submit": "Create and sign in",
+      "creating": "Creating…",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "nameLength": "A login name needs {{min}} to {{max}} characters.",
+      "passwordLength": "A password needs {{min}} to {{max}} characters.",
+      "passwordsDiffer": "The passwords do not match."
+    }
+  },
+  "players": {
+    "title": "👥 Your players",
+    "text": "Only you see them. Add regulars here or right at the table.",
+    "loading": "Loading players…",
+    "empty": "No players yet. Add the first one!",
+    "confirm": "Delete for good? Finished games keep their score as an unknown player; a game still running ends.",
+    "delete": "Delete",
+    "keep": "Keep",
+    "deleteName": "Delete {{name}}",
+    "count": "{{count}} / {{max}}",
+    "full": "You have {{max}} players, the most a login can keep. Delete one to add another."
+  },
+  "settings": {
+    "title": "⚙️ Settings",
+    "signedInAs": "Signed in as {{name}}",
+    "admin": "admin"
+  },
+  "admin": {
+    "title": "🛠️ Questions",
+    "text": "Every login plays with these questions. Only admins can change them.",
+    "categories": "Categories",
+    "loading": "Loading categories…",
+    "counts": "{{total}} questions, {{ai}} by AI",
+    "moreCount": "Number of AI questions to add to {{name}}",
+    "generateMore": "✨ Add AI questions",
+    "deleteAi": "Delete AI questions",
+    "deleteCategory": "Delete category",
+    "confirmAi": "Delete the {{count}} AI questions of \"{{name}}\"? Questions added by hand stay.",
+    "confirmCategory": "Delete \"{{name}}\" with all its {{count}} questions?",
+    "delete": "Delete",
+    "keep": "Keep",
+    "created": "\"{{name}}\" is ready with {{count}} fresh questions! ✨",
+    "added": "{{count}} new questions added to \"{{name}}\". ✨",
+    "aiDeleted": "{{count}} AI questions deleted from \"{{name}}\".",
+    "categoryDeleted": "\"{{name}}\" was deleted."
+  },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "unreachable": "The game server is not reachable. Is the API running?",
@@ -210,7 +280,8 @@
       },
       "Player": {
         "NotFound": "This player does not exist.",
-        "NameTaken": "A player with this name already exists."
+        "NameTaken": "You already have a player with this name.",
+        "LimitReached": "You have reached the most players a login can keep. Delete one first."
       },
       "QuestionCategory": {
         "NotFound": "This category does not exist.",
@@ -226,6 +297,14 @@
         "UnknownCategories": "Some of the chosen categories do not exist.",
         "NoneAvailable": "The selected categories contain no questions.",
         "ViewConflict": "The question could not be recorded. Please try again."
+      },
+      "Auth": {
+        "Unauthenticated": "Please sign in again.",
+        "UnknownAccount": "Your login no longer exists. Please sign in again.",
+        "Forbidden": "Only an admin may do this.",
+        "WrongPassword": "The password is not right.",
+        "UnknownLogin": "There is no login with this name.",
+        "NameTaken": "This login name is already taken."
       }
     }
   }

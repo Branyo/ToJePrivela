@@ -1,0 +1,113 @@
+.sign-in {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+}
+
+.card {
+  width: min(440px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.card__donkey {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: var(--border);
+  border-radius: 50%;
+  background: var(--sun);
+  box-shadow: var(--shadow-sm);
+  font-size: 2.8rem;
+  transform: rotate(-6deg);
+}
+
+.card__title {
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+}
+
+.card__text,
+.hint {
+  margin: 0;
+}
+
+.hint {
+  font-size: 0.95rem;
+}
+
+.fields {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+.field__label {
+  font-weight: 700;
+}
+
+.field__help {
+  font-size: 0.9rem;
+}
+
+.fields .text-input {
+  width: 100%;
+}
+
+.sign-in__submit {
+  justify-self: center;
+  margin-top: 4px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(43 33 64 / 0.45);
+}
+
+.dialog {
+  width: min(400px, 100%);
+  display: grid;
+  gap: 14px;
+  animation: pop 0.25s var(--bounce);
+}
+
+.dialog__title {
+  font-size: 1.5rem;
+}
+
+.dialog p {
+  margin: 0;
+}
+
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    animation: none;
+  }
+}

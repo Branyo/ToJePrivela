@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GamesApi } from '../../core/api/games-api';
 import { BadPointsMode, Limit, Player, QuestionCategory } from '../../core/api/models';
 import { PlayersApi } from '../../core/api/players-api';
+import { AuthStore } from '../../core/auth/auth-store';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
@@ -15,12 +16,10 @@ import { PlayerAvatar } from '../../shared/player-avatar';
 
 /** Without the backend's rules nothing is allowed; the screen's own requests report the outage. */
 const NOTHING: Limit = { min: 0, max: 0 };
-/** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
-const GENERATOR_MIN_QUESTIONS = 1;
 
 @Component({
   selector: 'app-setup',
-  imports: [PlayerAvatar, TranslatePipe, MessagePipe],
+  imports: [RouterLink, PlayerAvatar, TranslatePipe, MessagePipe],
   templateUrl: './setup.html',
   styleUrl: './setup.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,16 +32,13 @@ export class Setup {
   private readonly router = inject(Router);
   protected readonly i18n = inject(LanguageService);
   private readonly rules = inject(GameRulesStore).rules;
+  /** Only admins can add questions, so only they are sent to the settings screen when there are none. */
+  protected readonly isAdmin = inject(AuthStore).isAdmin;
 
   protected readonly playerLimit = computed(() => this.rules()?.players ?? NOTHING);
   protected readonly cardLimit = computed(() => this.rules()?.badCardLimit ?? NOTHING);
   protected readonly playerNameLimit = computed(() => this.rules()?.playerName ?? NOTHING);
-  protected readonly categoryNameLimit = computed(() => this.rules()?.categoryName ?? NOTHING);
   protected readonly badPoints = computed(() => badPointsParams(this.rules()));
-  protected readonly questionCountLimit = computed<Limit>(() => ({
-    min: GENERATOR_MIN_QUESTIONS,
-    max: this.rules()?.maxAiQuestionCount ?? 0,
-  }));
 
   protected readonly players = signal<Player[]>([]);
   protected readonly selectedIds = signal<number[]>([]);
@@ -54,10 +50,6 @@ export class Setup {
   protected readonly categories = signal<QuestionCategory[]>([]);
   protected readonly questionCounts = signal<ReadonlyMap<number, number>>(new Map());
   protected readonly selectedCategoryIds = signal<number[]>([]);
-  protected readonly newCategoryName = signal('');
-  protected readonly newCategoryCount = signal(20);
-  protected readonly generating = signal(false);
-  protected readonly generated = signal<Message | null>(null);
 
   protected readonly starting = signal(false);
   protected readonly error = signal<Message | null>(null);
@@ -108,7 +100,7 @@ export class Setup {
       return { key: this.i18n.pluralKey('setup.errors.missingPlayers', missing), params: { count: missing } };
     }
     if (this.availableQuestions() === 0) {
-      return { key: 'setup.errors.noQuestions' };
+      return { key: this.isAdmin() ? 'setup.errors.noQuestionsAdmin' : 'setup.errors.noQuestions' };
     }
     return null;
   });
@@ -191,41 +183,6 @@ export class Setup {
     return this.questionCounts().get(id) ?? 0;
   }
 
-  protected createCategory(): void {
-    const name = this.newCategoryName().trim();
-    const count = this.newCategoryCount();
-    const nameLimit = this.categoryNameLimit();
-    if (name.length < nameLimit.min || name.length > nameLimit.max) {
-      this.error.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
-      return;
-    }
-    const countLimit = this.questionCountLimit();
-    if (!Number.isInteger(count) || count < countLimit.min || count > countLimit.max) {
-      this.error.set({ key: 'setup.errors.questionCount', params: { min: countLimit.min, max: countLimit.max } });
-      return;
-    }
-
-    this.error.set(null);
-    this.generated.set(null);
-    this.generating.set(true);
-    this.categoriesApi.create(name, count).subscribe({
-      next: (category) => {
-        this.generating.set(false);
-        this.newCategoryName.set('');
-        this.generated.set({
-          key: 'setup.generator.done',
-          params: { name: category.name, count: category.questionGeneration.created },
-        });
-        this.selectedCategoryIds.update((ids) => [...ids, category.id]);
-        this.loadCategories();
-      },
-      error: (error) => {
-        this.generating.set(false);
-        this.error.set(toProblem(error).message);
-      },
-    });
-  }
-
   protected start(): void {
     if (this.startBlocker() || this.starting()) {
       return;
@@ -249,14 +206,6 @@ export class Setup {
 
   protected onNameInput(event: Event): void {
     this.newName.set((event.target as HTMLInputElement).value);
-  }
-
-  protected onCategoryNameInput(event: Event): void {
-    this.newCategoryName.set((event.target as HTMLInputElement).value);
-  }
-
-  protected onCategoryCountInput(event: Event): void {
-    this.newCategoryCount.set(Number((event.target as HTMLInputElement).value));
   }
 
   private findByName(name: string): Player | undefined {
