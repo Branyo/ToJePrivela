@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -34,7 +35,10 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     public IQuestionGenerator QuestionGenerator { get; } = Substitute.For<IQuestionGenerator>();
 
-    /// <summary>A signed-in admin (<see cref="AdminPassword"/>); every client signs in as this login unless a test asks for another.</summary>
+    /// <summary>
+    /// A signed-in admin (<see cref="AdminPassword"/>) owning the seeded players; every client signs in as this login
+    /// unless a test asks for another.
+    /// </summary>
     public Account Admin { get; private set; } = default!;
 
     /// <summary>A login without admin rights (<see cref="MemberPassword"/>).</summary>
@@ -112,11 +116,13 @@ public class ApiFactory : WebApplicationFactory<Program>
         var context = scope.ServiceProvider.GetRequiredService<ToJePrivelaDbContext>();
         context.Database.Migrate();
 
+        // Like the first configured admin, the test admin takes over the reserved account and its seeded players.
         var now = DateTime.UtcNow;
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-        Admin = Account.CreateAdmin("Test admin", hasher.Hash(AdminPassword), now);
+        Admin = context.Accounts.Single(account => account.Id == Account.ReservedId);
+        Admin.TakeOverReserved("Test admin", hasher.Hash(AdminPassword), now);
         Member = Account.Register("Test member", hasher.Hash(MemberPassword), now);
-        context.Accounts.AddRange(Admin, Member);
+        context.Accounts.Add(Member);
         context.SaveChanges();
 
         return host;
@@ -134,6 +140,8 @@ public class ApiFactory : WebApplicationFactory<Program>
 
         if (disposing && File.Exists(_databasePath))
         {
+            // Pooled connections keep the file open.
+            SqliteConnection.ClearAllPools();
             File.Delete(_databasePath);
         }
     }

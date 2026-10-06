@@ -10,5 +10,6 @@ public static class PlayerMapper
     public static IReadOnlyList<PlayerDto> ToDtos(IEnumerable<Player> players) =>
         players.Select(ToDto).ToList();
 
-    public static Player ToEntity(CreatePlayerRequest request, string avatar) => new(request.Name, avatar);
+    public static Player ToEntity(CreatePlayerRequest request, int accountId, string avatar) =>
+        new(accountId, request.Name, avatar);
 }

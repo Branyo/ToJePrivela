@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Players.Dtos;
@@ -6,6 +7,10 @@ using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Players;
 
+/// <summary>
+/// Works on the signed-in account's players only; names are unique within the account, which keeps at most
+/// <see cref="Account.MaxPlayers"/> of them.
+/// </summary>
 public sealed class PlayerService : IPlayerService
 {
     private readonly IPlayerRepository _players;
@@ -13,30 +18,33 @@ public sealed class PlayerService : IPlayerService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAvatarPicker _avatarPicker;
     private readonly TimeProvider _timeProvider;
+    private readonly ICurrentAccount _currentAccount;
 
     public PlayerService(
         IPlayerRepository players,
         IGameRepository games,
         IUnitOfWork unitOfWork,
         IAvatarPicker avatarPicker,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ICurrentAccount currentAccount)
     {
         _players = players;
         _games = games;
         _unitOfWork = unitOfWork;
         _avatarPicker = avatarPicker;
         _timeProvider = timeProvider;
+        _currentAccount = currentAccount;
     }
 
     public async Task<Result<IReadOnlyList<PlayerDto>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var players = await _players.GetAllAsync(cancellationToken);
+        var players = await _players.GetAllAsync(_currentAccount.Id, cancellationToken);
         return Result.Success(PlayerMapper.ToDtos(players));
     }
 
     public async Task<Result<PlayerDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var player = await _players.GetByIdAsync(id, cancellationToken);
+        var player = await _players.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         return player is null
             ? Result.Failure<PlayerDto>(PlayerErrors.NotFound(id))
@@ -52,13 +60,18 @@ public sealed class PlayerService : IPlayerService
 
         var name = Player.NormalizeName(request.Name);
 
-        if (await _players.GetByNameAsync(name, cancellationToken) is not null)
+        if (await _players.GetByNameAsync(_currentAccount.Id, name, cancellationToken) is not null)
         {
             return Result.Failure<PlayerDto>(PlayerErrors.NameTaken(name));
         }
 
-        var avatar = _avatarPicker.Pick(await _players.GetAvatarsAsync(cancellationToken));
-        var player = PlayerMapper.ToEntity(request, avatar);
+        if (await _players.CountAsync(_currentAccount.Id, cancellationToken) >= Account.MaxPlayers)
+        {
+            return Result.Failure<PlayerDto>(PlayerErrors.LimitReached);
+        }
+
+        var avatar = _avatarPicker.Pick(await _players.GetAvatarsAsync(_currentAccount.Id, cancellationToken));
+        var player = PlayerMapper.ToEntity(request, _currentAccount.Id, avatar);
 
         await _players.AddAsync(player, cancellationToken);
 
@@ -82,7 +95,7 @@ public sealed class PlayerService : IPlayerService
             return Result.Failure(invalid);
         }
 
-        var player = await _players.GetByIdAsync(id, cancellationToken);
+        var player = await _players.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         if (player is null)
         {
@@ -90,7 +103,7 @@ public sealed class PlayerService : IPlayerService
         }
 
         var name = Player.NormalizeName(request.Name);
-        var duplicate = await _players.GetByNameAsync(name, cancellationToken);
+        var duplicate = await _players.GetByNameAsync(_currentAccount.Id, name, cancellationToken);
 
         if (duplicate is not null && duplicate.Id != id)
         {
@@ -118,7 +131,7 @@ public sealed class PlayerService : IPlayerService
     /// </summary>
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var player = await _players.GetByIdAsync(id, cancellationToken);
+        var player = await _players.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         if (player is null)
         {
@@ -127,7 +140,7 @@ public sealed class PlayerService : IPlayerService
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        foreach (var game in await _games.GetByPlayerAsync(id, cancellationToken))
+        foreach (var game in await _games.GetByPlayerAsync(_currentAccount.Id, id, cancellationToken))
         {
             game.ForgetPlayer(id, now);
         }
