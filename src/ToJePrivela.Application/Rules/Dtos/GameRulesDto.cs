@@ -8,6 +8,8 @@ public sealed record LimitDto(int Min, int Max);
 /// copies of them.
 /// </summary>
 /// <param name="Avatars">Every avatar a player can be given, in a fixed order.</param>
+/// <param name="LoginName">Length of a new login's name.</param>
+/// <param name="Password">Length of a new login's password.</param>
 public sealed record GameRulesDto(
     LimitDto Players,
     LimitDto BadCardLimit,
@@ -16,4 +18,6 @@ public sealed record GameRulesDto(
     LimitDto PlayerName,
     LimitDto CategoryName,
     int MaxAiQuestionCount,
-    IReadOnlyList<string> Avatars);
+    IReadOnlyList<string> Avatars,
+    LimitDto LoginName,
+    LimitDto Password);

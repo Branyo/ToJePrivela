@@ -46,6 +46,8 @@ public static class ResultExtensions
         ErrorType.NotFound => StatusCodes.Status404NotFound,
         ErrorType.Conflict => StatusCodes.Status409Conflict,
         ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
+        ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+        ErrorType.Forbidden => StatusCodes.Status403Forbidden,
         _ => StatusCodes.Status500InternalServerError
     };
 
@@ -55,6 +57,8 @@ public static class ResultExtensions
         ErrorType.NotFound => "Resource not found",
         ErrorType.Conflict => "Conflict",
         ErrorType.Unavailable => "Service unavailable",
+        ErrorType.Unauthorized => "Unauthorized",
+        ErrorType.Forbidden => "Forbidden",
         _ => "Unexpected error"
     };
 }
