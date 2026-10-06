@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 using Serilog;
@@ -11,6 +10,8 @@ using ToJePrivela.Identity;
 using ToJePrivela.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+DeploymentSafety.EnsureNoDevelopmentSigningKey(builder.Environment, builder.Configuration);
 
 builder.Host.UseSerilog((context, configuration) =>
     configuration.WriteTo.Console().ReadFrom.Configuration(context.Configuration));
@@ -79,20 +80,17 @@ var signInRateLimit = builder.Configuration.GetSection(SignInRateLimitOptions.Se
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = (context, cancellationToken) =>
+        RateLimitRejection.WriteAsync(context.HttpContext, context.Lease, cancellationToken);
     options.AddFixedWindowLimiter(AiRateLimitOptions.PolicyName, limiter =>
     {
         limiter.PermitLimit = aiRateLimit.PermitLimit;
         limiter.Window = TimeSpan.FromSeconds(aiRateLimit.WindowSeconds);
         limiter.QueueLimit = 0;
     });
-    options.AddPolicy(SignInRateLimitOptions.PolicyName, httpContext => RateLimitPartition.GetFixedWindowLimiter(
-        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = signInRateLimit.PermitLimit,
-            Window = TimeSpan.FromSeconds(signInRateLimit.WindowSeconds),
-            QueueLimit = 0
-        }));
+    options.AddPolicy(
+        SignInRateLimitOptions.PolicyName,
+        httpContext => SignInRateLimiting.Partition(httpContext, signInRateLimit));
 });
 
 var app = builder.Build();
@@ -124,9 +122,12 @@ if (!isTesting && !app.Environment.IsDevelopment())
 
 app.UseCors(CorsOptions.PolicyName);
 app.UseAuthentication();
+app.UseSignInLoginNames();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
+
+DeploymentSafety.StopDevelopmentReachableFromNetwork(app);
 
 await app.RunAsync();
 

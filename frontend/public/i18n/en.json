@@ -265,6 +265,8 @@
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "unreachable": "The game server is not reachable. Is the API running?",
+    "rulesUnavailable": "The game rules could not be loaded from the server. Check that it is running and try again.",
+    "rateLimited": "Too many attempts in a short time. Wait a moment and try again.",
     "api": {
       "Concurrency": {
         "Conflict": "Someone else changed this in the meantime. Reload and try again."
@@ -305,6 +307,9 @@
         "WrongPassword": "The password is not right.",
         "UnknownLogin": "There is no login with this name.",
         "NameTaken": "This login name is already taken."
+      },
+      "RateLimit": {
+        "Exceeded": "Too many attempts in a short time. Try again in {{seconds}} s."
       }
     }
   }

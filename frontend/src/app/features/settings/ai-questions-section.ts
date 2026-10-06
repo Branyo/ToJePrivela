@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
-import { Limit, QuestionCategory } from '../../core/api/models';
+import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { QuestionsApi } from '../../core/api/questions-api';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
@@ -12,7 +12,6 @@ import { GameRulesStore } from '../../core/rules/game-rules-store';
 /** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
 const GENERATOR_MIN_QUESTIONS = 1;
 const DEFAULT_COUNT = 20;
-const NOTHING: Limit = { min: 0, max: 0 };
 
 interface CategoryRow {
   category: QuestionCategory;
@@ -38,13 +37,11 @@ export class AiQuestionsSection {
   private readonly categoriesApi = inject(CategoriesApi);
   private readonly questionsApi = inject(QuestionsApi);
   private readonly i18n = inject(LanguageService);
-  private readonly rules = inject(GameRulesStore).rules;
+  private readonly rulesStore = inject(GameRulesStore);
 
-  protected readonly nameLimit = computed(() => this.rules()?.categoryName ?? NOTHING);
-  protected readonly countLimit = computed<Limit>(() => ({
-    min: GENERATOR_MIN_QUESTIONS,
-    max: this.rules()?.maxAiQuestionCount ?? 0,
-  }));
+  /** `null` while the backend's rules are missing; the inputs then take anything and the actions say so. */
+  protected readonly nameLimit = computed(() => this.rulesStore.rules()?.categoryName ?? null);
+  protected readonly countLimit = computed(() => countLimitOf(this.rulesStore.rules()));
 
   private readonly categories = signal<QuestionCategory[] | null>(null);
   private readonly counts = signal<ReadonlyMap<number, { total: number; ai: number }>>(new Map());
@@ -71,18 +68,23 @@ export class AiQuestionsSection {
   });
 
   constructor() {
+    void this.rulesStore.ensureLoaded();
     this.load();
   }
 
-  protected create(): void {
+  protected async create(): Promise<void> {
+    const rules = this.rulesStore.rules() ?? (await this.reloadRules());
+    if (!rules) {
+      return;
+    }
     const name = this.newName().trim();
-    const nameLimit = this.nameLimit();
+    const nameLimit = rules.categoryName;
     if (name.length < nameLimit.min || name.length > nameLimit.max) {
       this.error.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
       return;
     }
     const count = this.newCount();
-    if (!this.isValidCount(count)) {
+    if (!this.isValidCount(count, rules)) {
       return;
     }
 
@@ -99,9 +101,13 @@ export class AiQuestionsSection {
     });
   }
 
-  protected generateMore(row: CategoryRow): void {
+  protected async generateMore(row: CategoryRow): Promise<void> {
+    const rules = this.rulesStore.rules() ?? (await this.reloadRules());
+    if (!rules) {
+      return;
+    }
     const count = this.moreCountFor(row.category.id);
-    if (!this.isValidCount(count)) {
+    if (!this.isValidCount(count, rules)) {
       return;
     }
 
@@ -164,8 +170,18 @@ export class AiQuestionsSection {
     this.moreCounts.update((counts) => new Map(counts).set(id, value));
   }
 
-  private isValidCount(count: number): boolean {
-    const { min, max } = this.countLimit();
+  /** Tries to load the missing rules again; `null` after saying that they still cannot be had. */
+  private async reloadRules(): Promise<GameRules | null> {
+    const rules = await this.rulesStore.ensureLoaded();
+    if (!rules) {
+      this.error.set({ key: 'errors.rulesUnavailable' });
+    }
+    return rules;
+  }
+
+  private isValidCount(count: number, rules: GameRules): boolean {
+    const min = GENERATOR_MIN_QUESTIONS;
+    const max = rules.maxAiQuestionCount;
     if (Number.isInteger(count) && count >= min && count <= max) {
       return true;
     }
@@ -208,4 +224,8 @@ export class AiQuestionsSection {
       error: (error) => this.error.set(toProblem(error).message),
     });
   }
+}
+
+function countLimitOf(rules: GameRules | null): Limit | null {
+  return rules ? { min: GENERATOR_MIN_QUESTIONS, max: rules.maxAiQuestionCount } : null;
 }

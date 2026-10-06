@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using ToJePrivela.Api.Common;
 using ToJePrivela.Application.Accounts.Dtos;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence;
@@ -223,4 +225,50 @@ public class SignInRateLimitTests : IClassFixture<TwoSignInPermitsApiFactory>
 
         Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
     }
+
+    [Fact]
+    public async Task OtherLoginNamesFromTheSameAddress_HaveTheirOwnAttempts()
+    {
+        var name = UniqueName();
+        await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "guess-password" });
+        await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "guess-password" });
+
+        var otherName = await _anonymous.PostAsJsonAsync(
+            "/api/auth/sign-in",
+            new { name = UniqueName(), password = "guess-password" });
+
+        Assert.Equal(HttpStatusCode.NotFound, otherName.StatusCode);
+    }
+
+    [Fact]
+    public async Task OneNameSpelledDifferently_SharesItsAttempts()
+    {
+        var name = UniqueName();
+        await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "guess-password" });
+        await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name = $"  {name.ToUpperInvariant()} ", password = "x" });
+
+        var third = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { Name = name, password = "guess-password" });
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+    }
+
+    [Fact]
+    public async Task ARefusal_SaysHowLongToWait()
+    {
+        var attempt = new { name = UniqueName(), password = "guess-password" };
+        await _anonymous.PostAsJsonAsync("/api/auth/sign-in", attempt);
+        await _anonymous.PostAsJsonAsync("/api/auth/sign-in", attempt);
+
+        var refused = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", attempt);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal("application/problem+json", refused.Content.Headers.ContentType?.MediaType);
+        var problem = await refused.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(RateLimitRejection.Code, problem.GetProperty("code").GetString());
+        var seconds = problem.GetProperty(RateLimitRejection.RetryAfterSecondsExtension).GetInt32();
+        Assert.InRange(seconds, 1, 60);
+        Assert.Equal(TimeSpan.FromSeconds(seconds), refused.Headers.RetryAfter?.Delta);
+    }
+
+    private static string UniqueName() => $"u{Guid.NewGuid():N}"[..20];
 }

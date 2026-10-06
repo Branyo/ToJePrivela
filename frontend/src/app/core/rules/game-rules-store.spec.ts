@@ -31,4 +31,25 @@ describe('GameRulesStore', () => {
 
     expect(store.rules()).toBeNull();
   });
+
+  it('tries again when the rules are needed and the backend was down', async () => {
+    const loading = store.load();
+    http.expectOne('/api/rules').error(new ProgressEvent('error'));
+    await loading;
+
+    const ensured = store.ensureLoaded();
+    http.expectOne('/api/rules').flush(TEST_RULES);
+
+    expect(await ensured).toEqual(TEST_RULES);
+  });
+
+  it('asks once for rules it already has, and once for several screens at a time', async () => {
+    const first = store.ensureLoaded();
+    const second = store.ensureLoaded();
+    http.expectOne('/api/rules').flush(TEST_RULES);
+    await Promise.all([first, second]);
+
+    expect(await store.ensureLoaded()).toEqual(TEST_RULES);
+    http.expectNone('/api/rules');
+  });
 });

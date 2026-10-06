@@ -50,6 +50,10 @@ dotnet test ToJePrivela.slnx
 
 The database file is created and migrated on startup, so a fresh clone needs no manual EF step.
 
+The Development settings carry a public signing key, so the API refuses to run where that is unsafe
+(`DeploymentSafety`): any other environment does not start with that key, and Development stops at once (exit code 1)
+when it listens on an address other machines can reach (`0.0.0.0`, `*`, a host name…) instead of `localhost`.
+
 ### Configuration
 
 | Setting | Purpose |
@@ -65,10 +69,10 @@ The database file is created and migrated on startup, so a fresh clone needs no 
 | `QuestionGeneration:MaxExcludedQuestions` | Known questions each call is told not to repeat (default 100) |
 | `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on the AI endpoints (default 5 per 60 s) |
 | `Cors:AllowedOrigins` | Frontend origins; empty means "any origin" |
-| `Authentication:Jwt:SigningKey` | Signs the access tokens; at least 32 characters, required — user-secrets or `Authentication__Jwt__SigningKey` (Development has a dev-only key) |
+| `Authentication:Jwt:SigningKey` | Signs the access tokens; at least 32 characters, required — user-secrets or `Authentication__Jwt__SigningKey` (Development has a dev-only key, which every other environment refuses to start with) |
 | `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 1440 minutes (24 h) by default |
 | `Authentication:Admins` | `[{ "Name": "Brano", "Password": "…" }, …]` — the admin logins, synced on startup; passwords via user-secrets or environment variables only |
-| `RateLimiting:SignIn:PermitLimit`, `WindowSeconds` | Per-address limit on signing in and creating logins (default 10 per 60 s) |
+| `RateLimiting:SignIn:PermitLimit`, `WindowSeconds` | Limit per client address and login name on signing in and creating logins (default 10 per 60 s) |
 
 ```bash
 dotnet user-secrets set "OpenAi:ApiKey" "sk-..." --project src/ToJePrivela.Api
@@ -86,7 +90,9 @@ sign-in. `POST /api/auth/sign-in` and `POST /api/auth/accounts` answer with a JW
 `GET /api/rules` needs as `Authorization: Bearer …`.
 
 Signing in with an unknown name answers 404 `Auth.UnknownLogin` on purpose, so the client can offer to create the
-login; both endpoints are rate limited per address instead.
+login; both endpoints are rate limited instead. The limit counts per client address **and** login name (compared
+like login names, so `" Brano"` and `"brano"` share it): people at one party behind the same address each get their own
+attempts, while guessing one login's password stays slow.
 
 Admin rights come from `Authentication:Admins` only, and the stored logins are made to match it on every startup:
 
@@ -149,7 +155,10 @@ Without a valid token every other route answers 401 `Auth.Unauthenticated`. Chan
 answers 403 `Auth.Forbidden` to everyone else; reading questions and recording views is open to every login.
 
 Categories are immutable — there is no PUT; delete the category and create a new one instead. The two
-AI-generating POSTs share one rate limit and answer 429 when it is exhausted.
+AI-generating POSTs share one rate limit.
+
+A request a rate limit refuses answers 429 `RateLimit.Exceeded` with `retryAfterSeconds` (also sent as the
+`Retry-After` header): how long until the limit lets the caller try again.
 
 Failures are returned as `ProblemDetails` with a machine-readable `code` extension.
 
@@ -195,6 +204,8 @@ Every generated question gets random bad points (1–5), `Source = Ai` and a `Cr
 - **Least-viewed rotation.** `GET /api/questions/random` picks at random among the questions with the
   lowest `ViewCount` in the selected categories, so no question repeats until every one in the
   selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`.
+  **For now the view counts are shared between the logins**, like the questions themselves: a question shown in one
+  login's game counts as viewed for every login, so one login's games change which questions the others draw next.
 - **Optimistic concurrency on questions.** `Question.Version` is a row version the entity bumps on every
   change (SQLite has no native rowversion) and EF checks as a concurrency token. A lost race surfaces as
   `ConcurrencyConflictException`; recording a view rereads the row and retries (up to 5 attempts, then

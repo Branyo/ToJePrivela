@@ -102,4 +102,31 @@ describe('PlayersSection', () => {
     expect(page.querySelector('.full')).not.toBeNull();
     expect(page.querySelector('.count--full')).not.toBeNull();
   });
+
+  it('says the rules are missing instead of calling an empty list full', async () => {
+    TestBed.inject(GameRulesStore).rules.set(null);
+    const fixture = TestBed.createComponent(PlayersSection);
+    fixture.detectChanges();
+    http.expectOne('/api/rules').error(new ProgressEvent('error'));
+    http.expectOne('/api/players').flush(PLAYERS);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('.full')).toBeNull();
+    expect(page.querySelector('.count')?.textContent?.trim()).toBe(String(PLAYERS.length));
+    const input = page.querySelector<HTMLInputElement>('.add-row input')!;
+    expect(input.disabled).toBe(false);
+    expect(input.hasAttribute('maxlength')).toBe(false);
+
+    input.value = 'Brano';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    page.querySelector<HTMLButtonElement>('.add-row button')!.click();
+    http.expectOne('/api/rules').error(new ProgressEvent('error'));
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+
+    expect(page.querySelector('.error-banner')?.textContent).toContain('errors.rulesUnavailable');
+    http.expectNone('/api/players');
+  });
 });

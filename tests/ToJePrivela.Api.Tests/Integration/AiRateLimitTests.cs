@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using ToJePrivela.Api.Common;
 
 namespace ToJePrivela.Api.Tests.Integration;
 
@@ -28,6 +29,7 @@ public class AiRateLimitTests : IClassFixture<SingleAiPermitApiFactory>
 
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, second.StatusCode);
+        Assert.Equal(RateLimitRejection.Code, await ProblemResponse.CodeOf(second));
         Assert.Equal(HttpStatusCode.OK, unlimited.StatusCode);
     }
 }
