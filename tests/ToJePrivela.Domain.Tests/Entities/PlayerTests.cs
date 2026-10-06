@@ -8,7 +8,7 @@ public class PlayerTests
     [Fact]
     public void Constructor_TrimsTheName()
     {
-        var player = new Player("  Brano  ", "🦊");
+        var player = new Player(TestAccountId, "  Brano  ", "🦊");
 
         Assert.Equal("Brano", player.Name);
     }
@@ -16,7 +16,7 @@ public class PlayerTests
     [Fact]
     public void Constructor_StartsWithoutGames()
     {
-        var player = new Player("Brano", "🦊");
+        var player = new Player(TestAccountId, "Brano", "🦊");
 
         Assert.Empty(player.GamePlayers);
     }
@@ -27,7 +27,7 @@ public class PlayerTests
     [InlineData("A")]
     public void Constructor_RejectsTooShortName(string name)
     {
-        Assert.Throws<DomainException>(() => new Player(name, "🦊"));
+        Assert.Throws<DomainException>(() => new Player(TestAccountId, name, "🦊"));
     }
 
     [Fact]
@@ -35,13 +35,13 @@ public class PlayerTests
     {
         var name = new string('x', Player.NameMaxLength + 1);
 
-        Assert.Throws<DomainException>(() => new Player(name, "🦊"));
+        Assert.Throws<DomainException>(() => new Player(TestAccountId, name, "🦊"));
     }
 
     [Fact]
     public void Constructor_KeepsTheAvatar()
     {
-        var player = new Player("Brano", "🐼");
+        var player = new Player(TestAccountId, "Brano", "🐼");
 
         Assert.Equal("🐼", player.Avatar);
     }
@@ -52,7 +52,7 @@ public class PlayerTests
     [InlineData("🫏")]
     public void Constructor_RejectsAvatarOutsideThePool(string avatar)
     {
-        Assert.Throws<DomainException>(() => new Player("Brano", avatar));
+        Assert.Throws<DomainException>(() => new Player(TestAccountId, "Brano", avatar));
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class PlayerTests
     [Fact]
     public void Rename_ReplacesTheName()
     {
-        var player = new Player("Brano", "🦊");
+        var player = new Player(TestAccountId, "Brano", "🦊");
 
         player.Rename("Duri");
 
@@ -75,7 +75,7 @@ public class PlayerTests
     [Fact]
     public void NameKey_FollowsTheName()
     {
-        var player = new Player("Štefan", "🦊");
+        var player = new Player(TestAccountId, "Štefan", "🦊");
         Assert.Equal("štefan", player.NameKey);
 
         player.Rename("ĽUBO");
@@ -85,9 +85,21 @@ public class PlayerTests
     [Fact]
     public void Rename_RejectsInvalidName()
     {
-        var player = new Player("Brano", "🦊");
+        var player = new Player(TestAccountId, "Brano", "🦊");
 
         Assert.Throws<DomainException>(() => player.Rename("X"));
         Assert.Equal("Brano", player.Name);
+    }
+
+    [Fact]
+    public void Constructor_KeepsTheOwningAccount()
+    {
+        Assert.Equal(7, new Player(7, "Brano", "🦊").AccountId);
+    }
+
+    [Fact]
+    public void Constructor_RejectsAMissingAccount()
+    {
+        Assert.Throws<DomainException>(() => new Player(0, "Brano", "🦊"));
     }
 }

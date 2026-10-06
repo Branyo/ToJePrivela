@@ -63,6 +63,9 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("AccountId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("BadCardLimit")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -85,6 +88,8 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
 
                     b.ToTable("Games");
                 });
@@ -132,6 +137,9 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("AccountId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Avatar")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -150,7 +158,7 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NameKey")
+                    b.HasIndex("AccountId", "NameKey")
                         .IsUnique();
 
                     b.ToTable("Players");
@@ -159,6 +167,7 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = 1,
+                            AccountId = 1,
                             Avatar = "🦉",
                             Name = "Admin",
                             NameKey = "admin"
@@ -166,6 +175,7 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = 2,
+                            AccountId = 1,
                             Avatar = "🦊",
                             Name = "Brano",
                             NameKey = "brano"
@@ -173,6 +183,7 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = 3,
+                            AccountId = 1,
                             Avatar = "🐼",
                             Name = "Duri",
                             NameKey = "duri"
@@ -272,6 +283,15 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ToJePrivela.Domain.Entities.Game", b =>
+                {
+                    b.HasOne("ToJePrivela.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ToJePrivela.Domain.Entities.GamePlayer", b =>
                 {
                     b.HasOne("ToJePrivela.Domain.Entities.Game", "Game")
@@ -288,6 +308,15 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("ToJePrivela.Domain.Entities.Player", b =>
+                {
+                    b.HasOne("ToJePrivela.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ToJePrivela.Domain.Entities.Question", b =>

@@ -1,0 +1,19 @@
+<section class="page settings">
+  <header class="settings__head">
+    <h1>{{ 'settings.title' | translate }}</h1>
+    @if (auth.account(); as account) {
+      <p class="muted">
+        {{ 'settings.signedInAs' | translate: { name: account.name } }}
+        @if (account.isAdmin) {
+          <span class="badge">{{ 'settings.admin' | translate }}</span>
+        }
+      </p>
+    }
+  </header>
+
+  <app-players-section />
+
+  @if (auth.isAdmin()) {
+    <app-ai-questions-section />
+  }
+</section>

@@ -39,8 +39,7 @@
   }
 }
 
-.add-row,
-.generator__form {
+.add-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -145,34 +144,6 @@
 .limit__label {
   margin: 12px 0 0;
   text-align: center;
-}
-
-.generator {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 2px dashed rgb(43 33 64 / 0.25);
-
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-    margin-bottom: 12px;
-  }
-}
-
-.generator__count {
-  flex: 0 0 90px;
-}
-
-.generator__done {
-  margin: 12px 0 0;
-  font-weight: 600;
-  color: #11845b;
-  animation: slide-up 0.4s ease both;
-}
-
-.spinner {
-  display: inline-block;
-  animation: wiggle 0.8s ease infinite;
 }
 
 .start {

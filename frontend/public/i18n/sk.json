@@ -2,7 +2,10 @@
   "app": {
     "name": "To je priveľa!",
     "home": "To je priveľa! – domov",
-    "language": "Jazyk"
+    "language": "Jazyk",
+    "menu": "Menu",
+    "signOut": "Odhlásiť",
+    "settings": "Nastavenia"
   },
   "languages": {
     "sk": "Slovenčina",
@@ -11,7 +14,9 @@
   "titles": {
     "setup": "Nová hra",
     "play": "Hra",
-    "summary": "Výsledky"
+    "summary": "Výsledky",
+    "signIn": "Prihlásenie",
+    "settings": "Nastavenia"
   },
   "common": {
     "dateTime": "d. M. HH:mm",
@@ -121,11 +126,12 @@
         "many": "Pridajte ešte aspoň {{count}} hráča.",
         "other": "Pridajte ešte aspoň {{count}} hráčov."
       },
-      "noQuestions": "Zatiaľ nie sú žiadne otázky. Najprv vytvorte kategóriu s AI otázkami.",
+      "noQuestions": "Zatiaľ nie sú žiadne otázky. Požiadajte správcu, aby nejaké pridal.",
       "nameLength": "Meno musí mať {{min}} až {{max}} znakov.",
       "tableFull": "Stôl je plný: najviac {{max}} hráčov.",
       "categoryNameLength": "Názov kategórie musí mať {{min}} až {{max}} znakov.",
-      "questionCount": "Zadajte {{min}} až {{max}} otázok."
+      "questionCount": "Zadajte {{min}} až {{max}} otázok.",
+      "noQuestionsAdmin": "Zatiaľ nie sú žiadne otázky. Najprv vytvorte kategóriu s AI otázkami."
     }
   },
   "play": {
@@ -202,6 +208,70 @@
     "home": "🏠 Domov",
     "loading": "Počítam somáre… 🫏🫏🫏"
   },
+  "signIn": {
+    "title": "Prihláste sa a hrajte",
+    "text": "Vaši hráči a hry zostávajú pri vašom prihlásení. Otázky sú pre všetkých rovnaké.",
+    "name": "Prihlasovacie meno",
+    "password": "Heslo",
+    "submit": "Prihlásiť",
+    "signingIn": "Prihlasujem…",
+    "newHint": "Ste tu nový? Napíšte prihlasovacie meno, ktoré chcete, a stlačte Prihlásiť.",
+    "ask": {
+      "title": "Nové prihlásenie?",
+      "text": "Prihlásenie s menom „{{name}}“ ešte neexistuje. Chcete ho vytvoriť?",
+      "yes": "Áno, vytvoriť",
+      "no": "Nie"
+    },
+    "create": {
+      "title": "Vytvoriť prihlásenie",
+      "repeat": "Zopakujte heslo",
+      "passwordHelp": "{{min}} až {{max}} znakov.",
+      "submit": "Vytvoriť a prihlásiť",
+      "creating": "Vytváram…",
+      "cancel": "Zrušiť"
+    },
+    "errors": {
+      "nameLength": "Prihlasovacie meno musí mať {{min}} až {{max}} znakov.",
+      "passwordLength": "Heslo musí mať {{min}} až {{max}} znakov.",
+      "passwordsDiffer": "Heslá sa nezhodujú."
+    }
+  },
+  "players": {
+    "title": "👥 Vaši hráči",
+    "text": "Vidíte ich len vy. Pravidelných hráčov pridajte tu alebo priamo pri stole.",
+    "loading": "Načítavam hráčov…",
+    "empty": "Zatiaľ žiadni hráči. Pridajte prvého!",
+    "confirm": "Natrvalo vymazať? Skončené hry si skóre ponechajú ako neznámy hráč; rozohratá hra sa ukončí.",
+    "delete": "Vymazať",
+    "keep": "Ponechať",
+    "deleteName": "Vymazať hráča {{name}}",
+    "count": "{{count}} / {{max}}",
+    "full": "Máte {{max}} hráčov, viac jedno prihlásenie mať nemôže. Ak chcete pridať ďalšieho, jedného vymažte."
+  },
+  "settings": {
+    "title": "⚙️ Nastavenia",
+    "signedInAs": "Prihlásený ako {{name}}",
+    "admin": "správca"
+  },
+  "admin": {
+    "title": "🛠️ Otázky",
+    "text": "S týmito otázkami hrajú všetci. Meniť ich môžu len správcovia.",
+    "categories": "Kategórie",
+    "loading": "Načítavam kategórie…",
+    "counts": "otázok: {{total}}, od AI: {{ai}}",
+    "moreCount": "Počet AI otázok na pridanie do kategórie {{name}}",
+    "generateMore": "✨ Pridať AI otázky",
+    "deleteAi": "Vymazať AI otázky",
+    "deleteCategory": "Vymazať kategóriu",
+    "confirmAi": "Vymazať AI otázky kategórie „{{name}}“ ({{count}})? Ručne pridané otázky zostanú.",
+    "confirmCategory": "Vymazať kategóriu „{{name}}“ so všetkými otázkami ({{count}})?",
+    "delete": "Vymazať",
+    "keep": "Ponechať",
+    "created": "Kategória „{{name}}“ je pripravená, nových otázok: {{count}}! ✨",
+    "added": "Do kategórie „{{name}}“ pribudlo nových otázok: {{count}}. ✨",
+    "aiDeleted": "Z kategórie „{{name}}“ ubudlo AI otázok: {{count}}.",
+    "categoryDeleted": "Kategória „{{name}}“ bola vymazaná."
+  },
   "errors": {
     "generic": "Niečo sa pokazilo. Skúste to znova.",
     "unreachable": "Herný server je nedostupný. Beží API?",
@@ -220,7 +290,8 @@
       },
       "Player": {
         "NotFound": "Tento hráč neexistuje.",
-        "NameTaken": "Hráč s týmto menom už existuje."
+        "NameTaken": "Hráča s týmto menom už máte.",
+        "LimitReached": "Dosiahli ste najväčší počet hráčov na jedno prihlásenie. Najprv jedného vymažte."
       },
       "QuestionCategory": {
         "NotFound": "Táto kategória neexistuje.",
@@ -236,6 +307,14 @@
         "UnknownCategories": "Niektoré vybraté kategórie neexistujú.",
         "NoneAvailable": "Vo vybratých kategóriách nie sú žiadne otázky.",
         "ViewConflict": "Otázku sa nepodarilo zaznamenať. Skúste to znova."
+      },
+      "Auth": {
+        "Unauthenticated": "Prihláste sa, prosím, znova.",
+        "UnknownAccount": "Vaše prihlásenie už neexistuje. Prihláste sa, prosím, znova.",
+        "Forbidden": "Toto môže urobiť len správca.",
+        "WrongPassword": "Heslo nie je správne.",
+        "UnknownLogin": "Prihlásenie s týmto menom neexistuje.",
+        "NameTaken": "Toto prihlasovacie meno je už obsadené."
       }
     }
   }

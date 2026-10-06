@@ -101,8 +101,38 @@ export interface GameRules {
   defaultBadCardLimit: number;
   badPoints: Limit;
   playerName: Limit;
+  /** How many players one login may keep. */
+  maxPlayersPerAccount: number;
   categoryName: Limit;
   maxAiQuestionCount: number;
   /** Every avatar a player can be given, in a fixed order. */
   avatars: string[];
+  /** Length of a new login's name. */
+  loginName: Limit;
+  /** Length of a new login's password. */
+  password: Limit;
+}
+
+/** A login: a name and a password. Players and games belong to it. */
+export interface Account {
+  id: number;
+  name: string;
+  /** Admins manage the shared questions and categories, AI generation included. */
+  isAdmin: boolean;
+}
+
+export interface SignedIn {
+  /** Sent as `Authorization: Bearer …` with every request until `expiresAt`. */
+  accessToken: string;
+  expiresAt: string;
+  account: Account;
+}
+
+export interface GeneratedAiQuestions {
+  summary: QuestionGenerationSummary;
+  questions: Question[];
+}
+
+export interface DeletedAiQuestions {
+  deleted: number;
 }

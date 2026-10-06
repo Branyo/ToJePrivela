@@ -1,0 +1,133 @@
+<section class="page sign-in">
+  <div class="card panel">
+    <div class="card__donkey" aria-hidden="true">🫏</div>
+    <h1 class="card__title">{{ 'signIn.title' | translate }}</h1>
+    <p class="muted card__text">{{ 'signIn.text' | translate }}</p>
+
+    @if (error(); as message) {
+      <p class="error-banner" role="alert">{{ message | message }}</p>
+    }
+
+    <form class="fields" (submit)="$event.preventDefault(); signIn()">
+      <label class="field">
+        <span class="field__label">{{ 'signIn.name' | translate }}</span>
+        <input
+          class="text-input sign-in__name"
+          name="username"
+          autocomplete="username"
+          [attr.maxlength]="nameLimit().max"
+          [value]="name()"
+          (input)="name.set(value($event))"
+          [disabled]="busy()"
+        />
+      </label>
+      <label class="field">
+        <span class="field__label">{{ 'signIn.password' | translate }}</span>
+        <input
+          class="text-input sign-in__password"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          [attr.maxlength]="passwordLimit().max"
+          [value]="password()"
+          (input)="password.set(value($event))"
+          [disabled]="busy()"
+        />
+      </label>
+      <button type="submit" class="btn btn--primary btn--big sign-in__submit" [disabled]="busy() || name().trim().length === 0">
+        {{ (busy() ? 'signIn.signingIn' : 'signIn.submit') | translate }}
+      </button>
+    </form>
+    <p class="muted hint">{{ 'signIn.newHint' | translate }}</p>
+  </div>
+</section>
+
+@if (step() === 'ask') {
+  <div class="backdrop" (click)="closeDialog()">
+    <div
+      class="dialog panel ask"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="ask-title"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="ask-title" class="dialog__title">{{ 'signIn.ask.title' | translate }}</h2>
+      <p>{{ 'signIn.ask.text' | translate: { name: unknownName() } }}</p>
+      <div class="dialog__actions">
+        <button type="button" class="btn btn--ghost ask__no" (click)="closeDialog()">{{ 'signIn.ask.no' | translate }}</button>
+        <button #askYes type="button" class="btn btn--primary ask__yes" (click)="startCreating()">
+          {{ 'signIn.ask.yes' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (step() === 'create') {
+  <div class="backdrop" (click)="closeDialog()">
+    <div
+      class="dialog panel create"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-title"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="create-title" class="dialog__title">{{ 'signIn.create.title' | translate }}</h2>
+
+      @if (dialogError(); as message) {
+        <p class="error-banner" role="alert">{{ message | message }}</p>
+      }
+
+      <form class="fields" (submit)="$event.preventDefault(); create()">
+        <label class="field">
+          <span class="field__label">{{ 'signIn.name' | translate }}</span>
+          <input
+            #createName
+            class="text-input create__name"
+            name="username"
+            autocomplete="username"
+            [attr.maxlength]="nameLimit().max"
+            [value]="newName()"
+            (input)="newName.set(value($event))"
+            [disabled]="busy()"
+          />
+        </label>
+        <label class="field">
+          <span class="field__label">{{ 'signIn.password' | translate }}</span>
+          <input
+            class="text-input create__password"
+            type="password"
+            name="new-password"
+            autocomplete="new-password"
+            [attr.maxlength]="passwordLimit().max"
+            [value]="newPassword()"
+            (input)="newPassword.set(value($event))"
+            [disabled]="busy()"
+          />
+          <span class="field__help muted">{{ 'signIn.create.passwordHelp' | translate: passwordLimit() }}</span>
+        </label>
+        <label class="field">
+          <span class="field__label">{{ 'signIn.create.repeat' | translate }}</span>
+          <input
+            class="text-input create__repeat"
+            type="password"
+            name="repeat-password"
+            autocomplete="new-password"
+            [attr.maxlength]="passwordLimit().max"
+            [value]="repeatPassword()"
+            (input)="repeatPassword.set(value($event))"
+            [disabled]="busy()"
+          />
+        </label>
+        <div class="dialog__actions">
+          <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="closeDialog()">
+            {{ 'signIn.create.cancel' | translate }}
+          </button>
+          <button type="submit" class="btn btn--primary create__submit" [disabled]="busy()">
+            {{ (busy() ? 'signIn.create.creating' : 'signIn.create.submit') | translate }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

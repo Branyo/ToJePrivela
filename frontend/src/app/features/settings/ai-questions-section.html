@@ -1,0 +1,120 @@
+<section class="admin" aria-labelledby="admin-title">
+  <h2 id="admin-title">{{ 'admin.title' | translate }}</h2>
+  <p class="muted">{{ 'admin.text' | translate }}</p>
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+  @if (notice(); as message) {
+    <p class="notice" role="status">{{ message | message }}</p>
+  }
+
+  <section class="panel">
+    <h2 class="panel__title">{{ 'setup.generator.title' | translate }}</h2>
+    <form class="generator" (submit)="$event.preventDefault(); create()">
+      <input
+        class="text-input"
+        [placeholder]="'setup.generator.namePlaceholder' | translate"
+        [attr.aria-label]="'setup.generator.name' | translate"
+        [attr.maxlength]="nameLimit().max"
+        [value]="newName()"
+        (input)="onNameInput($event)"
+        [disabled]="working() !== null"
+      />
+      <input
+        class="text-input count"
+        type="number"
+        [attr.min]="countLimit().min"
+        [attr.max]="countLimit().max"
+        [attr.aria-label]="'setup.generator.count' | translate"
+        [value]="newCount()"
+        (input)="onCountInput($event)"
+        [disabled]="working() !== null"
+      />
+      <button type="submit" class="btn btn--sky" [disabled]="working() !== null || newName().trim().length === 0">
+        @if (working() === 'new') {
+          <span class="spinner" aria-hidden="true">🤔</span> {{ 'setup.generator.thinking' | translate }}
+        } @else {
+          {{ 'setup.generator.generate' | translate }}
+        }
+      </button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel__title">{{ 'admin.categories' | translate }}</h2>
+
+    @if (!loaded()) {
+      <p class="muted">{{ 'admin.loading' | translate }}</p>
+    } @else if (rows().length === 0) {
+      <p class="muted">{{ 'setup.categories.empty' | translate }}</p>
+    } @else {
+      <ul class="list">
+        @for (row of rows(); track row.category.id) {
+          <li class="row" [class.row--busy]="working() === row.category.id">
+            <div class="row__head">
+              <strong class="row__name">{{ row.category.name }}</strong>
+              <span class="muted">{{ 'admin.counts' | translate: { total: row.total, ai: row.ai } }}</span>
+            </div>
+
+            @if (isPending(row.category.id, 'ai') || isPending(row.category.id, 'category')) {
+              <div class="row__confirm">
+                <span>
+                  {{
+                    (isPending(row.category.id, 'ai') ? 'admin.confirmAi' : 'admin.confirmCategory')
+                      | translate: { name: row.category.name, count: isPending(row.category.id, 'ai') ? row.ai : row.total }
+                  }}
+                </span>
+                <button
+                  type="button"
+                  class="btn btn--danger"
+                  [disabled]="working() !== null"
+                  (click)="confirmDelete(row)"
+                >
+                  {{ 'admin.delete' | translate }}
+                </button>
+                <button type="button" class="btn btn--ghost" (click)="cancelDelete()">{{ 'admin.keep' | translate }}</button>
+              </div>
+            } @else {
+              <form class="row__actions" (submit)="$event.preventDefault(); generateMore(row)">
+                <input
+                  class="text-input count"
+                  type="number"
+                  [attr.min]="countLimit().min"
+                  [attr.max]="countLimit().max"
+                  [attr.aria-label]="'admin.moreCount' | translate: { name: row.category.name }"
+                  [value]="moreCountFor(row.category.id)"
+                  (input)="onMoreCountInput(row.category.id, $event)"
+                  [disabled]="working() !== null"
+                />
+                <button type="submit" class="btn btn--sky" [disabled]="working() !== null">
+                  @if (working() === row.category.id) {
+                    <span class="spinner" aria-hidden="true">🤔</span> {{ 'setup.generator.thinking' | translate }}
+                  } @else {
+                    {{ 'admin.generateMore' | translate }}
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost"
+                  [disabled]="working() !== null || row.ai === 0"
+                  (click)="askToDelete(row.category.id, 'ai')"
+                >
+                  {{ 'admin.deleteAi' | translate }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost danger"
+                  [disabled]="working() !== null"
+                  (click)="askToDelete(row.category.id, 'category')"
+                >
+                  {{ 'admin.deleteCategory' | translate }}
+                </button>
+              </form>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</section>
