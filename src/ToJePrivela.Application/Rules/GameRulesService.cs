@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.Rules.Dtos;
@@ -16,7 +17,9 @@ public sealed class GameRulesService : IGameRulesService
         new LimitDto(Player.NameMinLength, Player.NameMaxLength),
         new LimitDto(QuestionCategory.NameMinLength, QuestionCategory.NameMaxLength),
         QuestionGenerationOptions.MaxCount,
-        PlayerAvatars.All);
+        PlayerAvatars.All,
+        new LimitDto(Account.NameMinLength, Account.NameMaxLength),
+        new LimitDto(PasswordRules.MinLength, PasswordRules.MaxLength));
 
     public Result<GameRulesDto> Get() => Result.Success(Rules);
 }

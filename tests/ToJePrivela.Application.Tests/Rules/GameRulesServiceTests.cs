@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.Rules;
 using ToJePrivela.Application.Rules.Dtos;
@@ -19,6 +20,8 @@ public class GameRulesServiceTests
         Assert.Equal(new LimitDto(Player.NameMinLength, Player.NameMaxLength), _rules.PlayerName);
         Assert.Equal(new LimitDto(QuestionCategory.NameMinLength, QuestionCategory.NameMaxLength), _rules.CategoryName);
         Assert.Equal(QuestionGenerationOptions.MaxCount, _rules.MaxAiQuestionCount);
+        Assert.Equal(new LimitDto(Account.NameMinLength, Account.NameMaxLength), _rules.LoginName);
+        Assert.Equal(new LimitDto(PasswordRules.MinLength, PasswordRules.MaxLength), _rules.Password);
     }
 
     [Fact]

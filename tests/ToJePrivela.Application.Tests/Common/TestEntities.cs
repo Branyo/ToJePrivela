@@ -28,6 +28,19 @@ public static class TestEntities
         BadPointsMode badPointsMode = BadPointsMode.Question) =>
         WithId(new Game(playerIds, started, badCardLimit, badPointsMode), id);
 
+    public static Account Account(int id, string name = "brano", bool isAdmin = false, string passwordHash = "hash")
+    {
+        var account = isAdmin
+            ? Domain.Entities.Account.CreateAdmin(name, passwordHash, CreatedAt)
+            : Domain.Entities.Account.Register(name, passwordHash, CreatedAt);
+
+        return WithId(account, id);
+    }
+
+    /// <summary>The account the migration inserts; the domain itself never creates one.</summary>
+    public static Account ReservedAccount() =>
+        WithId((Account)Activator.CreateInstance(typeof(Account), nonPublic: true)!, Domain.Entities.Account.ReservedId);
+
     private static TEntity WithId<TEntity>(TEntity entity, int id)
     {
         typeof(TEntity).GetProperty("Id")!.SetValue(entity, id);

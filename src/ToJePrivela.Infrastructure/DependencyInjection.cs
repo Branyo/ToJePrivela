@@ -15,6 +15,7 @@ public static class DependencyInjection
             options.UseSqlite(SqliteConnectionString.Resolve(configuration)));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IPlayerRepository, PlayerRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
