@@ -23,6 +23,11 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
         builder.Property(g => g.IsCancelled).HasDefaultValue(false);
         builder.Ignore(g => g.IsFinished);
 
+        builder.HasOne<Account>()
+            .WithMany()
+            .HasForeignKey(g => g.AccountId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Metadata
             .FindNavigation(nameof(Game.GamePlayers))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);

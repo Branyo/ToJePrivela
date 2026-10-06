@@ -15,6 +15,7 @@ public sealed class GameRulesService : IGameRulesService
         Game.DefaultBadCardLimit,
         new LimitDto(Question.MinBadPoints, Question.MaxBadPoints),
         new LimitDto(Player.NameMinLength, Player.NameMaxLength),
+        Account.MaxPlayers,
         new LimitDto(QuestionCategory.NameMinLength, QuestionCategory.NameMaxLength),
         QuestionGenerationOptions.MaxCount,
         PlayerAvatars.All,

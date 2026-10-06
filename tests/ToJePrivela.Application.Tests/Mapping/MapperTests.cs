@@ -30,7 +30,7 @@ public class MapperTests
     [Fact]
     public void PlayerMapper_BuildsEntityFromRequest()
     {
-        var player = PlayerMapper.ToEntity(new CreatePlayerRequest { Name = " Brano " }, "🐸");
+        var player = PlayerMapper.ToEntity(new CreatePlayerRequest { Name = " Brano " }, TestAccountId, "🐸");
 
         Assert.Equal("Brano", player.Name);
         Assert.Equal("🐸", player.Avatar);

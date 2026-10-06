@@ -18,6 +18,7 @@ public class GameRulesServiceTests
         Assert.Equal(Game.DefaultBadCardLimit, _rules.DefaultBadCardLimit);
         Assert.Equal(new LimitDto(Question.MinBadPoints, Question.MaxBadPoints), _rules.BadPoints);
         Assert.Equal(new LimitDto(Player.NameMinLength, Player.NameMaxLength), _rules.PlayerName);
+        Assert.Equal(Account.MaxPlayers, _rules.MaxPlayersPerAccount);
         Assert.Equal(new LimitDto(QuestionCategory.NameMinLength, QuestionCategory.NameMaxLength), _rules.CategoryName);
         Assert.Equal(QuestionGenerationOptions.MaxCount, _rules.MaxAiQuestionCount);
         Assert.Equal(new LimitDto(Account.NameMinLength, Account.NameMaxLength), _rules.LoginName);

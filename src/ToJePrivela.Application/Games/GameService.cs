@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Games.Dtos;
@@ -6,6 +7,10 @@ using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Games;
 
+/// <summary>
+/// Works on the signed-in account's games only. A new game is saved under that account and may seat only its players;
+/// the questions are shared by every account.
+/// </summary>
 public sealed class GameService : IGameService
 {
     private readonly IGameRepository _games;
@@ -13,30 +18,33 @@ public sealed class GameService : IGameService
     private readonly IQuestionRepository _questions;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
+    private readonly ICurrentAccount _currentAccount;
 
     public GameService(
         IGameRepository games,
         IPlayerRepository players,
         IQuestionRepository questions,
         IUnitOfWork unitOfWork,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ICurrentAccount currentAccount)
     {
         _games = games;
         _players = players;
         _questions = questions;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
+        _currentAccount = currentAccount;
     }
 
     public async Task<Result<IReadOnlyList<GameDto>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var games = await _games.GetAllAsync(cancellationToken);
+        var games = await _games.GetAllAsync(_currentAccount.Id, cancellationToken);
         return Result.Success(GameMapper.ToDtos(games));
     }
 
     public async Task<Result<GameDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var game = await _games.GetByIdAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         return game is null
             ? Result.Failure<GameDto>(GameErrors.NotFound(id))
@@ -45,7 +53,7 @@ public sealed class GameService : IGameService
 
     public async Task<Result<GameDetailsDto>> GetDetailsAsync(int id, CancellationToken cancellationToken = default)
     {
-        var game = await _games.GetByIdAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         return game is null
             ? Result.Failure<GameDetailsDto>(GameErrors.NotFound(id))
@@ -60,7 +68,7 @@ public sealed class GameService : IGameService
         }
 
         var requestedIds = request.PlayerIds.Distinct().ToList();
-        var existingIds = await _players.GetExistingIdsAsync(requestedIds, cancellationToken);
+        var existingIds = await _players.GetExistingIdsAsync(_currentAccount.Id, requestedIds, cancellationToken);
         var missingIds = requestedIds.Except(existingIds).ToList();
 
         if (missingIds.Count > 0)
@@ -69,6 +77,7 @@ public sealed class GameService : IGameService
         }
 
         var game = new Game(
+            _currentAccount.Id,
             requestedIds,
             _timeProvider.GetUtcNow().UtcDateTime,
             request.BadCardLimit ?? Game.DefaultBadCardLimit,
@@ -87,7 +96,7 @@ public sealed class GameService : IGameService
             return Result.Failure(invalid);
         }
 
-        var game = await _games.GetByIdAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         if (game is null)
         {
@@ -122,7 +131,7 @@ public sealed class GameService : IGameService
             return Result.Failure<GameDetailsDto>(invalid);
         }
 
-        var game = await _games.GetByIdAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         if (game is null)
         {
@@ -180,7 +189,7 @@ public sealed class GameService : IGameService
 
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var game = await _games.GetByIdAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         if (game is null)
         {
@@ -204,7 +213,7 @@ public sealed class GameService : IGameService
         int? playerId,
         CancellationToken cancellationToken)
     {
-        var game = await _games.GetByIdAsync(id, cancellationToken);
+        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
         if (game is null)
         {

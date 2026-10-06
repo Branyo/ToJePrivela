@@ -13,6 +13,9 @@ public class Account
     public const int NameMaxLength = 30;
     public const int PasswordHashMaxLength = 256;
 
+    /// <summary>How many players one login may keep.</summary>
+    public const int MaxPlayers = 100;
+
     /// <summary>
     /// Created by the migration that introduced logins, to own everything stored before anyone could sign in. It has
     /// no name and no password (<see cref="IsReserved"/>), so nobody can sign in to it, until
