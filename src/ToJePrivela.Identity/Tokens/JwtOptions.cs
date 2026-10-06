@@ -23,9 +23,9 @@ public sealed class JwtOptions
     [MinLength(SigningKeyMinLength, ErrorMessage = "Authentication:Jwt:SigningKey must have at least 32 characters.")]
     public string SigningKey { get; set; } = string.Empty;
 
-    /// <summary>How long one sign-in lasts; 12 hours covers a game night.</summary>
+    /// <summary>How long one sign-in lasts; 24 hours, so a login made for a game night still works the next day.</summary>
     [Range(5, 43200)]
-    public int LifetimeMinutes { get; set; } = 720;
+    public int LifetimeMinutes { get; set; } = 1440;
 
     public SymmetricSecurityKey CreateSigningKey() => new(Encoding.UTF8.GetBytes(SigningKey));
 

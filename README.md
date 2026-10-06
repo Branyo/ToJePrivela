@@ -66,7 +66,7 @@ The database file is created and migrated on startup, so a fresh clone needs no 
 | `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on the AI endpoints (default 5 per 60 s) |
 | `Cors:AllowedOrigins` | Frontend origins; empty means "any origin" |
 | `Authentication:Jwt:SigningKey` | Signs the access tokens; at least 32 characters, required — user-secrets or `Authentication__Jwt__SigningKey` (Development has a dev-only key) |
-| `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 720 minutes by default |
+| `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 1440 minutes (24 h) by default |
 | `Authentication:Admins` | `[{ "Name": "Brano", "Password": "…" }, …]` — the admin logins, synced on startup; passwords via user-secrets or environment variables only |
 | `RateLimiting:SignIn:PermitLimit`, `WindowSeconds` | Per-address limit on signing in and creating logins (default 10 per 60 s) |
 
