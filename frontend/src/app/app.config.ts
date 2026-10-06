@@ -1,12 +1,14 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import localeEnGb from '@angular/common/locales/en-GB';
 import localeSk from '@angular/common/locales/sk';
 import { TitleStrategy, provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
+import { authInterceptor } from './core/auth/auth-interceptor';
+import { AuthStore } from './core/auth/auth-store';
 import { DEFAULT_LANGUAGE, LanguageService } from './core/i18n/language';
 import { TranslatedTitleStrategy } from './core/i18n/translated-title-strategy';
 import { GameRulesStore } from './core/rules/game-rules-store';
@@ -18,14 +20,16 @@ registerLocaleData(localeEnGb, 'en-GB');
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withFetch()),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideRouter(routes, withComponentInputBinding()),
     provideTranslateService({
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),
       fallbackLang: DEFAULT_LANGUAGE,
     }),
     { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
-    // The first screen renders only once its translations and the backend's limits are there.
-    provideAppInitializer(() => Promise.all([inject(LanguageService).init(), inject(GameRulesStore).load()])),
+    // The first screen renders only once its translations, the backend's limits and the stored sign-in are there.
+    provideAppInitializer(() =>
+      Promise.all([inject(LanguageService).init(), inject(GameRulesStore).load(), inject(AuthStore).restore()]),
+    ),
   ],
 };
