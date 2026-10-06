@@ -115,7 +115,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 
-if (!isTesting)
+// Not in Development: the Angular dev server proxies /api over plain HTTP, and a redirect to the HTTPS port is a
+// cross-origin redirect for the browser, which then drops the Authorization header, so every call would answer 401.
+if (!isTesting && !app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
