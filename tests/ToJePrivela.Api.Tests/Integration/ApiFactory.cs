@@ -66,6 +66,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>High enough that ordinary tests never hit the sign-in rate limit.</summary>
     protected virtual int SignInPermitLimit => 10_000;
 
+    /// <summary>High enough that ordinary tests never hit the sign-in cap per address.</summary>
+    protected virtual int SignInAddressPermitLimit => 10_000;
+
     /// <summary>Every call answers with as many new, unique questions as it was asked for.</summary>
     public void ReplyWithFreshQuestions()
     {
@@ -100,6 +103,10 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting(
             $"{SignInRateLimitOptions.SectionName}:{nameof(SignInRateLimitOptions.PermitLimit)}",
             SignInPermitLimit.ToString());
+
+        builder.UseSetting(
+            $"{SignInRateLimitOptions.SectionName}:{nameof(SignInRateLimitOptions.AddressPermitLimit)}",
+            SignInAddressPermitLimit.ToString());
 
         builder.ConfigureServices(services =>
         {

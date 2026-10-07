@@ -4,9 +4,14 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using ToJePrivela.Api.Common;
+using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Accounts.Dtos;
 using ToJePrivela.Domain.Entities;
+using ToJePrivela.Identity.Tokens;
 using ToJePrivela.Infrastructure.Persistence;
 
 namespace ToJePrivela.Api.Tests.Integration;
@@ -181,6 +186,59 @@ public class AuthEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task ASquattersToken_StopsCountingOnceTheLoginIsMadeAdmin()
+    {
+        // Someone creates a login under a name that is later configured as an admin's. On startup the provisioner makes
+        // that login admin and sets the configured password; the token they already hold must not become an admin token.
+        var name = NewName();
+        var created = await _anonymous.PostAsJsonAsync("/api/auth/accounts", new { name, password = "squatter-password" });
+        var squatter = WithToken((await created.Content.ReadFromJsonAsync<SignedInDto>())!.AccessToken);
+        Assert.Equal(HttpStatusCode.OK, (await squatter.GetAsync("/api/auth/me")).StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ToJePrivelaDbContext>();
+            var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+            var account = await context.Accounts.SingleAsync(a => a.Name == name);
+            account.GrantAdmin();
+            account.ChangePasswordHash(hasher.Hash("configured-password"));
+            await context.SaveChangesAsync();
+        }
+
+        var response = await squatter.DeleteAsync("/api/question-categories/999999");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("Auth.SignedOut", await ProblemResponse.CodeOf(response));
+
+        var signIn = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "configured-password" });
+        var admin = WithToken((await signIn.Content.ReadFromJsonAsync<SignedInDto>())!.AccessToken);
+        Assert.True((await admin.GetFromJsonAsync<AccountDto>("/api/auth/me"))!.IsAdmin);
+    }
+
+    [Fact]
+    public async Task ATokenIssuedBeforeSecurityStamps_Answers401()
+    {
+        var jwt = _factory.Services.GetRequiredService<IOptions<JwtOptions>>().Value;
+        var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = jwt.Issuer,
+            Audience = jwt.Audience,
+            Claims = new Dictionary<string, object>
+            {
+                [AccessTokenClaims.Subject] = _factory.Member.Id.ToString(),
+                [AccessTokenClaims.Name] = _factory.Member.Name
+            },
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(jwt.CreateSigningKey(), SecurityAlgorithms.HmacSha256)
+        });
+
+        var response = await WithToken(token).GetAsync("/api/players");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("Auth.SignedOut", await ProblemResponse.CodeOf(response));
+    }
+
+    [Fact]
     public async Task ATamperedToken_Answers401()
     {
         var token = _factory.TokenFor(_factory.Member);
@@ -268,6 +326,43 @@ public class SignInRateLimitTests : IClassFixture<TwoSignInPermitsApiFactory>
         var seconds = problem.GetProperty(RateLimitRejection.RetryAfterSecondsExtension).GetInt32();
         Assert.InRange(seconds, 1, 60);
         Assert.Equal(TimeSpan.FromSeconds(seconds), refused.Headers.RetryAfter?.Delta);
+    }
+
+    private static string UniqueName() => $"u{Guid.NewGuid():N}"[..20];
+}
+
+public sealed class ThreeSignInsPerAddressApiFactory : ApiFactory
+{
+    protected override int SignInAddressPermitLimit => 3;
+}
+
+public class SignInAddressCapTests : IClassFixture<ThreeSignInsPerAddressApiFactory>
+{
+    private readonly ThreeSignInsPerAddressApiFactory _factory;
+    private readonly HttpClient _anonymous;
+
+    public SignInAddressCapTests(ThreeSignInsPerAddressApiFactory factory)
+    {
+        _factory = factory;
+        _anonymous = factory.CreateAnonymousClient();
+    }
+
+    [Fact]
+    public async Task TryingManyNamesFromOneAddress_IsStoppedWith429()
+    {
+        // Every name has attempts left; together they exceed what one address may send.
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var allowed = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name = UniqueName(), password = "guess" });
+            Assert.Equal(HttpStatusCode.NotFound, allowed.StatusCode);
+        }
+
+        var refused = await _anonymous.PostAsJsonAsync("/api/auth/accounts", new { name = UniqueName(), password = "new-password" });
+        var otherEndpoint = await _factory.CreateClient().GetAsync("/api/players");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal(RateLimitRejection.Code, await ProblemResponse.CodeOf(refused));
+        Assert.Equal(HttpStatusCode.OK, otherEndpoint.StatusCode);
     }
 
     private static string UniqueName() => $"u{Guid.NewGuid():N}"[..20];

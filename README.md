@@ -73,6 +73,7 @@ when it listens on an address other machines can reach (`0.0.0.0`, `*`, a host n
 | `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 1440 minutes (24 h) by default |
 | `Authentication:Admins` | `[{ "Name": "Brano", "Password": "…" }, …]` — the admin logins, synced on startup; passwords via user-secrets or environment variables only |
 | `RateLimiting:SignIn:PermitLimit`, `WindowSeconds` | Limit per client address and login name on signing in and creating logins (default 10 per 60 s) |
+| `RateLimiting:SignIn:AddressPermitLimit` | Cap per client address on the same endpoints, whatever the names, over the same window (default 60) |
 
 ```bash
 dotnet user-secrets set "OpenAi:ApiKey" "sk-..." --project src/ToJePrivela.Api
@@ -92,7 +93,9 @@ sign-in. `POST /api/auth/sign-in` and `POST /api/auth/accounts` answer with a JW
 Signing in with an unknown name answers 404 `Auth.UnknownLogin` on purpose, so the client can offer to create the
 login; both endpoints are rate limited instead. The limit counts per client address **and** login name (compared
 like login names, so `" Brano"` and `"brano"` share it): people at one party behind the same address each get their own
-attempts, while guessing one login's password stays slow.
+attempts, while guessing one login's password stays slow. On top of that, one address may send at most
+`AddressPermitLimit` such requests per window whatever the names, so it cannot try many names, or create many
+logins, at speed either.
 
 Admin rights come from `Authentication:Admins` only, and the stored logins are made to match it on every startup:
 
@@ -103,6 +106,13 @@ Admin rights come from `Authentication:Admins` only, and the stored logins are m
 
 The JWT carries no rights: the login is read on every request, so a revoked admin is refused at once and a token of a
 login that is gone answers 401 `Auth.UnknownAccount`.
+
+The JWT does carry the login's **security stamp**, a random value that changes whenever who may act as the login
+changes: a password set from configuration, admin rights granted, the reserved login taken over. A token with an older
+stamp answers 401 `Auth.SignedOut`. So someone who created a login under an admin's name before it was configured
+cannot go on as admin with the token they already hold. Upgrading a weak hash at sign-in keeps the stamp, and so does
+an admin re-applied with an unchanged password on startup. Tokens issued before stamps existed carry none and need one
+more sign-in.
 
 Login 1 is reserved by the migration that introduced logins, for everything stored before they existed. Nobody can
 sign in to it until the **first** configured admin without a login takes it over.

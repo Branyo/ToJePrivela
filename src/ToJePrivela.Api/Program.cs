@@ -82,6 +82,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = (context, cancellationToken) =>
         RateLimitRejection.WriteAsync(context.HttpContext, context.Lease, cancellationToken);
+    options.GlobalLimiter = SignInRateLimiting.AddressLimiter(signInRateLimit);
     options.AddFixedWindowLimiter(AiRateLimitOptions.PolicyName, limiter =>
     {
         limiter.PermitLimit = aiRateLimit.PermitLimit;

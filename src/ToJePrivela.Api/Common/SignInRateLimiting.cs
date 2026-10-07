@@ -6,10 +6,11 @@ using ToJePrivela.Domain.Common;
 namespace ToJePrivela.Api.Common;
 
 /// <summary>
-/// The sign-in limit (<see cref="SignInRateLimitOptions"/>) counts per client address <em>and</em> login name: the
-/// people of one party behind the same address each get their own attempts, while guessing one login's password stays
-/// slow. The rate limiter picks a partition before the body is bound, so <see cref="UseSignInLoginNames"/> reads the
-/// name out of the JSON body first.
+/// The sign-in limits (<see cref="SignInRateLimitOptions"/>). The endpoint policy counts per client address <em>and</em>
+/// login name: the people of one party behind the same address each get their own attempts, while guessing one login's
+/// password stays slow. <see cref="AddressLimiter"/>, the global limiter, also caps everything one address sends to
+/// those endpoints, so it cannot try many names, or create many logins, at speed. The rate limiter picks a partition
+/// before the body is bound, so <see cref="UseSignInLoginNames"/> reads the name out of the JSON body first.
 /// </summary>
 public static class SignInRateLimiting
 {
@@ -40,12 +41,28 @@ public static class SignInRateLimiting
                 QueueLimit = 0
             });
 
+    /// <summary>
+    /// Counts every request one address sends to the sign-in endpoints, whatever the names, and leaves every other
+    /// endpoint alone. As the global limiter it runs before the per-name policy, so attempts that policy then refuses
+    /// still count here.
+    /// </summary>
+    public static PartitionedRateLimiter<HttpContext> AddressLimiter(SignInRateLimitOptions options) =>
+        PartitionedRateLimiter.Create<HttpContext, string>(context => IsSignInEndpoint(context)
+            ? RateLimitPartition.GetFixedWindowLimiter(
+                Address(context),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = options.AddressPermitLimit,
+                    Window = TimeSpan.FromSeconds(options.WindowSeconds),
+                    QueueLimit = 0
+                })
+            : RateLimitPartition.GetNoLimiter(string.Empty));
+
     /// <summary>The address and the login name as <see cref="NameKeys.Of"/> compares it ("Brano " counts as "brano").</summary>
     public static string PartitionKey(HttpContext context)
     {
-        var address = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var name = context.Items[LoginNameItem] as string ?? string.Empty;
-        return $"{address}|{name}";
+        return $"{Address(context)}|{name}";
     }
 
     /// <summary>
@@ -93,6 +110,8 @@ public static class SignInRateLimiting
             request.Body.Position = 0;
         }
     }
+
+    private static string Address(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     private static bool IsSignInEndpoint(HttpContext context) =>
         context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName
