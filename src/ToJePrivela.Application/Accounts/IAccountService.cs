@@ -14,8 +14,10 @@ public interface IAccountService
     Task<Result<AccountDto>> GetCurrentAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// The account an access token names. The host reads it on every request, so a revoked admin flag counts at once
-    /// rather than when the token expires. <see cref="AccountErrors.UnknownAccount"/> when it is gone.
+    /// The account an access token names, as long as the token still counts for it. The host reads it on every request,
+    /// so a revoked admin flag counts at once rather than when the token expires.
+    /// <see cref="AccountErrors.UnknownAccount"/> when the login is gone, <see cref="AccountErrors.SignedOut"/> when
+    /// the token carries an older <see cref="Domain.Entities.Account.SecurityStamp"/>.
     /// </summary>
-    Task<Result<AccountDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<Result<AccountDto>> GetSignedInAsync(int id, string securityStamp, CancellationToken cancellationToken = default);
 }

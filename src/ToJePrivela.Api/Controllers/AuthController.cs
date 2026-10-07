@@ -27,6 +27,7 @@ public sealed class AuthController : ControllerBase
     [HttpPost("sign-in")]
     [AllowAnonymous]
     [EnableRateLimiting(SignInRateLimitOptions.PolicyName)]
+    [SuccessIsFree]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -66,9 +66,17 @@ public sealed class AdminAccountProvisioner : IAdminAccountProvisioner
             {
                 existing.GrantAdmin();
 
-                if (_passwordHasher.Verify(existing.PasswordHash!, admin.Password) != PasswordCheck.Succeeded)
+                // Only a different password ends the login's sign-ins; an outdated hash of the same one is just upgraded.
+                switch (_passwordHasher.Verify(existing.PasswordHash!, admin.Password))
                 {
-                    existing.ChangePasswordHash(_passwordHasher.Hash(admin.Password));
+                    case PasswordCheck.Succeeded:
+                        break;
+                    case PasswordCheck.SucceededRehashNeeded:
+                        existing.UpgradePasswordHash(_passwordHasher.Hash(admin.Password));
+                        break;
+                    default:
+                        existing.ChangePasswordHash(_passwordHasher.Hash(admin.Password));
+                        break;
                 }
 
                 continue;

@@ -15,7 +15,7 @@
           class="text-input sign-in__name"
           name="username"
           autocomplete="username"
-          [attr.maxlength]="nameLimit().max"
+          [attr.maxlength]="nameLimit()?.max ?? null"
           [value]="name()"
           (input)="name.set(value($event))"
           [disabled]="busy()"
@@ -28,7 +28,7 @@
           type="password"
           name="password"
           autocomplete="current-password"
-          [attr.maxlength]="passwordLimit().max"
+          [attr.maxlength]="passwordLimit()?.max ?? null"
           [value]="password()"
           (input)="password.set(value($event))"
           [disabled]="busy()"
@@ -86,7 +86,7 @@
             class="text-input create__name"
             name="username"
             autocomplete="username"
-            [attr.maxlength]="nameLimit().max"
+            [attr.maxlength]="nameLimit()?.max ?? null"
             [value]="newName()"
             (input)="newName.set(value($event))"
             [disabled]="busy()"
@@ -99,12 +99,14 @@
             type="password"
             name="new-password"
             autocomplete="new-password"
-            [attr.maxlength]="passwordLimit().max"
+            [attr.maxlength]="passwordLimit()?.max ?? null"
             [value]="newPassword()"
             (input)="newPassword.set(value($event))"
             [disabled]="busy()"
           />
-          <span class="field__help muted">{{ 'signIn.create.passwordHelp' | translate: passwordLimit() }}</span>
+          @if (passwordLimit(); as limit) {
+            <span class="field__help muted">{{ 'signIn.create.passwordHelp' | translate: limit }}</span>
+          }
         </label>
         <label class="field">
           <span class="field__label">{{ 'signIn.create.repeat' | translate }}</span>
@@ -113,7 +115,7 @@
             type="password"
             name="repeat-password"
             autocomplete="new-password"
-            [attr.maxlength]="passwordLimit().max"
+            [attr.maxlength]="passwordLimit()?.max ?? null"
             [value]="repeatPassword()"
             (input)="repeatPassword.set(value($event))"
             [disabled]="busy()"

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Limit, Player } from '../../core/api/models';
+import { GameRules, Player } from '../../core/api/models';
 import { PlayersApi } from '../../core/api/players-api';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
@@ -9,11 +9,10 @@ import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { PlayerAvatar } from '../../shared/player-avatar';
 
-const NOTHING: Limit = { min: 0, max: 0 };
-
 /**
  * The signed-in login's own players: add them here or at the table, delete the ones you no longer need. A login keeps
- * at most `maxPlayersPerAccount` of them.
+ * at most `maxPlayersPerAccount` of them. Without the backend's rules the limits are unknown rather than zero: the list
+ * still shows, and adding says that the rules are missing.
  */
 @Component({
   selector: 'app-players-section',
@@ -25,11 +24,14 @@ const NOTHING: Limit = { min: 0, max: 0 };
 export class PlayersSection {
   private readonly api = inject(PlayersApi);
   private readonly i18n = inject(LanguageService);
-  private readonly rules = inject(GameRulesStore).rules;
+  private readonly rulesStore = inject(GameRulesStore);
 
-  protected readonly nameLimit = computed(() => this.rules()?.playerName ?? NOTHING);
-  protected readonly maxPlayers = computed(() => this.rules()?.maxPlayersPerAccount ?? 0);
-  protected readonly full = computed(() => (this.players()?.length ?? 0) >= this.maxPlayers());
+  protected readonly nameLimit = computed(() => this.rulesStore.rules()?.playerName ?? null);
+  protected readonly maxPlayers = computed(() => this.rulesStore.rules()?.maxPlayersPerAccount ?? null);
+  protected readonly full = computed(() => {
+    const max = this.maxPlayers();
+    return max !== null && (this.players()?.length ?? 0) >= max;
+  });
   protected readonly players = signal<Player[] | null>(null);
   protected readonly newName = signal('');
   protected readonly adding = signal(false);
@@ -44,28 +46,30 @@ export class PlayersSection {
   });
 
   constructor() {
+    void this.rulesStore.ensureLoaded();
     this.api.getAll().subscribe({
       next: (players) => this.players.set(players),
       error: (error) => this.error.set(toProblem(error).message),
     });
   }
 
-  protected add(): void {
-    if (this.full()) {
-      this.error.set({ key: 'players.full', params: { max: this.maxPlayers() } });
-      return;
-    }
-
-    const name = this.newName().trim();
-    const { min, max } = this.nameLimit();
-    if (name.length < min || name.length > max) {
-      this.error.set({ key: 'setup.errors.nameLength', params: { min, max } });
+  protected async add(): Promise<void> {
+    if (this.adding()) {
       return;
     }
 
     this.adding.set(true);
     this.error.set(null);
-    this.api.create(name).subscribe({
+    // Only waits when the rules are missing, to try loading them again.
+    const rules = this.rulesStore.rules() ?? (await this.rulesStore.ensureLoaded());
+    const problem = this.validateNewPlayer(rules);
+    if (problem) {
+      this.error.set(problem);
+      this.adding.set(false);
+      return;
+    }
+
+    this.api.create(this.newName().trim()).subscribe({
       next: (player) => {
         this.players.update((players) => [...(players ?? []), player]);
         this.newName.set('');
@@ -104,5 +108,23 @@ export class PlayersSection {
 
   protected onNameInput(event: Event): void {
     this.newName.set((event.target as HTMLInputElement).value);
+  }
+
+  private validateNewPlayer(rules: GameRules | null): Message | null {
+    if (!rules) {
+      return { key: 'errors.rulesUnavailable' };
+    }
+
+    if ((this.players()?.length ?? 0) >= rules.maxPlayersPerAccount) {
+      return { key: 'players.full', params: { max: rules.maxPlayersPerAccount } };
+    }
+
+    const name = this.newName().trim();
+    const { min, max } = rules.playerName;
+    if (name.length < min || name.length > max) {
+      return { key: 'setup.errors.nameLength', params: { min, max } };
+    }
+
+    return null;
   }
 }

@@ -202,4 +202,50 @@ describe('SignIn', () => {
     expect(page.querySelector('[role="dialog"] .error-banner')?.textContent).toContain('errors.api.Auth.NameTaken');
     expect(TestBed.inject(AuthStore).isSignedIn()).toBe(false);
   });
+
+  it('says the rules are missing instead of refusing every name when the backend was down', async () => {
+    TestBed.inject(GameRulesStore).rules.set(null);
+    const { fixture, page } = await render();
+    http.expectOne('/api/rules').error(new ProgressEvent('error'));
+    await settle(fixture);
+
+    expect(page.querySelector('.sign-in__name')!.hasAttribute('maxlength')).toBe(false);
+
+    await signInAsUnknown(fixture, page);
+    click(page, '.ask__yes');
+    await fixture.whenStable();
+    expect(page.querySelector('.field__help')).toBeNull();
+
+    type(page, '.create__password', 'new-password');
+    type(page, '.create__repeat', 'new-password');
+    await fixture.whenStable();
+    click(page, '.create__submit');
+    http.expectOne('/api/rules').error(new ProgressEvent('error'));
+    await settle(fixture);
+
+    expect(page.querySelector('[role="dialog"] .error-banner')?.textContent).toContain('errors.rulesUnavailable');
+    http.expectNone('/api/auth/accounts');
+  });
+
+  it('creates the login once the backend is back, with the rules it now serves', async () => {
+    TestBed.inject(GameRulesStore).rules.set(null);
+    const { fixture, page } = await render();
+    http.expectOne('/api/rules').error(new ProgressEvent('error'));
+    await settle(fixture);
+    await signInAsUnknown(fixture, page);
+    click(page, '.ask__yes');
+    await fixture.whenStable();
+
+    type(page, '.create__password', 'new-password');
+    type(page, '.create__repeat', 'new-password');
+    await fixture.whenStable();
+    click(page, '.create__submit');
+    http.expectOne('/api/rules').flush(TEST_RULES);
+    await settle(fixture);
+
+    http.expectOne('/api/auth/accounts').flush(testSession({ name: 'Novak' }));
+    await settle(fixture);
+
+    expect(TestBed.inject(AuthStore).account()?.name).toBe('Novak');
+  });
 });

@@ -193,21 +193,59 @@ public class AccountServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_ReportsAnAccountThatIsGone()
+    public async Task GetSignedInAsync_AcceptsATokenWithTheCurrentStamp()
     {
-        var result = await _sut.GetByIdAsync(99);
+        var account = TestEntities.Account(7, "Brano", isAdmin: true);
+        _accounts.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns(account);
+
+        var result = await _sut.GetSignedInAsync(7, account.SecurityStamp);
+
+        Assert.Equal(new AccountDto(7, "Brano", true), result.Value);
+    }
+
+    [Theory]
+    [InlineData("an-older-stamp")]
+    [InlineData("")]
+    public async Task GetSignedInAsync_RefusesATokenWithAnotherStamp(string stamp)
+    {
+        _accounts.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns(TestEntities.Account(7, "Brano"));
+
+        var result = await _sut.GetSignedInAsync(7, stamp);
+
+        Assert.Equal(AccountErrors.SignedOut, result.Error);
+    }
+
+    [Fact]
+    public async Task GetSignedInAsync_ReportsAnAccountThatIsGone()
+    {
+        var result = await _sut.GetSignedInAsync(99, "stamp");
 
         Assert.Equal(AccountErrors.UnknownAccount, result.Error);
     }
 
     [Fact]
-    public async Task GetByIdAsync_DoesNotTreatTheReservedAccountAsALogin()
+    public async Task GetSignedInAsync_DoesNotTreatTheReservedAccountAsALogin()
     {
-        _accounts.GetByIdAsync(Account.ReservedId, Arg.Any<CancellationToken>()).Returns(TestEntities.ReservedAccount());
+        var reserved = TestEntities.ReservedAccount();
+        _accounts.GetByIdAsync(Account.ReservedId, Arg.Any<CancellationToken>()).Returns(reserved);
 
-        var result = await _sut.GetByIdAsync(Account.ReservedId);
+        var result = await _sut.GetSignedInAsync(Account.ReservedId, reserved.SecurityStamp);
 
         Assert.Equal(AccountErrors.UnknownAccount, result.Error);
+    }
+
+    [Fact]
+    public async Task SignInAsync_UpgradesAWeakHashWithoutEndingOtherSignIns()
+    {
+        var account = TestEntities.Account(5, "Brano", passwordHash: "old:secret-password");
+        _accounts.GetByNameAsync("Brano", Arg.Any<CancellationToken>()).Returns(account);
+        var stamp = account.SecurityStamp;
+
+        var result = await _sut.SignInAsync(new SignInRequest { Name = "Brano", Password = "secret-password" });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(FakePasswordHasher.HashOf("secret-password"), account.PasswordHash);
+        Assert.Equal(stamp, account.SecurityStamp);
     }
 
     private Account Stored(int id, string name, string password)

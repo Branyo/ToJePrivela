@@ -275,6 +275,8 @@
   "errors": {
     "generic": "Niečo sa pokazilo. Skúste to znova.",
     "unreachable": "Herný server je nedostupný. Beží API?",
+    "rulesUnavailable": "Pravidlá hry sa nepodarilo načítať zo servera. Skontrolujte, či beží, a skúste to znova.",
+    "rateLimited": "Príliš veľa pokusov za krátky čas. Chvíľu počkajte a skúste to znova.",
     "api": {
       "Concurrency": {
         "Conflict": "Medzitým to zmenil niekto iný. Načítajte stránku znova a skúste to ešte raz."
@@ -311,10 +313,14 @@
       "Auth": {
         "Unauthenticated": "Prihláste sa, prosím, znova.",
         "UnknownAccount": "Vaše prihlásenie už neexistuje. Prihláste sa, prosím, znova.",
+        "SignedOut": "Vaše prihlásenie skončilo, pretože sa prihlasovací účet zmenil. Prihláste sa, prosím, znova.",
         "Forbidden": "Toto môže urobiť len správca.",
         "WrongPassword": "Heslo nie je správne.",
         "UnknownLogin": "Prihlásenie s týmto menom neexistuje.",
         "NameTaken": "Toto prihlasovacie meno je už obsadené."
+      },
+      "RateLimit": {
+        "Exceeded": "Príliš veľa pokusov za krátky čas. Skúste to znova o {{seconds}} s."
       }
     }
   }

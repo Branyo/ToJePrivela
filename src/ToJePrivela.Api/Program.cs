@@ -1,5 +1,6 @@
+using System.Net;
 using System.Text.Json.Serialization;
-using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 using Serilog;
@@ -11,6 +12,9 @@ using ToJePrivela.Identity;
 using ToJePrivela.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+DeploymentSafety.EnsureNoDevelopmentSigningKey(builder.Environment, builder.Configuration);
+DeploymentSafety.EnsureDevelopmentNotReachableFromNetwork(builder.Environment, builder.Configuration);
 
 builder.Host.UseSerilog((context, configuration) =>
     configuration.WriteTo.Console().ReadFrom.Configuration(context.Configuration));
@@ -76,23 +80,34 @@ var aiRateLimit = builder.Configuration.GetSection(AiRateLimitOptions.SectionNam
 var signInRateLimit = builder.Configuration.GetSection(SignInRateLimitOptions.SectionName).Get<SignInRateLimitOptions>()
     ?? new SignInRateLimitOptions();
 
+builder.Services.AddSingleton(_ => new SignInAddressLimiter(signInRateLimit));
+
+// Behind a reverse proxy every connection comes from the proxy, so the sign-in limits would lump all clients into one
+// address. X-Forwarded-For is trusted only from loopback and the proxies listed here.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+
+    foreach (var proxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+    {
+        options.KnownProxies.Add(IPAddress.Parse(proxy));
+    }
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = (context, cancellationToken) =>
+        RateLimitRejection.WriteAsync(context.HttpContext, context.Lease, cancellationToken);
     options.AddFixedWindowLimiter(AiRateLimitOptions.PolicyName, limiter =>
     {
         limiter.PermitLimit = aiRateLimit.PermitLimit;
         limiter.Window = TimeSpan.FromSeconds(aiRateLimit.WindowSeconds);
         limiter.QueueLimit = 0;
     });
-    options.AddPolicy(SignInRateLimitOptions.PolicyName, httpContext => RateLimitPartition.GetFixedWindowLimiter(
-        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = signInRateLimit.PermitLimit,
-            Window = TimeSpan.FromSeconds(signInRateLimit.WindowSeconds),
-            QueueLimit = 0
-        }));
+    options.AddPolicy(
+        SignInRateLimitOptions.PolicyName,
+        httpContext => SignInRateLimiting.Partition(httpContext, signInRateLimit));
 });
 
 var app = builder.Build();
@@ -105,6 +120,7 @@ if (!isTesting)
     await app.Services.ProvisionAdminAccountsAsync();
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
@@ -124,9 +140,12 @@ if (!isTesting && !app.Environment.IsDevelopment())
 
 app.UseCors(CorsOptions.PolicyName);
 app.UseAuthentication();
+app.UseSignInLimits();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
+
+DeploymentSafety.StopDevelopmentReachableFromNetwork(app);
 
 await app.RunAsync();
 

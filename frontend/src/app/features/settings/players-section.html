@@ -15,7 +15,7 @@
         class="text-input"
         [placeholder]="'setup.players.namePlaceholder' | translate"
         [attr.aria-label]="'setup.players.name' | translate"
-        [attr.maxlength]="nameLimit().max"
+        [attr.maxlength]="nameLimit()?.max ?? null"
         [value]="newName()"
         (input)="onNameInput($event)"
         [disabled]="adding() || full()"
@@ -25,7 +25,11 @@
       </button>
       @if (players(); as list) {
         <span class="count muted" [class.count--full]="full()">
-          {{ 'players.count' | translate: { count: list.length, max: maxPlayers() } }}
+          @if (maxPlayers(); as max) {
+            {{ 'players.count' | translate: { count: list.length, max } }}
+          } @else {
+            {{ list.length }}
+          }
         </span>
       }
     </form>

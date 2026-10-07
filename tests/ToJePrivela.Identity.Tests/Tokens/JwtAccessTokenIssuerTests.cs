@@ -28,6 +28,17 @@ public class JwtAccessTokenIssuerTests
     }
 
     [Fact]
+    public async Task Issue_CarriesTheAccountsSecurityStamp()
+    {
+        var account = AccountWithId(7, isAdmin: false);
+        var token = Issuer().Issue(account);
+
+        var result = await new JsonWebTokenHandler().ValidateTokenAsync(token.Value, Settings.CreateValidationParameters());
+
+        Assert.Equal(account.SecurityStamp, result.ClaimsIdentity.FindFirst(AccessTokenClaims.SecurityStamp)!.Value);
+    }
+
+    [Fact]
     public async Task Issue_LeavesAdminRightsOutOfTheToken()
     {
         // The host reads them from the stored login on every request, so revoking them counts at once.

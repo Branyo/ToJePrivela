@@ -21,6 +21,25 @@ describe('toProblem', () => {
     expect(toProblem(error).message).toEqual({ text: 'Unexpected error' });
   });
 
+  it('says how long to wait when a rate limit refuses the request', () => {
+    const error = new HttpErrorResponse({
+      status: 429,
+      error: { code: 'RateLimit.Exceeded', detail: 'Too many attempts.', retryAfterSeconds: 42 },
+    });
+
+    expect(toProblem(error).message).toEqual({
+      key: 'errors.api.RateLimit.Exceeded',
+      params: { seconds: 42 },
+      fallback: 'Too many attempts.',
+    });
+  });
+
+  it('still explains a rate limit that does not say how long to wait', () => {
+    const error = new HttpErrorResponse({ status: 429, error: { code: 'RateLimit.Exceeded' } });
+
+    expect(toProblem(error).message).toEqual({ key: 'errors.rateLimited', fallback: undefined });
+  });
+
   it('reports an unreachable server', () => {
     expect(toProblem(new HttpErrorResponse({ status: 0 })).message).toEqual({ key: 'errors.unreachable' });
   });
