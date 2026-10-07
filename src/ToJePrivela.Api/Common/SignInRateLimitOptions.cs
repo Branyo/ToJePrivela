@@ -8,8 +8,8 @@ namespace ToJePrivela.Api.Common;
 /// <list type="bullet">
 /// <item><see cref="PermitLimit"/> per client address and login name, so one login's password cannot be guessed at
 /// speed while people sharing one address (a party on one Wi-Fi) do not use up each other's attempts;</item>
-/// <item><see cref="AddressPermitLimit"/> per client address whatever the names, so one address cannot try many names,
-/// or create many logins, at speed either.</item>
+/// <item><see cref="AddressPermitLimit"/> attempts per client address whatever the names, so one address cannot try many
+/// names, or create many logins, at speed either; successful sign-ins do not count.</item>
 /// </list>
 /// </summary>
 public sealed class SignInRateLimitOptions

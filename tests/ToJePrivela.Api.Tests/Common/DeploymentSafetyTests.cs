@@ -42,6 +42,47 @@ public class DeploymentSafetyTests
         Assert.Contains("Development key", exception.Message);
     }
 
+    [Theory]
+    [InlineData("\n")]
+    [InlineData(" ")]
+    [InlineData("\r\n")]
+    public void DevelopmentSigningKey_WithSurroundingWhitespace_IsRefusedToo(string whitespace)
+    {
+        Assert.Throws<InvalidOperationException>(() => DeploymentSafety.EnsureNoDevelopmentSigningKey(
+            Environment(Environments.Production),
+            KeyedWith(DeploymentSafety.DevelopmentSigningKey + whitespace)));
+    }
+
+    [Theory]
+    [InlineData("urls", "http://localhost:5178;http://+:8080")]
+    [InlineData("http_ports", "8080")]
+    [InlineData("https_ports", "8443")]
+    [InlineData("Kestrel:Endpoints:Http:Url", "http://0.0.0.0:5000")]
+    public void Development_ConfiguredToListenOnTheNetwork_DoesNotStart(string key, string value)
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() => DeploymentSafety.EnsureDevelopmentNotReachableFromNetwork(
+            Environment(Environments.Development),
+            Configured(key, value)));
+
+        Assert.Contains("other machines can reach", exception.Message);
+    }
+
+    [Fact]
+    public void Development_ConfiguredForLocalhostOnly_Starts()
+    {
+        DeploymentSafety.EnsureDevelopmentNotReachableFromNetwork(
+            Environment(Environments.Development),
+            Configured("urls", "https://localhost:7030;http://localhost:5178"));
+    }
+
+    [Fact]
+    public void OtherEnvironments_MayListenOnTheNetwork()
+    {
+        DeploymentSafety.EnsureDevelopmentNotReachableFromNetwork(
+            Environment(Environments.Production),
+            Configured("http_ports", "8080"));
+    }
+
     [Fact]
     public void DevelopmentSigningKey_IsAllowedInDevelopment()
     {
@@ -75,9 +116,11 @@ public class DeploymentSafetyTests
         return environment;
     }
 
-    private static IConfiguration KeyedWith(string signingKey) =>
+    private static IConfiguration KeyedWith(string signingKey) => Configured("Authentication:Jwt:SigningKey", signingKey);
+
+    private static IConfiguration Configured(string key, string value) =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Authentication:Jwt:SigningKey"] = signingKey })
+            .AddInMemoryCollection(new Dictionary<string, string?> { [key] = value })
             .Build();
 
     private static string DevelopmentSettingsPath()

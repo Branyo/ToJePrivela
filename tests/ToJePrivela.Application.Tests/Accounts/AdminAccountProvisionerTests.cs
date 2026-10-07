@@ -79,6 +79,18 @@ public class AdminAccountProvisionerTests
     }
 
     [Fact]
+    public async Task ProvisionAsync_UpgradesAnOutdatedHashOfTheSamePasswordWithoutEndingSignIns()
+    {
+        var existing = Existing(TestEntities.Account(4, "Brano", isAdmin: true, passwordHash: "old:brano-password"));
+        var stamp = existing.SecurityStamp;
+
+        await Provisioner(Admin("Brano", "brano-password")).ProvisionAsync();
+
+        Assert.Equal(FakePasswordHasher.HashOf("brano-password"), existing.PasswordHash);
+        Assert.Equal(stamp, existing.SecurityStamp);
+    }
+
+    [Fact]
     public async Task ProvisionAsync_RevokesAdminsThatAreNoLongerConfigured()
     {
         var kept = Existing(TestEntities.Account(4, "Brano", isAdmin: true, passwordHash: FakePasswordHasher.HashOf("brano-password")));

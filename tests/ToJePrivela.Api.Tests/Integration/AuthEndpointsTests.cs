@@ -75,6 +75,19 @@ public class AuthEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, known.StatusCode);
     }
 
+    [Theory]
+    [InlineData("/api/auth/sign-in")]
+    [InlineData("/api/auth/accounts")]
+    public async Task ANameThatIsNotValidUnicode_IsABadRequest(string endpoint)
+    {
+        // A lone surrogate, which cannot be normalized into a name key.
+        var body = new StringContent("""{ "name": "\uD800abc", "password": "whatever-password" }""", null, "application/json");
+
+        var response = await _anonymous.PostAsync(endpoint, body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     [Fact]
     public async Task CreateAccount_CreatesALoginThatCanSignInAgain()
     {
@@ -348,9 +361,18 @@ public class SignInAddressCapTests : IClassFixture<ThreeSignInsPerAddressApiFact
     }
 
     [Fact]
-    public async Task TryingManyNamesFromOneAddress_IsStoppedWith429()
+    public async Task TryingManyNamesFromOneAddress_IsStoppedWith429_WhileSuccessfulSignInsAreFree()
     {
-        // Every name has attempts left; together they exceed what one address may send.
+        // People who know their passwords never use up their address's cap.
+        for (var signIn = 0; signIn < 5; signIn++)
+        {
+            var signedIn = await _anonymous.PostAsJsonAsync(
+                "/api/auth/sign-in",
+                new { name = "Test member", password = ApiFactory.MemberPassword });
+            Assert.Equal(HttpStatusCode.OK, signedIn.StatusCode);
+        }
+
+        // Every name has attempts left; together they exceed what one address may try.
         for (var attempt = 0; attempt < 3; attempt++)
         {
             var allowed = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name = UniqueName(), password = "guess" });

@@ -51,8 +51,10 @@ dotnet test ToJePrivela.slnx
 The database file is created and migrated on startup, so a fresh clone needs no manual EF step.
 
 The Development settings carry a public signing key, so the API refuses to run where that is unsafe
-(`DeploymentSafety`): any other environment does not start with that key, and Development stops at once (exit code 1)
-when it listens on an address other machines can reach (`0.0.0.0`, `*`, a host name…) instead of `localhost`.
+(`DeploymentSafety`): any other environment does not start with that key (surrounding whitespace ignored), and
+Development does not start when it is configured to listen on an address other machines can reach (`0.0.0.0`, `*`, a
+host name…, through `ASPNETCORE_URLS`, `ASPNETCORE_HTTP_PORTS` or `Kestrel:Endpoints`) instead of `localhost`; an
+address added any other way stops it at once after startup (exit code 1).
 
 ### Configuration
 
@@ -73,7 +75,8 @@ when it listens on an address other machines can reach (`0.0.0.0`, `*`, a host n
 | `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 1440 minutes (24 h) by default |
 | `Authentication:Admins` | `[{ "Name": "Brano", "Password": "…" }, …]` — the admin logins, synced on startup; passwords via user-secrets or environment variables only |
 | `RateLimiting:SignIn:PermitLimit`, `WindowSeconds` | Limit per client address and login name on signing in and creating logins (default 10 per 60 s) |
-| `RateLimiting:SignIn:AddressPermitLimit` | Cap per client address on the same endpoints, whatever the names, over the same window (default 60) |
+| `RateLimiting:SignIn:AddressPermitLimit` | Cap per client address on attempts at the same endpoints, whatever the names, over the same window; successful sign-ins do not count (default 60) |
+| `ForwardedHeaders:KnownProxies` | IP addresses of reverse proxies whose `X-Forwarded-For` is trusted (loopback always is) |
 
 ```bash
 dotnet user-secrets set "OpenAi:ApiKey" "sk-..." --project src/ToJePrivela.Api
@@ -93,9 +96,11 @@ sign-in. `POST /api/auth/sign-in` and `POST /api/auth/accounts` answer with a JW
 Signing in with an unknown name answers 404 `Auth.UnknownLogin` on purpose, so the client can offer to create the
 login; both endpoints are rate limited instead. The limit counts per client address **and** login name (compared
 like login names, so `" Brano"` and `"brano"` share it): people at one party behind the same address each get their own
-attempts, while guessing one login's password stays slow. On top of that, one address may send at most
-`AddressPermitLimit` such requests per window whatever the names, so it cannot try many names, or create many
-logins, at speed either.
+attempts, while guessing one login's password stays slow. On top of that, one address may make at most
+`AddressPermitLimit` such attempts per window whatever the names, so it cannot try many names, or create many
+logins, at speed either. A successful sign-in is not counted there, so people who know their passwords never use up
+their address's cap; an address over it is refused before its request body is read. Behind a reverse proxy, list the
+proxy in `ForwardedHeaders:KnownProxies` so the limits see each client's own address.
 
 Admin rights come from `Authentication:Admins` only, and the stored logins are made to match it on every startup:
 
