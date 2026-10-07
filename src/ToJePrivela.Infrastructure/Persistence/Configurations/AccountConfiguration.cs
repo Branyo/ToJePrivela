@@ -28,6 +28,10 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(a => a.CreatedAt).IsRequired();
         builder.Property(a => a.LastSignedInAt);
 
+        builder.Property(a => a.SecurityStamp)
+            .IsRequired()
+            .HasMaxLength(Account.SecurityStampLength);
+
         builder.Ignore(a => a.IsReserved);
     }
 }

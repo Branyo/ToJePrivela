@@ -54,11 +54,14 @@ public class AdminAccountProvisionerTests
     {
         // Someone created "Brano" before it was configured: they must not become admin with their own password.
         var existing = Existing(TestEntities.Account(4, "Brano", passwordHash: FakePasswordHasher.HashOf("squatter-password")));
+        var squattersStamp = existing.SecurityStamp;
 
         await Provisioner(Admin("brano", "brano-password")).ProvisionAsync();
 
         Assert.True(existing.IsAdmin);
         Assert.Equal(FakePasswordHasher.HashOf("brano-password"), existing.PasswordHash);
+        // Nor may they go on as admin with the token they already hold.
+        Assert.NotEqual(squattersStamp, existing.SecurityStamp);
         await _accounts.DidNotReceive().AddAsync(Arg.Any<Account>(), Arg.Any<CancellationToken>());
     }
 
@@ -67,10 +70,12 @@ public class AdminAccountProvisionerTests
     {
         var hash = FakePasswordHasher.HashOf("brano-password");
         var existing = Existing(TestEntities.Account(4, "Brano", isAdmin: true, passwordHash: hash));
+        var stamp = existing.SecurityStamp;
 
         await Provisioner(Admin("Brano", "brano-password")).ProvisionAsync();
 
         Assert.Same(hash, existing.PasswordHash);
+        Assert.Equal(stamp, existing.SecurityStamp);
     }
 
     [Fact]

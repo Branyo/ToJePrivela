@@ -6,6 +6,7 @@ namespace ToJePrivela.Domain.Tests.Entities;
 public class AccountTests
 {
     private static readonly DateTime Now = new(2026, 10, 6, 12, 0, 0, DateTimeKind.Utc);
+    private const string StampPattern = "^[0-9a-f]{32}$";
 
     [Fact]
     public void Register_CreatesALoginThatIsNoAdmin()
@@ -83,11 +84,80 @@ public class AccountTests
     }
 
     [Fact]
+    public void Register_GivesEveryLoginItsOwnSecurityStamp()
+    {
+        var first = Account.Register("Brano", "hash", Now);
+        var second = Account.Register("Duri", "hash", Now);
+
+        Assert.Matches(StampPattern, first.SecurityStamp);
+        Assert.NotEqual(first.SecurityStamp, second.SecurityStamp);
+    }
+
+    [Fact]
+    public void ChangePasswordHash_EndsEarlierSignIns()
+    {
+        var account = Account.Register("Brano", "old", Now);
+        var before = account.SecurityStamp;
+
+        account.ChangePasswordHash("new");
+
+        Assert.NotEqual(before, account.SecurityStamp);
+    }
+
+    [Fact]
+    public void UpgradePasswordHash_KeepsEarlierSignIns()
+    {
+        var account = Account.Register("Brano", "weak", Now);
+        var before = account.SecurityStamp;
+
+        account.UpgradePasswordHash("strong");
+
+        Assert.Equal("strong", account.PasswordHash);
+        Assert.Equal(before, account.SecurityStamp);
+    }
+
+    [Fact]
+    public void GrantAdmin_EndsTheSignInsOfALoginThatWasNoAdmin()
+    {
+        var account = Account.Register("Brano", "hash", Now);
+        var before = account.SecurityStamp;
+
+        account.GrantAdmin();
+
+        Assert.NotEqual(before, account.SecurityStamp);
+    }
+
+    [Fact]
+    public void GrantAdmin_KeepsTheSignInsOfAnAdmin()
+    {
+        // The configured admins are granted again on every startup; that must not sign them out.
+        var account = Account.CreateAdmin("Brano", "hash", Now);
+        var before = account.SecurityStamp;
+
+        account.GrantAdmin();
+
+        Assert.Equal(before, account.SecurityStamp);
+    }
+
+    [Fact]
+    public void RevokeAdmin_KeepsTheSignIns()
+    {
+        // Rights are read on every request, so the login simply stops being admin.
+        var account = Account.CreateAdmin("Brano", "hash", Now);
+        var before = account.SecurityStamp;
+
+        account.RevokeAdmin();
+
+        Assert.Equal(before, account.SecurityStamp);
+    }
+
+    [Fact]
     public void TakeOverReserved_GivesTheReservedAccountToAnAdmin()
     {
         var reserved = Reserved();
 
         reserved.TakeOverReserved("Brano", "hash", Now);
+        Assert.Matches(StampPattern, reserved.SecurityStamp);
 
         Assert.False(reserved.IsReserved);
         Assert.True(reserved.IsAdmin);
@@ -113,6 +183,7 @@ public class AccountTests
         Assert.Throws<DomainException>(() => reserved.RecordSignIn(Now));
         Assert.Throws<DomainException>(() => reserved.GrantAdmin());
         Assert.Throws<DomainException>(() => reserved.ChangePasswordHash("hash"));
+        Assert.Throws<DomainException>(() => reserved.UpgradePasswordHash("hash"));
     }
 
     /// <summary>The row the migration inserts; the domain itself never creates one.</summary>

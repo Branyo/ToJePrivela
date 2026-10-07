@@ -16,6 +16,13 @@ public static class AccountErrors
     public static readonly Error UnknownAccount =
         Error.Unauthorized("Auth.UnknownAccount", "The signed-in login no longer exists; sign in again.");
 
+    /// <summary>
+    /// The token was issued before the login's password or admin rights changed hands (see
+    /// <see cref="Domain.Entities.Account.SecurityStamp"/>), so it no longer counts.
+    /// </summary>
+    public static readonly Error SignedOut =
+        Error.Unauthorized("Auth.SignedOut", "This sign-in has ended because the login changed; sign in again.");
+
     public static readonly Error WrongPassword =
         Error.Unauthorized("Auth.WrongPassword", "The password is not right.");
 

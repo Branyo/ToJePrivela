@@ -8,6 +8,11 @@ public static class AccessTokenClaims
 
     public const string Name = "name";
 
+    /// <summary>
+    /// The account's security stamp when the token was issued; the host refuses the token once the stored one differs.
+    /// </summary>
+    public const string SecurityStamp = "stamp";
+
     /// <summary>Not in the token: the host adds it for an admin once it has read the stored account.</summary>
     public const string Role = "role";
 

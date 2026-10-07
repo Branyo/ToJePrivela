@@ -303,6 +303,7 @@
       "Auth": {
         "Unauthenticated": "Please sign in again.",
         "UnknownAccount": "Your login no longer exists. Please sign in again.",
+        "SignedOut": "Your sign-in has ended because the login changed. Please sign in again.",
         "Forbidden": "Only an admin may do this.",
         "WrongPassword": "The password is not right.",
         "UnknownLogin": "There is no login with this name.",

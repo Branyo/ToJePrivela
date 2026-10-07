@@ -17,8 +17,9 @@ public static class AccessTokenAuthentication
 
     /// <summary>
     /// Accepts the access tokens issued at sign-in and requires one on every endpoint not marked
-    /// <c>[AllowAnonymous]</c>. The login a token names is read on every request: a login that is gone is refused, and
-    /// only a login that is admin <em>now</em> gets the admin role. A missing token (401) or a missing admin role (403)
+    /// <c>[AllowAnonymous]</c>. The login a token names is read on every request: a login that is gone is refused, so is
+    /// a token issued before the login's security stamp changed (a new password, admin rights granted), and only a login
+    /// that is admin <em>now</em> gets the admin role. A missing token (401) or a missing admin role (403)
     /// is answered like any other error.
     /// </summary>
     public static IServiceCollection AddAccessTokenAuthentication(this IServiceCollection services)
@@ -66,8 +67,11 @@ public static class AccessTokenAuthentication
             return;
         }
 
+        // Tokens issued before security stamps existed carry none; they count as signed out like any stale one.
+        var securityStamp = context.Principal?.FindFirst(AccessTokenClaims.SecurityStamp)?.Value ?? string.Empty;
+
         var accounts = context.HttpContext.RequestServices.GetRequiredService<IAccountService>();
-        var account = await accounts.GetByIdAsync(id, context.HttpContext.RequestAborted);
+        var account = await accounts.GetSignedInAsync(id, securityStamp, context.HttpContext.RequestAborted);
 
         if (account.IsFailure)
         {

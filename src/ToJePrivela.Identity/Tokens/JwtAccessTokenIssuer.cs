@@ -8,8 +8,9 @@ using ToJePrivela.Domain.Entities;
 namespace ToJePrivela.Identity.Tokens;
 
 /// <summary>
-/// Signs a JWT naming the account (see <see cref="AccessTokenClaims"/>). It says nothing about admin rights: the host
-/// reads those from the stored account on every request, so revoking them takes effect at once.
+/// Signs a JWT naming the account and its current security stamp (see <see cref="AccessTokenClaims"/>). It says nothing
+/// about admin rights: the host reads those from the stored account on every request, so revoking them takes effect at
+/// once, and a changed stamp ends the token.
 /// </summary>
 public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
 {
@@ -33,7 +34,8 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
         var claims = new Dictionary<string, object>
         {
             [AccessTokenClaims.Subject] = account.Id.ToString(CultureInfo.InvariantCulture),
-            [AccessTokenClaims.Name] = account.Name
+            [AccessTokenClaims.Name] = account.Name,
+            [AccessTokenClaims.SecurityStamp] = account.SecurityStamp
         };
 
         var token = _handler.CreateToken(new SecurityTokenDescriptor

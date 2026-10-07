@@ -59,7 +59,7 @@ public sealed class AccountService : IAccountService
 
         if (check == PasswordCheck.SucceededRehashNeeded)
         {
-            account.ChangePasswordHash(_passwordHasher.Hash(password));
+            account.UpgradePasswordHash(_passwordHasher.Hash(password));
         }
 
         account.RecordSignIn(_timeProvider.GetUtcNow().UtcDateTime);
@@ -101,15 +101,36 @@ public sealed class AccountService : IAccountService
         return Result.Success(AccountMapper.ToSignedInDto(account, _tokenIssuer.Issue(account)));
     }
 
-    public Task<Result<AccountDto>> GetCurrentAsync(CancellationToken cancellationToken = default) =>
-        GetByIdAsync(_currentAccount.Id, cancellationToken);
-
-    public async Task<Result<AccountDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<Result<AccountDto>> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
-        var account = await _accounts.GetByIdAsync(id, cancellationToken);
+        var account = await FindLoginAsync(_currentAccount.Id, cancellationToken);
 
-        return account is null || account.IsReserved
+        return account is null
             ? Result.Failure<AccountDto>(AccountErrors.UnknownAccount)
             : Result.Success(AccountMapper.ToDto(account));
+    }
+
+    public async Task<Result<AccountDto>> GetSignedInAsync(
+        int id,
+        string securityStamp,
+        CancellationToken cancellationToken = default)
+    {
+        var account = await FindLoginAsync(id, cancellationToken);
+
+        if (account is null)
+        {
+            return Result.Failure<AccountDto>(AccountErrors.UnknownAccount);
+        }
+
+        return account.SecurityStamp == securityStamp
+            ? Result.Success(AccountMapper.ToDto(account))
+            : Result.Failure<AccountDto>(AccountErrors.SignedOut);
+    }
+
+    /// <summary>The login with the id; the reserved account is none, since nobody can sign in to it.</summary>
+    private async Task<Account?> FindLoginAsync(int id, CancellationToken cancellationToken)
+    {
+        var account = await _accounts.GetByIdAsync(id, cancellationToken);
+        return account is null || account.IsReserved ? null : account;
     }
 }

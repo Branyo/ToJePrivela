@@ -313,6 +313,7 @@
       "Auth": {
         "Unauthenticated": "Prihláste sa, prosím, znova.",
         "UnknownAccount": "Vaše prihlásenie už neexistuje. Prihláste sa, prosím, znova.",
+        "SignedOut": "Vaše prihlásenie skončilo, pretože sa prihlasovací účet zmenil. Prihláste sa, prosím, znova.",
         "Forbidden": "Toto môže urobiť len správca.",
         "WrongPassword": "Heslo nie je správne.",
         "UnknownLogin": "Prihlásenie s týmto menom neexistuje.",
