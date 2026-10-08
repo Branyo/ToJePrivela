@@ -11,7 +11,10 @@ import { GameRulesStore } from '../../core/rules/game-rules-store';
 
 /** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
 const GENERATOR_MIN_QUESTIONS = 1;
-const DEFAULT_COUNT = 20;
+/** How many AI questions a new category asks for, unless the admin changes it. */
+const NEW_CATEGORY_COUNT = 100;
+/** How many more AI questions an existing category asks for, unless the admin changes it. */
+const MORE_COUNT = 20;
 
 interface CategoryRow {
   category: QuestionCategory;
@@ -47,7 +50,7 @@ export class AiQuestionsSection {
   private readonly counts = signal<ReadonlyMap<number, { total: number; ai: number }>>(new Map());
 
   protected readonly newName = signal('');
-  protected readonly newCount = signal(DEFAULT_COUNT);
+  protected readonly newCount = signal(NEW_CATEGORY_COUNT);
   /** Per category: how many AI questions to add. */
   protected readonly moreCounts = signal<ReadonlyMap<number, number>>(new Map());
 
@@ -154,7 +157,7 @@ export class AiQuestionsSection {
   }
 
   protected moreCountFor(id: number): number {
-    return this.moreCounts().get(id) ?? DEFAULT_COUNT;
+    return this.moreCounts().get(id) ?? MORE_COUNT;
   }
 
   protected onNameInput(event: Event): void {
