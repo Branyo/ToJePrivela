@@ -9,4 +9,4 @@ public interface IGeneratedQuestionParser
     IReadOnlyList<string> ParseSubtopics(string? reply);
 }
 
-public sealed record ParsedQuestion(string Question, string Answer);
+public sealed record ParsedQuestion(string QuestionSk, string QuestionEn, string Answer);

@@ -15,7 +15,9 @@ const CATEGORIES: QuestionCategory[] = [
 
 const question = (id: number, categoryId: number, source: Question['source']): Question => ({
   id,
-  text: `Question ${id}?`,
+  text: `Otázka ${id}?`,
+  textSk: `Otázka ${id}?`,
+  textEn: `Question ${id}?`,
   answer: '1',
   categoryId,
   categoryName: '',

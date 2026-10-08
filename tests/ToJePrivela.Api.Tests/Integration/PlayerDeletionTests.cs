@@ -107,7 +107,7 @@ public class PlayerDeletionTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/api/questions",
-            new { text = $"How many cars in {Guid.NewGuid():N}?", answer = "42", categoryId = 1, badPoints = 3 });
+            new { textSk = $"Koľko áut je v {Guid.NewGuid():N}?", textEn = "How many cars are there?", answer = "42", categoryId = 1, badPoints = 3 });
         return (await response.Content.ReadFromJsonAsync<QuestionDto>())!;
     }
 }

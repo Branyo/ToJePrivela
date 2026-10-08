@@ -9,7 +9,7 @@ public class GameTests
     private static readonly DateTime Now = new(2026, 10, 1, 12, 0, 0, DateTimeKind.Utc);
 
     private static Question QuestionWorth(int badPoints) =>
-        new("How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, Start);
+        new("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, Start);
 
     [Fact]
     public void Constructor_CreatesOneEntryPerPlayer()

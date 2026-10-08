@@ -13,7 +13,7 @@ public class QuestionGenerationServiceTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 24, 12, 30, 0, TimeSpan.Zero);
 
-    private readonly QuestionCategory _sport = TestEntities.Category(2, "Sport");
+    private readonly QuestionCategory _sport = TestEntities.Category(2, "Šport", "Sport");
     private readonly FakeQuestionGenerator _generator = new();
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly QuestionGenerationOptions _options = new()
@@ -58,6 +58,8 @@ public class QuestionGenerationServiceTests
         Assert.Equal(0, result.Discarded);
         Assert.All(result.Questions, question =>
         {
+            Assert.StartsWith("Vygenerovaná otázka", question.TextSk);
+            Assert.StartsWith("Generated question", question.TextEn);
             Assert.Same(_sport, question.Category);
             Assert.Equal(QuestionSource.Ai, question.Source);
             Assert.Equal(4, question.BadPoints);
@@ -70,6 +72,7 @@ public class QuestionGenerationServiceTests
     {
         await CreateSut().GenerateAsync(_sport, 20);
 
+        // Prompts name the category in English; the questions come back in both languages anyway.
         var request = Assert.Single(_generator.Requests);
         Assert.Equal("Sport", request.Category);
         Assert.Equal(20, request.Count);
@@ -120,7 +123,7 @@ public class QuestionGenerationServiceTests
     {
         _questions.GetTextsAsync(2, Arg.Any<CancellationToken>()).Returns(["How many players are on a football pitch?"]);
         _generator.Reply = request => request.ExcludedQuestions!.Count == 1
-            ? [new GeneratedQuestion("  how many PLAYERS are on a   football pitch ", "11"), .. _generator.Fresh(1)]
+            ? [new GeneratedQuestion("  how many PLAYERS are on a   football pitch ", "  how many PLAYERS are on a   football pitch ", "11"), .. _generator.Fresh(1)]
             : _generator.Fresh(request.Count);
 
         var result = await CreateSut().GenerateAsync(_sport, 2);
@@ -134,7 +137,7 @@ public class QuestionGenerationServiceTests
     public async Task GenerateAsync_DropsUnusableQuestionsAndTopsUpTheShortfall()
     {
         _generator.Reply = request => _generator.Requests.Count == 1
-            ? [new GeneratedQuestion("In 1969, which year did Apollo 11 land on the Moon?", "1969"), .. _generator.Fresh(1)]
+            ? [new GeneratedQuestion("In 1969, which year did Apollo 11 land on the Moon?", "In 1969, which year did Apollo 11 land on the Moon?", "1969"), .. _generator.Fresh(1)]
             : _generator.Fresh(request.Count);
 
         var result = await CreateSut().GenerateAsync(_sport, 2);
@@ -149,7 +152,7 @@ public class QuestionGenerationServiceTests
     public async Task GenerateAsync_SkipsDuplicatesReturnedByDifferentCalls()
     {
         _options.QuestionsPerRequest = 2;
-        var shared = new GeneratedQuestion("Which year was ChatGPT publicly released?", "2022");
+        var shared = new GeneratedQuestion("Which year was ChatGPT publicly released?", "Which year was ChatGPT publicly released?", "2022");
         _generator.Reply = request => [shared, .. _generator.Fresh(request.Count)];
 
         var result = await CreateSut().GenerateAsync(_sport, 4);

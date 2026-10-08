@@ -25,7 +25,8 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync("/api/questions", new
         {
-            text = ValidText,
+            textSk = ValidText,
+            textEn = ValidText,
             answer = "2022",
             categoryId = HistoryId,
             badPoints = 2
@@ -42,9 +43,38 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PostQuestion_StoresBothTextsAndShowsTheOneTheRequestAsksFor()
+    {
+        var response = await _client.PostAsJsonAsync("/api/questions", new
+        {
+            textSk = "V ktorom roku bol verejne spustený ChatGPT?",
+            textEn = ValidText,
+            answer = "2022",
+            categoryId = HistoryId
+        });
+        var created = await response.Content.ReadFromJsonAsync<QuestionDto>();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/questions/{created!.Id}");
+        request.Headers.Add("Accept-Language", "en");
+        var english = await (await _client.SendAsync(request)).Content.ReadFromJsonAsync<QuestionDto>();
+
+        Assert.Equal("V ktorom roku bol verejne spustený ChatGPT?", created.Text);
+        Assert.Equal((ValidText, "History"), (english!.Text, english.CategoryName));
+        Assert.Equal(("V ktorom roku bol verejne spustený ChatGPT?", ValidText), (english.TextSk, english.TextEn));
+    }
+
+    [Fact]
+    public async Task PostQuestion_RequiresTheEnglishText()
+    {
+        var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = ValidText, answer = "2022", categoryId = HistoryId });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task PostQuestion_PicksBadPointsWhenNoneAreGiven()
     {
-        var response = await _client.PostAsJsonAsync("/api/questions", new { text = ValidText, answer = "2022", categoryId = HistoryId });
+        var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = ValidText, textEn = ValidText, answer = "2022", categoryId = HistoryId });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.InRange((await response.Content.ReadFromJsonAsync<QuestionDto>())!.BadPoints, 1, 5);
@@ -53,7 +83,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task PostQuestion_RejectsAnUnknownCategory()
     {
-        var response = await _client.PostAsJsonAsync("/api/questions", new { text = ValidText, answer = "2022", categoryId = 9999 });
+        var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = ValidText, textEn = ValidText, answer = "2022", categoryId = 9999 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -61,7 +91,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task PostQuestion_RequiresACategory()
     {
-        var response = await _client.PostAsJsonAsync("/api/questions", new { text = ValidText, answer = "2022" });
+        var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = ValidText, textEn = ValidText, answer = "2022" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -69,7 +99,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task PostQuestion_RejectsANonNumericAnswer()
     {
-        var response = await _client.PostAsJsonAsync("/api/questions", new { text = ValidText, answer = "two thousand", categoryId = HistoryId });
+        var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = ValidText, textEn = ValidText, answer = "two thousand", categoryId = HistoryId });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -79,7 +109,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     [InlineData(6)]
     public async Task PostQuestion_RejectsBadPointsOutOfRange(int badPoints)
     {
-        var response = await _client.PostAsJsonAsync("/api/questions", new { text = ValidText, answer = "2022", categoryId = HistoryId, badPoints });
+        var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = ValidText, textEn = ValidText, answer = "2022", categoryId = HistoryId, badPoints });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -106,7 +136,8 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
 
         var response = await _client.PutAsJsonAsync($"/api/questions/{question.Id}", new
         {
-            text = "How many players are on a football pitch?",
+            textSk = "How many players are on a football pitch?",
+            textEn = "How many players are on a football pitch?",
             answer = "22",
             categoryId = SportId,
             badPoints = 5
@@ -125,7 +156,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     {
         var question = await CreateQuestionAsync(ValidText, "2022", HistoryId, badPoints: 4);
 
-        await _client.PutAsJsonAsync($"/api/questions/{question.Id}", new { text = ValidText, answer = "2023", categoryId = HistoryId });
+        await _client.PutAsJsonAsync($"/api/questions/{question.Id}", new { textSk = ValidText, textEn = ValidText, answer = "2023", categoryId = HistoryId });
 
         Assert.Equal(4, (await _client.GetFromJsonAsync<QuestionDto>($"/api/questions/{question.Id}"))!.BadPoints);
     }
@@ -137,7 +168,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
             .Content.ReadFromJsonAsync<GeneratedAiQuestionsDto>();
         var aiQuestion = Assert.Single(generated!.Questions);
 
-        await _client.PutAsJsonAsync($"/api/questions/{aiQuestion.Id}", new { text = aiQuestion.Text, answer = "7", categoryId = SportId });
+        await _client.PutAsJsonAsync($"/api/questions/{aiQuestion.Id}", new { textSk = aiQuestion.TextSk, textEn = aiQuestion.TextEn, answer = "7", categoryId = SportId });
 
         Assert.Equal("Manual", (await _client.GetFromJsonAsync<QuestionDto>($"/api/questions/{aiQuestion.Id}"))!.Source);
     }
@@ -147,7 +178,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     {
         var question = await CreateQuestionAsync(ValidText, "2022", HistoryId);
 
-        var response = await _client.PutAsJsonAsync($"/api/questions/{question.Id}", new { text = ValidText, answer = "2022", categoryId = 9999 });
+        var response = await _client.PutAsJsonAsync($"/api/questions/{question.Id}", new { textSk = ValidText, textEn = ValidText, answer = "2022", categoryId = 9999 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -300,7 +331,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
 
     private async Task<QuestionDto> CreateQuestionAsync(string text, string answer, int categoryId, int badPoints = 3)
     {
-        var response = await _client.PostAsJsonAsync("/api/questions", new { text, answer, categoryId, badPoints });
+        var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = text, textEn = text, answer, categoryId, badPoints });
         response.EnsureSuccessStatusCode();
 
         return (await response.Content.ReadFromJsonAsync<QuestionDto>())!;

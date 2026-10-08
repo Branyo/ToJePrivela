@@ -12,8 +12,12 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
     {
         builder.HasKey(q => q.Id);
 
-        builder.Property(q => q.Text)
+        builder.Property(q => q.TextSk)
             .IsRequired()
+            .HasMaxLength(Question.TextMaxLength);
+
+        // Null for questions stored before texts became bilingual.
+        builder.Property(q => q.TextEn)
             .HasMaxLength(Question.TextMaxLength);
 
         builder.Property(q => q.Answer)

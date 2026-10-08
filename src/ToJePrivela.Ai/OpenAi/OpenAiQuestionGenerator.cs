@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using ToJePrivela.Ai.Parsing;
 using ToJePrivela.Ai.Prompts;
 using ToJePrivela.Application.Abstractions.Ai;
@@ -16,20 +15,17 @@ public sealed class OpenAiQuestionGenerator : IQuestionGenerator
     private readonly IQuestionPromptBuilder _promptBuilder;
     private readonly IGeneratedQuestionParser _parser;
     private readonly ILogger<OpenAiQuestionGenerator> _logger;
-    private readonly OpenAiOptions _options;
 
     public OpenAiQuestionGenerator(
         IChatCompletionClient client,
         IQuestionPromptBuilder promptBuilder,
         IGeneratedQuestionParser parser,
-        IOptions<OpenAiOptions> options,
         ILogger<OpenAiQuestionGenerator> logger)
     {
         _client = client;
         _promptBuilder = promptBuilder;
         _parser = parser;
         _logger = logger;
-        _options = options.Value;
     }
 
     public async Task<IReadOnlyList<string>> GenerateSubtopicsAsync(
@@ -39,7 +35,7 @@ public sealed class OpenAiQuestionGenerator : IQuestionGenerator
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var prompt = _promptBuilder.BuildSubtopics(category, count, _options.Language);
+        var prompt = _promptBuilder.BuildSubtopics(category, count);
         var subtopics = _parser.ParseSubtopics(await _client.CompleteAsync(prompt, cancellationToken))
             .Take(count)
             .ToList();
@@ -59,11 +55,11 @@ public sealed class OpenAiQuestionGenerator : IQuestionGenerator
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var prompt = _promptBuilder.BuildQuestions(request, _options.Language);
+        var prompt = _promptBuilder.BuildQuestions(request);
         var reply = await _client.CompleteAsync(prompt, cancellationToken);
 
         return _parser.Parse(reply)
-            .Select(parsed => new GeneratedQuestion(parsed.Question.Trim(), parsed.Answer.Trim()))
+            .Select(parsed => new GeneratedQuestion(parsed.QuestionSk.Trim(), parsed.QuestionEn.Trim(), parsed.Answer.Trim()))
             .ToList();
     }
 }

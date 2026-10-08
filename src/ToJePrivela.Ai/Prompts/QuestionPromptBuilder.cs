@@ -6,7 +6,7 @@ namespace ToJePrivela.Ai.Prompts;
 
 public sealed class QuestionPromptBuilder : IQuestionPromptBuilder
 {
-    public string BuildQuestions(QuestionGenerationRequest request, string language)
+    public string BuildQuestions(QuestionGenerationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -20,11 +20,13 @@ public sealed class QuestionPromptBuilder : IQuestionPromptBuilder
             builder.AppendLine(CultureInfo.InvariantCulture, $"- Subtopic: {request.Subtopic} (stay within it)");
         }
 
-        builder.AppendLine(CultureInfo.InvariantCulture, $"- Target language: {language}");
+        builder.AppendLine("- Target languages: Slovak and English (every question in both)");
         builder.AppendLine(CultureInfo.InvariantCulture, $"- Question count: {request.Count}");
         builder.AppendLine("Rules:");
         builder.AppendLine("- Answer with a bare JSON array only, without markdown fences or commentary.");
-        builder.AppendLine("- Each item has exactly the keys \"question\" and \"answer\".");
+        builder.AppendLine("- Each item has exactly the keys \"questionSk\", \"questionEn\" and \"answer\".");
+        builder.AppendLine("- \"questionSk\" is the question in natural Slovak; \"questionEn\" is the same question in natural English,");
+        builder.AppendLine("  with the same meaning, units and answer.");
         builder.AppendLine("- The answer must be a plain integer number, without units or extra text.");
         builder.AppendLine("- Define questions unambiguously (with units that answer expresses if it is necessary).");
         builder.AppendLine("- Avoid duplicates and trivial rephrasings.");
@@ -51,14 +53,17 @@ public sealed class QuestionPromptBuilder : IQuestionPromptBuilder
         }
 
         builder.AppendLine("Example:");
-        builder.AppendLine("[{\"question\": \"Which year was ChatGPT publicly released?\", \"answer\": 2022},");
-        builder.AppendLine(" {\"question\": \"How many meters tall is the Eiffel Tower including its antennas (as of 2022)?\", \"answer\": 330},");
-        builder.AppendLine(" {\"question\": \"How many millions of inhabitants did Japan have in 2020?\", \"answer\": 126}]");
+        builder.AppendLine("[{\"questionSk\": \"V ktorom roku bol verejne spustený ChatGPT?\",");
+        builder.AppendLine("  \"questionEn\": \"Which year was ChatGPT publicly released?\", \"answer\": 2022},");
+        builder.AppendLine(" {\"questionSk\": \"Koľko metrov meria Eiffelova veža aj s anténami (k roku 2022)?\",");
+        builder.AppendLine("  \"questionEn\": \"How many meters tall is the Eiffel Tower including its antennas (as of 2022)?\", \"answer\": 330},");
+        builder.AppendLine(" {\"questionSk\": \"Koľko miliónov obyvateľov malo Japonsko v roku 2020?\",");
+        builder.AppendLine("  \"questionEn\": \"How many millions of inhabitants did Japan have in 2020?\", \"answer\": 126}]");
 
         return builder.ToString();
     }
 
-    public string BuildSubtopics(string category, int count, string language)
+    public string BuildSubtopics(string category, int count)
     {
         var builder = new StringBuilder();
 
@@ -68,7 +73,7 @@ public sealed class QuestionPromptBuilder : IQuestionPromptBuilder
         builder.AppendLine("- Where the category allows it, prefer broad, general subtopics over specific brands, titles or names");
         builder.AppendLine("  (for the category \"Toys\" choose \"Construction sets\" rather than \"Lego\").");
         builder.AppendLine("- The subtopics must not overlap: no subtopic may be a part, an example or a rephrasing of another one.");
-        builder.AppendLine(CultureInfo.InvariantCulture, $"- Target language: {language}");
+        builder.AppendLine("- Target language: English");
         builder.AppendLine("- Answer with a bare JSON array of strings only, without markdown fences or commentary.");
         builder.AppendLine("Example:");
         builder.AppendLine("[\"Formula 1 history\", \"Car engines\"]");

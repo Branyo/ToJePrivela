@@ -8,8 +8,13 @@ public sealed class CreateQuestionRequest
 {
     [Required]
     [TrimmedLength(Question.TextMinLength, Question.TextMaxLength,
-        ErrorMessage = "Question text should have from {1} to {2} characters.")]
-    public string Text { get; init; } = default!;
+        ErrorMessage = "Slovak question text should have from {1} to {2} characters.")]
+    public string TextSk { get; init; } = default!;
+
+    [Required]
+    [TrimmedLength(Question.TextMinLength, Question.TextMaxLength,
+        ErrorMessage = "English question text should have from {1} to {2} characters.")]
+    public string TextEn { get; init; } = default!;
 
     [Required]
     [Numeric(ErrorMessage = "Answer should be a number such as 42 or -3.5, without separators.")]

@@ -36,7 +36,7 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
     public async Task<IReadOnlyList<string>> GetTextsAsync(int categoryId, CancellationToken cancellationToken = default) =>
         await Set.Where(q => q.CategoryId == categoryId)
             .OrderByDescending(q => q.Id)
-            .Select(q => q.Text)
+            .Select(q => q.TextSk)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<int>> GetLeastViewedIdsAsync(

@@ -6,10 +6,15 @@ namespace ToJePrivela.Application.Questions.Mapping;
 
 public static class QuestionMapper
 {
-    /// <summary>The category name, in <paramref name="language"/>, is empty when the category was not loaded.</summary>
+    /// <summary>
+    /// Text and category name come in <paramref name="language"/>; the category name is empty when the category was
+    /// not loaded.
+    /// </summary>
     public static QuestionDto ToDto(Question question, Language language) => new(
         question.Id,
-        question.Text,
+        question.TextIn(language),
+        question.TextSk,
+        question.TextEn,
         question.Answer,
         question.CategoryId,
         question.Category?.NameIn(language) ?? string.Empty,
@@ -23,5 +28,5 @@ public static class QuestionMapper
         questions.Select(question => ToDto(question, language)).ToList();
 
     public static Question ToEntity(CreateQuestionRequest request, QuestionCategory category, int badPoints, DateTime createdAt) =>
-        new(request.Text, request.Answer, category, badPoints, QuestionSource.Manual, createdAt);
+        new(request.TextSk, request.TextEn, request.Answer, category, badPoints, QuestionSource.Manual, createdAt);
 }

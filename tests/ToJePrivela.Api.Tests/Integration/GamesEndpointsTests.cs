@@ -317,7 +317,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/api/questions",
-            new { text = $"How many cars in {Guid.NewGuid():N}?", answer = "42", categoryId = 1, badPoints });
+            new { textSk = $"Koľko áut je v {Guid.NewGuid():N}?", textEn = "How many cars are there?", answer = "42", categoryId = 1, badPoints });
         return (await response.Content.ReadFromJsonAsync<QuestionDto>())!;
     }
 }

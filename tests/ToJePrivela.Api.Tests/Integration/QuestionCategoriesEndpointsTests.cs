@@ -100,6 +100,17 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PostCategory_StoresTheGeneratedQuestionsInBothLanguages()
+    {
+        var created = await CreateCategoryAsync(questionCount: 1);
+
+        var question = Assert.Single(await GetQuestionsAsync(created.Id));
+        Assert.StartsWith("Vygenerovaná testová otázka", question.TextSk);
+        Assert.StartsWith("Generated test question", question.TextEn);
+        Assert.Equal(question.TextSk, question.Text);
+    }
+
+    [Fact]
     public async Task PostCategory_CreatesNothingWhenGenerationFails()
     {
         _factory.ReplyWithNothing();
@@ -246,7 +257,8 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync("/api/questions", new
         {
-            text = "How many players are on a football pitch?",
+            textSk = "How many players are on a football pitch?",
+            textEn = "How many players are on a football pitch?",
             answer = "22",
             categoryId,
             badPoints = 2

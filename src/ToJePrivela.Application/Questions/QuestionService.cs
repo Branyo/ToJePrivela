@@ -178,7 +178,7 @@ public sealed class QuestionService : IQuestionService
             return Result.Failure(QuestionErrors.UnknownCategory(request.CategoryId));
         }
 
-        question.Update(request.Text, request.Answer, category, request.BadPoints ?? question.BadPoints);
+        question.Update(request.TextSk, request.TextEn ?? question.TextEn, request.Answer, category, request.BadPoints ?? question.BadPoints);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

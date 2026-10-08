@@ -2,13 +2,15 @@ namespace ToJePrivela.Application.Abstractions.Ai;
 
 /// <summary>
 /// Port implemented by the AI layer. Each method is a single call to the provider; retries, batching,
-/// duplicate handling and deciding which questions are usable belong to the caller. The question
-/// language is the AI layer's own setting. Both methods throw
+/// duplicate handling and deciding which questions are usable belong to the caller. Every question
+/// comes in Slovak and in English. Both methods throw
 /// <see cref="QuestionGeneratorUnavailableException"/> when the provider cannot be used.
 /// </summary>
 public interface IQuestionGenerator
 {
-    /// <summary>Splits a category into distinct subtopics, so parallel requests do not repeat each other.</summary>
+    /// <summary>
+    /// Splits a category (its English name) into distinct subtopics, so parallel requests do not repeat each other.
+    /// </summary>
     Task<IReadOnlyList<string>> GenerateSubtopicsAsync(
         string category,
         int count,
@@ -20,6 +22,7 @@ public interface IQuestionGenerator
         CancellationToken cancellationToken = default);
 }
 
+/// <param name="Category">The category's English name.</param>
 /// <param name="ExcludedQuestions">Questions the model is asked not to repeat.</param>
 public sealed record QuestionGenerationRequest(
     string Category,
@@ -27,4 +30,4 @@ public sealed record QuestionGenerationRequest(
     string? Subtopic = null,
     IReadOnlyList<string>? ExcludedQuestions = null);
 
-public sealed record GeneratedQuestion(string Text, string Answer);
+public sealed record GeneratedQuestion(string TextSk, string TextEn, string Answer);

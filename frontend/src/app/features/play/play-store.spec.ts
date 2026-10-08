@@ -22,7 +22,9 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
 
 const question: Question = {
   id: 42,
-  text: 'How many keys does a piano have?',
+  text: 'Koľko klávesov má klavír?',
+  textSk: 'Koľko klávesov má klavír?',
+  textEn: 'How many keys does a piano have?',
   answer: '88',
   categoryId: 1,
   categoryName: 'Music',
@@ -75,10 +77,13 @@ describe('PlayStore', () => {
     store.reveal();
 
     const refreshed = store.refreshQuestion();
-    http.expectOne({ method: 'GET', url: '/api/questions/42' }).flush({ ...question, categoryName: 'Hudba' });
+    http
+      .expectOne({ method: 'GET', url: '/api/questions/42' })
+      .flush({ ...question, text: 'How many keys does a piano have?', categoryName: 'Music' });
     await refreshed;
 
-    expect(store.question()?.categoryName).toBe('Hudba');
+    expect(store.question()?.text).toBe('How many keys does a piano have?');
+    expect(store.question()?.categoryName).toBe('Music');
     expect(store.phase()).toBe('revealed');
     expect(store.questionNumber()).toBe(1);
   });

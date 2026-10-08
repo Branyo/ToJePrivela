@@ -40,8 +40,4 @@ public sealed class OpenAiOptions
 
     [Range(1, 600)]
     public int TimeoutSeconds { get; set; } = 180;
-
-    /// <summary>Every generated question is written in this language.</summary>
-    [Required(ErrorMessage = "OpenAi:Language must be configured.")]
-    public string Language { get; set; } = "Slovak";
 }

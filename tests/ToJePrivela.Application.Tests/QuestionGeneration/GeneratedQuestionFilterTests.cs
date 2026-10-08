@@ -6,11 +6,12 @@ namespace ToJePrivela.Application.Tests.QuestionGeneration;
 public class GeneratedQuestionFilterTests
 {
     private const string ValidQuestion = "Which year was ChatGPT publicly released?";
+    private const string ValidSlovakQuestion = "V ktorom roku bol verejne spustený ChatGPT?";
 
     [Fact]
     public void IsUsable_AcceptsAValidQuestion()
     {
-        Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(ValidQuestion, "2022")));
+        Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(ValidQuestion, ValidQuestion, "2022")));
     }
 
     [Theory]
@@ -20,7 +21,7 @@ public class GeneratedQuestionFilterTests
     [InlineData("Short", "5")]
     public void IsUsable_RejectsQuestionsTheDomainWouldReject(string text, string answer)
     {
-        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, answer)));
+        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, text, answer)));
     }
 
     [Theory]
@@ -29,13 +30,29 @@ public class GeneratedQuestionFilterTests
     [InlineData("5000000000000")]
     public void IsUsable_RejectsAnswersAboveOneTrillion(string answer)
     {
-        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(ValidQuestion, answer)));
+        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(ValidQuestion, ValidQuestion, answer)));
+    }
+
+    [Theory]
+    [InlineData("Krátka", ValidQuestion)]
+    [InlineData(ValidSlovakQuestion, "Short")]
+    [InlineData(ValidSlovakQuestion, " ")]
+    public void IsUsable_RejectsAQuestionWithoutBothUsableTexts(string textSk, string textEn)
+    {
+        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(textSk, textEn, "2022")));
+    }
+
+    [Fact]
+    public void IsUsable_RejectsAQuestionWhoseTranslationStatesTheAnswer()
+    {
+        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(
+            "V ktorom roku pristálo Apollo 11 na Mesiaci?", "In 1969, which year did Apollo 11 land on the Moon?", "1969")));
     }
 
     [Fact]
     public void IsUsable_AcceptsAnAnswerOfExactlyOneTrillion()
     {
-        Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(ValidQuestion, "1000000000000")));
+        Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(ValidQuestion, ValidQuestion, "1000000000000")));
     }
 
     [Theory]
@@ -46,7 +63,7 @@ public class GeneratedQuestionFilterTests
     [InlineData("How many degrees below zero is -40 degrees Celsius?", "-40")]
     public void IsUsable_RejectsQuestionsThatStateTheirAnswer(string text, string answer)
     {
-        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, answer)));
+        Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, text, answer)));
     }
 
     [Theory]
@@ -55,6 +72,6 @@ public class GeneratedQuestionFilterTests
     [InlineData("How many kilometers long is the river Danube?", "2850")]
     public void IsUsable_KeepsQuestionsWithOtherNumbers(string text, string answer)
     {
-        Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, answer)));
+        Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, text, answer)));
     }
 }

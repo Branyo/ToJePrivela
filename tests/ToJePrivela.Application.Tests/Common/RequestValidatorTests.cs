@@ -24,10 +24,11 @@ public class RequestValidatorTests
     [Fact]
     public void Validate_NamesEveryBrokenRule()
     {
-        var error = RequestValidator.Validate(new CreateQuestionRequest { Text = "Short", Answer = "4", CategoryId = 0, BadPoints = 9 });
+        var error = RequestValidator.Validate(new CreateQuestionRequest { TextSk = "Short", TextEn = "Short", Answer = "4", CategoryId = 0, BadPoints = 9 });
 
         Assert.Equal("Request.Invalid", error!.Code);
-        Assert.Contains("Question text", error.Message);
+        Assert.Contains("Slovak question text", error.Message);
+        Assert.Contains("English question text", error.Message);
         Assert.Contains("Category id", error.Message);
         Assert.Contains("Bad points", error.Message);
     }
@@ -35,10 +36,10 @@ public class RequestValidatorTests
     [Fact]
     public void Validate_RejectsWhatTheDomainWouldReject()
     {
-        var error = RequestValidator.Validate(new CreateQuestionRequest { Text = "      ab      ", Answer = "eight", CategoryId = 1 });
+        var error = RequestValidator.Validate(new CreateQuestionRequest { TextSk = "      ab      ", TextEn = "Which year was it?", Answer = "eight", CategoryId = 1 });
 
         Assert.Equal("Request.Invalid", error!.Code);
-        Assert.Contains("Question text should have from 8 to 512 characters.", error.Message);
+        Assert.Contains("Slovak question text should have from 8 to 512 characters.", error.Message);
         Assert.Contains("Answer should be a number", error.Message);
     }
 

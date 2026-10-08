@@ -64,7 +64,6 @@ address added any other way stops it at once after startup (exit code 1).
 | `OpenAi:ApiKey` | API key — set via user-secrets or `OpenAi__ApiKey`, never in source |
 | `OpenAi:Model`, `ReasoningEffort`, `MaxTokens` (≤ 128000, reasoning tokens included), `TimeoutSeconds` | One provider call (default `gpt-6-luna`, `medium` reasoning) |
 | `OpenAi:Temperature` | Sent only when `ReasoningEffort` is `none`; reasoning requests reject it |
-| `OpenAi:Language` | Language of every generated question (default `Slovak`) |
 | `QuestionGeneration:QuestionsPerRequest` | Questions per AI call (default 20) |
 | `QuestionGeneration:MaxParallelRequests` | AI calls running at once (default 3) |
 | `QuestionGeneration:MaxRetryAttempts` | Extra calls allowed to top up a shortfall (default 3) |
@@ -153,8 +152,8 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none); 400 for unknown ids, 404 when they hold no questions; does not count a view |
 | POST | `/api/questions/{id}/views` | Records that the question was shown; returns it with the new `viewCount` |
 | GET/DELETE | `/api/questions/{id}` | |
-| PUT | `/api/questions/{id}` | Omitted `badPoints` are kept; an edited AI question becomes `Manual` |
-| POST | `/api/questions` | `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
+| PUT | `/api/questions/{id}` | `textSk` required; omitted `textEn` and `badPoints` are kept; an edited AI question becomes `Manual` |
+| POST | `/api/questions` | `textSk` and `textEn` required; `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
 | GET | `/api/question-categories` | |
 | GET/DELETE | `/api/question-categories/{id}` | Delete also removes every question in the category |
 | POST | `/api/question-categories` | `nameSk`, `nameEn` or both (the AI translates a missing one); `questionCount` (0–200) is required; 503 and nothing stored when translation or generation fails |
@@ -180,6 +179,10 @@ in one language at least: the AI translates it into the other with a single, sim
 `categoryName`) in the language the request's `Accept-Language` header asks for — `sk` (the default) or `en` — ready
 to show.
 
+Questions are written in Slovak (`textSk`) and English (`textEn`) the same way, and `text` is the one in the requested
+language. Questions stored before texts became bilingual have no English text yet (`textEn` is `null`) and show their
+Slovak one in either language until it is added.
+
 A request a rate limit refuses answers 429 `RateLimit.Exceeded` with `retryAfterSeconds` (also sent as the
 `Retry-After` header): how long until the limit lets the caller try again.
 
@@ -198,7 +201,10 @@ Failures are returned as `ProblemDetails` with a machine-readable `code` extensi
    repeat. The total call budget is the planned calls plus `MaxRetryAttempts`; whatever is valid when
    it runs out is saved, and the shortfall is logged.
 
-Every generated question gets random bad points (1–5), `Source = Ai` and a `CreatedAt` timestamp.
+The model gets the category's English name and writes every question in Slovak and English at once
+(`questionSk`, `questionEn`); an item missing either text, or either text giving the answer away, is dropped.
+Duplicates are compared by the Slovak text. Every generated question gets random bad points (1–5), `Source = Ai` and
+a `CreatedAt` timestamp.
 
 ## Design notes
 
