@@ -296,6 +296,7 @@
       "QuestionCategory": {
         "NotFound": "Táto kategória neexistuje.",
         "NameTaken": "Kategória s týmto názvom už existuje.",
+        "TranslationNameTaken": "Preklad tohto názvu už existuje ako kategória. Skúste iný názov.",
         "TranslationUnavailable": "AI prekladač teraz nie je dostupný. Skúste to neskôr.",
         "TranslationFailed": "Názov sa nepodarilo preložiť. Skúste to znova."
       },

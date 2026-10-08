@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using Serilog;
 using ToJePrivela.Ai;
@@ -143,6 +144,16 @@ if (!isTesting && !app.Environment.IsDevelopment())
 }
 
 app.UseCors(CorsOptions.PolicyName);
+// Names and texts depend on the request's Accept-Language, so a shared cache must not mix the languages up.
+app.Use((context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers.Append(HeaderNames.Vary, HeaderNames.AcceptLanguage);
+        return Task.CompletedTask;
+    });
+    return next();
+});
 app.UseAuthentication();
 app.UseSignInLimits();
 app.UseRateLimiter();

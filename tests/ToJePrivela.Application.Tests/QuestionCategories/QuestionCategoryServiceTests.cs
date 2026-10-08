@@ -208,7 +208,9 @@ public class QuestionCategoryServiceTests
 
         var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { NameSk = "Vtáctvo", QuestionCount = 5 });
 
-        Assert.Equal("QuestionCategory.NameTaken", result.Error.Code);
+        Assert.Equal("QuestionCategory.TranslationNameTaken", result.Error.Code);
+        Assert.Contains("Vtáctvo", result.Error.Message);
+        Assert.Contains("Birds", result.Error.Message);
         await _generation.DidNotReceive().GenerateAsync(Arg.Any<QuestionCategory>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 

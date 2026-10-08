@@ -12,6 +12,8 @@ public class TranslationParserTests
     [InlineData("\"Toys\"", "Toys")]
     [InlineData("„Hračky“", "Hračky")]
     [InlineData("**Trains**.", "Trains")]
+    [InlineData("Translation: Toys", "Toys")]
+    [InlineData("Preklad: \"Vtáky\"", "Vtáky")]
     [InlineData("\nVlaky\nThis is the Slovak word for trains.", "Vlaky")]
     public void Parse_ReadsTheTranslation(string reply, string expected)
     {

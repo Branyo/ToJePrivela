@@ -42,8 +42,8 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                 nullable: false,
                 defaultValue: "");
 
-            // The categories in use get their English names; any other category starts with its Slovak name, which an
-            // admin can replace by deleting the category and creating it again.
+            // The categories in use get their English names; any other category starts with its Slovak name (so its
+            // "English" name is Slovak until an admin deletes the category and creates it again).
             migrationBuilder.Sql("""
                 UPDATE "QuestionCategories" SET "NameEn" = CASE "NameSkKey"
                         WHEN 'hračky' THEN 'Toys'
@@ -63,10 +63,12 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     END;
                 """);
 
-            // The English key is unique too; a name some other category already took gets its id appended.
+            // The English key is unique too; a name some other category already took gets its id appended, after
+            // being cut short enough to stay within the 32 characters a name may have.
             migrationBuilder.Sql("""
                 UPDATE "QuestionCategories"
-                SET "NameEn" = "NameEn" || ' #' || "Id", "NameEnKey" = "NameEnKey" || ' #' || "Id"
+                SET "NameEn" = substr("NameEn", 1, 32 - length(' #' || "Id")) || ' #' || "Id",
+                    "NameEnKey" = substr("NameEnKey", 1, 32 - length(' #' || "Id")) || ' #' || "Id"
                 WHERE EXISTS (
                     SELECT 1 FROM "QuestionCategories" AS "Other"
                     WHERE "Other"."NameEnKey" = "QuestionCategories"."NameEnKey" AND "Other"."Id" < "QuestionCategories"."Id");

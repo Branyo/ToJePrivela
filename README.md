@@ -174,10 +174,10 @@ AI-generating POSTs share one rate limit.
 
 Every category is named in Slovak (`nameSk`) and English (`nameEn`); both names are unique. Creating one needs a name
 in one language at least: the AI translates it into the other with a single, simple prompt (409
-`QuestionCategory.NameTaken` is checked before and after translating; 503 `QuestionCategory.TranslationUnavailable` /
+`QuestionCategory.NameTaken` is checked before translating, `QuestionCategory.TranslationNameTaken` after it; 503 `QuestionCategory.TranslationUnavailable` /
 `QuestionCategory.TranslationFailed` when it cannot). Responses carry both names plus `name` (and a question's
 `categoryName`) in the language the request's `Accept-Language` header asks for — `sk` (the default) or `en` — ready
-to show.
+to show, and every response varies by `Accept-Language` (`Vary` header).
 
 Questions are written in Slovak (`textSk`) and English (`textEn`) the same way, and `text` is the one in the requested
 language. Questions stored before texts became bilingual have no English text yet (`textEn` is `null`) and show their

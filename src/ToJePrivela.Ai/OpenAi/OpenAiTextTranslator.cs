@@ -27,11 +27,6 @@ public sealed class OpenAiTextTranslator : ITextTranslator
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (from == to)
-        {
-            return text.Trim();
-        }
-
         var reply = await _client.CompleteAsync(_promptBuilder.Build(text, from, to), cancellationToken);
         return _parser.Parse(reply);
     }

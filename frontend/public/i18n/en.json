@@ -42,19 +42,19 @@
       },
       "double": {
         "title": "Double",
-        "text": "If you think the previous estimate is too low, call \"Double!\" and at least double it. When the next player raises it or wrongly calls \"To je priveľa!\", your Double held and takes one donkey off your score at the end."
+        "text": "If you think the previous estimate is too low, call \"Double!\" and at least double it. When the next player raises it or wrongly calls \"That's too much!\", your Double held and takes one donkey off your score at the end."
       },
       "call": {
-        "title": "\"To je priveľa!\"",
-        "text": "If you think the previous player overdid it, call \"To je priveľa!\" instead of estimating, and the answer is revealed."
+        "title": "\"That's too much!\"",
+        "text": "If you think the previous player overdid it, call \"That's too much!\" instead of estimating, and the answer is revealed."
       },
       "card": {
         "title": "Who takes the card?",
-        "text": "If the estimate really was over the answer, the previous player takes the card. If not, the one who called \"To je priveľa!\" takes it."
+        "text": "If the estimate really was over the answer, the previous player takes the card. If not, the one who called \"That's too much!\" takes it."
       },
       "next": {
         "title": "Next round",
-        "text": "The player who called \"To je priveľa!\" starts the next round."
+        "text": "The player who called \"That's too much!\" starts the next round."
       },
       "end": {
         "title": "Game over",
@@ -149,13 +149,13 @@
       "second": "OVER!"
     },
     "answer": "The answer is",
-    "reveal": "✋ To je priveľa! Show the answer",
+    "reveal": "✋ That's too much! Show the answer",
     "skip": "😴 Too easy, skip it (no donkeys)",
     "doubleRule": "Did a Double hold? The next player raised it, so tap + by the ✌️ of whoever called it – it takes one donkey off their score at the end. Fix a mis-tap with −.",
     "whoTakes": "Who takes the <strong>🫏 ×{{points}}</strong> card?",
     "tapPlayer": "Tap a player 👇",
     "nobody": "🙅 Nobody, next question",
-    "cardRule": "Was the last estimate over the answer? Whoever said it takes the card. If not, the one who called \"To je priveľa!\" takes it.",
+    "cardRule": "Was the last estimate over the answer? Whoever said it takes the card. If not, the one who called \"That's too much!\" takes it.",
     "doublesFirst": "Add (+) every Double ✌️ that held first, and only then hand out the card.",
     "double": {
       "group": "{{name}}'s Doubles",
@@ -286,6 +286,7 @@
       "QuestionCategory": {
         "NotFound": "This category does not exist.",
         "NameTaken": "A category with this name already exists.",
+        "TranslationNameTaken": "The translation of this name is already a category. Try a different name.",
         "TranslationUnavailable": "The AI translator is not available right now. Please try again later.",
         "TranslationFailed": "The name could not be translated. Please try again."
       },

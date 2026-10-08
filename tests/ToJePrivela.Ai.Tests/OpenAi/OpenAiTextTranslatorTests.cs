@@ -36,13 +36,6 @@ public class OpenAiTextTranslatorTests
     }
 
     [Fact]
-    public async Task TranslateAsync_SkipsTheCallWithinOneLanguage()
-    {
-        Assert.Equal("Vtáky", await CreateSut().TranslateAsync(" Vtáky ", Language.Sk, Language.Sk));
-        await _client.DidNotReceiveWithAnyArgs().CompleteAsync(default!, default);
-    }
-
-    [Fact]
     public async Task TranslateAsync_LetsAnUnavailableProviderSurface()
     {
         _client.CompleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
