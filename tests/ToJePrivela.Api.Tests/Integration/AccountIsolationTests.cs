@@ -26,7 +26,7 @@ public class AccountIsolationTests : IClassFixture<ApiFactory>
         var adminPlayers = await _admin.GetFromJsonAsync<List<PlayerDto>>("/api/players");
 
         Assert.Contains(memberPlayers!, p => p.Id == mine.Id);
-        Assert.DoesNotContain(memberPlayers!, p => p.Name == "Admin");
+        Assert.DoesNotContain(memberPlayers!, p => p.Name == "Peter");
         Assert.DoesNotContain(adminPlayers!, p => p.Id == mine.Id);
     }
 

@@ -21,7 +21,7 @@ public class GameRepositoryTests : IDisposable
         var game = await sut.GetByIdAsync(TestAccountId, gameId);
 
         Assert.NotNull(game);
-        Assert.Equal(["Admin", "Brano"], game!.GamePlayers.Select(gp => gp.Player!.Name).Order());
+        Assert.Equal(["Brano", "Peter"], game!.GamePlayers.Select(gp => gp.Player!.Name).Order());
     }
 
     [Fact]

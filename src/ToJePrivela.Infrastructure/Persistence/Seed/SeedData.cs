@@ -10,13 +10,8 @@ public static class SeedData
     {
         // The reserved account (inserted by the AddAccounts migration) owns them until the first admin takes it over.
         modelBuilder.Entity<Player>().HasData(
-            new { Id = 1, AccountId = Account.ReservedId, Name = "Admin", NameKey = "admin", Avatar = "🦉" },
+            new { Id = 1, AccountId = Account.ReservedId, Name = "Peter", NameKey = "peter", Avatar = "🦉" },
             new { Id = 2, AccountId = Account.ReservedId, Name = "Brano", NameKey = "brano", Avatar = "🦊" },
             new { Id = 3, AccountId = Account.ReservedId, Name = "Duri", NameKey = "duri", Avatar = "🐼" });
-
-        modelBuilder.Entity<QuestionCategory>().HasData(
-            new { Id = 1, Name = "Cars", NameKey = "cars" },
-            new { Id = 2, Name = "Sport", NameKey = "sport" },
-            new { Id = 3, Name = "History", NameKey = "history" });
     }
 }

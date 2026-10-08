@@ -132,6 +132,12 @@ public class ApiFactory : WebApplicationFactory<Program>
         context.Accounts.Add(Member);
         context.SaveChanges();
 
+        // No category is seeded any more; tests use these, with the ids they had as seed data.
+        context.Database.ExecuteSqlRaw("""
+            INSERT INTO "QuestionCategories" ("Id", "Name", "NameKey") VALUES
+                (1, 'Cars', 'cars'), (2, 'Sport', 'sport'), (3, 'History', 'history');
+            """);
+
         return host;
     }
 
