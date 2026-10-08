@@ -37,7 +37,7 @@ public class QuestionMigrationTests : IDisposable
         var question = await context.Questions.Include(q => q.Category).FirstAsync(q => q.Answer == "2022");
 
         Assert.Equal(3, question.CategoryId);
-        Assert.Equal("History", question.Category!.Name);
+        Assert.Equal("History", question.Category!.NameSk);
     }
 
     [Fact]
@@ -45,9 +45,9 @@ public class QuestionMigrationTests : IDisposable
     {
         await using var context = await MigrateToLatestAsync();
 
-        var music = await context.QuestionCategories.SingleAsync(c => c.Name == "Music");
+        var music = await context.QuestionCategories.SingleAsync(c => c.NameSk == "Music");
         var musicQuestions = await context.Questions.Where(q => q.CategoryId == music.Id).CountAsync();
-        var names = await context.QuestionCategories.OrderBy(c => c.Id).Select(c => c.Name).ToListAsync();
+        var names = await context.QuestionCategories.OrderBy(c => c.Id).Select(c => c.NameSk).ToListAsync();
 
         // The seeded Cars and Sport held no questions, so a later migration removed them again.
         Assert.Equal(["History", "Music"], names);

@@ -10,6 +10,7 @@ import {
   input,
   numberAttribute,
   signal,
+  untracked,
   viewChild,
   viewChildren,
 } from '@angular/core';
@@ -83,6 +84,12 @@ export class Play implements OnInit, OnDestroy {
           });
         }, GAME_OVER_PAUSE_MS);
       }
+    });
+
+    // The question arrives in the shown language, so it is fetched again after a switch (a no-op before the first one).
+    effect(() => {
+      this.i18n.language();
+      untracked(() => void this.store.refreshQuestion());
     });
   }
 

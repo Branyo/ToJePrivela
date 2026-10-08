@@ -23,7 +23,7 @@ public class AiRateLimitTests : IClassFixture<SingleAiPermitApiFactory>
     {
         var first = await _client.PostAsJsonAsync(
             "/api/question-categories",
-            new { name = $"Cat{Guid.NewGuid():N}"[..12], questionCount = 1 });
+            new { nameSk = $"Cat{Guid.NewGuid():N}"[..12], questionCount = 1 });
         var second = await _client.PostAsJsonAsync("/api/question-categories/1/ai-questions", new { count = 1 });
         var unlimited = await _client.GetAsync("/api/question-categories");
 

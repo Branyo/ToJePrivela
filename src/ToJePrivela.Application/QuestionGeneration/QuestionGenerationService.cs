@@ -70,11 +70,11 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
         {
             try
             {
-                subtopics = await _generator.GenerateSubtopicsAsync(category.Name, plannedCalls, cancellationToken);
+                subtopics = await _generator.GenerateSubtopicsAsync(category.NameSk, plannedCalls, cancellationToken);
             }
             catch (QuestionGeneratorUnavailableException exception)
             {
-                LogUnavailable(category.Name, exception);
+                LogUnavailable(category.NameSk, exception);
                 return new QuestionGenerationResult([], count, 0, ProviderUnavailable: true);
             }
         }
@@ -94,7 +94,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
             var requests = SplitIntoBatches(count - accepted.Count)
                 .Take(callBudget - callsMade)
                 .Select((size, index) => new QuestionGenerationRequest(
-                    category.Name,
+                    category.NameSk,
                     size,
                     PickSubtopic(subtopics, callsMade + index),
                     excluded))
@@ -102,7 +102,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
 
             callsMade += requests.Count;
 
-            foreach (var reply in await CallInParallelAsync(requests, category.Name, cancellationToken))
+            foreach (var reply in await CallInParallelAsync(requests, category.NameSk, cancellationToken))
             {
                 // The provider is down: keep what the other calls brought, but spend no more of the budget.
                 if (reply is null)
@@ -126,7 +126,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
             }
         }
 
-        LogOutcome(category.Name, count, accepted.Count, discarded, callsMade);
+        LogOutcome(category.NameSk, count, accepted.Count, discarded, callsMade);
 
         var createdAt = _timeProvider.GetUtcNow().UtcDateTime;
         var questions = accepted

@@ -55,7 +55,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
     {
         var response = await _member.PostAsJsonAsync(
             "/api/question-categories",
-            new { name = $"C{Guid.NewGuid():N}"[..12], questionCount = 1 });
+            new { nameSk = $"C{Guid.NewGuid():N}"[..12], questionCount = 1 });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal("Auth.Forbidden", await ProblemResponse.CodeOf(response));
@@ -85,7 +85,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
     {
         var response = await _admin.PostAsJsonAsync(
             "/api/question-categories",
-            new { name = $"C{Guid.NewGuid():N}"[..12], questionCount = 1 });
+            new { nameSk = $"C{Guid.NewGuid():N}"[..12], questionCount = 1 });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
@@ -95,7 +95,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
     {
         var category = await (await _admin.PostAsJsonAsync(
                 "/api/question-categories",
-                new { name = $"C{Guid.NewGuid():N}"[..12], questionCount = 1 }))
+                new { nameSk = $"C{Guid.NewGuid():N}"[..12], questionCount = 1 }))
             .Content.ReadFromJsonAsync<IdOnly>();
         var question = await _member.GetFromJsonAsync<IdOnly>($"/api/questions/random?categoryIds={category!.Id}");
 

@@ -62,7 +62,10 @@ export interface GameDetails {
 
 export interface QuestionCategory {
   id: number;
+  /** In the language the request asked for (`Accept-Language`), ready to show. */
   name: string;
+  nameSk: string;
+  nameEn: string;
 }
 
 export interface QuestionGenerationSummary {
@@ -80,6 +83,7 @@ export interface Question {
   text: string;
   answer: string;
   categoryId: number;
+  /** In the language the request asked for (`Accept-Language`), ready to show. */
   categoryName: string;
   badPoints: number;
   source: 'Manual' | 'Ai';

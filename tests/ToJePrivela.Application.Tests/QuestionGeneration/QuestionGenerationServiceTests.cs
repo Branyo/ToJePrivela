@@ -233,7 +233,7 @@ public class QuestionGenerationServiceTests
     [Fact]
     public async Task GenerateAsync_DoesNotLookUpQuestionsOfAnUnsavedCategory()
     {
-        await CreateSut().GenerateAsync(new QuestionCategory("Brand new"), 2);
+        await CreateSut().GenerateAsync(new QuestionCategory("Úplne nová", "Brand new"), 2);
 
         await _questions.DidNotReceive().GetTextsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }

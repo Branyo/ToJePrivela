@@ -8,8 +8,8 @@ public class QuestionTests
     private const string ValidText = "Which year was ChatGPT publicly released?";
 
     private static readonly DateTime CreatedAt = new(2026, 9, 24, 10, 0, 0, DateTimeKind.Utc);
-    private static readonly QuestionCategory History = new("History");
-    private static readonly QuestionCategory Sport = new("Sport");
+    private static readonly QuestionCategory History = new("História", "History");
+    private static readonly QuestionCategory Sport = new("Šport", "Sport");
 
     [Fact]
     public void Constructor_KeepsEveryValue()

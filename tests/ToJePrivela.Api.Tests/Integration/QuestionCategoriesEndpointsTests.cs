@@ -25,7 +25,53 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
 
         // The factory's test categories; other tests in this class add more.
         var testCategories = categories!.Where(category => category.Id <= 3).ToList();
-        Assert.Equal(["Cars", "Sport", "History"], testCategories.Select(category => category.Name));
+        Assert.Equal(["Autá", "Šport", "História"], testCategories.Select(category => category.Name));
+        Assert.Equal(["Cars", "Sport", "History"], testCategories.Select(category => category.NameEn));
+    }
+
+    [Theory]
+    [InlineData("en", "Sport")]
+    [InlineData("en-GB,en;q=0.9", "Sport")]
+    [InlineData("de, en;q=0.5, sk;q=0.4", "Sport")]
+    [InlineData("sk", "Šport")]
+    [InlineData("de", "Šport")]
+    public async Task GetCategory_NamesItInTheLanguageTheRequestAsksFor(string acceptLanguage, string name)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/question-categories/2");
+        request.Headers.Add("Accept-Language", acceptLanguage);
+
+        var response = await _client.SendAsync(request);
+
+        var category = await response.Content.ReadFromJsonAsync<QuestionCategoryDto>();
+        Assert.Equal(name, category!.Name);
+    }
+
+    [Fact]
+    public async Task GetCategory_VariesByAcceptLanguage()
+    {
+        var response = await _client.GetAsync("/api/question-categories/2");
+
+        Assert.Contains("Accept-Language", response.Headers.Vary);
+    }
+
+    [Fact]
+    public async Task PostCategory_TranslatesTheMissingName()
+    {
+        var name = NewName();
+
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameEn = name, questionCount = 0 });
+
+        var created = await response.Content.ReadFromJsonAsync<CreatedQuestionCategoryDto>();
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(($"{name} (Sk)", name), (created!.NameSk, created.NameEn));
+    }
+
+    [Fact]
+    public async Task PostCategory_RequiresAName()
+    {
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { questionCount = 0 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -33,7 +79,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     {
         var name = NewName();
 
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name, questionCount = 0 });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameSk = name, questionCount = 0 });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
@@ -67,7 +113,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
         _factory.ReplyWithNothing();
         var name = NewName();
 
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name, questionCount = 5 });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameSk = name, questionCount = 5 });
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
 
@@ -78,7 +124,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task PostCategory_RequiresTheQuestionCount()
     {
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name = NewName() });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameSk = NewName() });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -88,7 +134,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     [InlineData(201)]
     public async Task PostCategory_RejectsAQuestionCountOutOfRange(int questionCount)
     {
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name = NewName(), questionCount });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameSk = NewName(), questionCount });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -96,7 +142,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task PostCategory_RejectsADuplicateNameIgnoringCase()
     {
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name = "sport", questionCount = 0 });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameSk = "Futbal", nameEn = "sport", questionCount = 0 });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -198,7 +244,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
 
     private async Task<CreatedQuestionCategoryDto> CreateCategoryAsync(int questionCount = 0)
     {
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name = NewName(), questionCount });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameSk = NewName(), questionCount });
         response.EnsureSuccessStatusCode();
 
         return (await response.Content.ReadFromJsonAsync<CreatedQuestionCategoryDto>())!;

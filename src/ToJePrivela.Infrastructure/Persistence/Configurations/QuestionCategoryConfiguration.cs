@@ -10,16 +10,26 @@ public sealed class QuestionCategoryConfiguration : IEntityTypeConfiguration<Que
     {
         builder.HasKey(qc => qc.Id);
 
-        builder.Property(qc => qc.Name)
+        builder.Property(qc => qc.NameSk)
             .IsRequired()
             .HasMaxLength(QuestionCategory.NameMaxLength)
             .UseCollation("NOCASE");
 
-        // NOCASE folds ASCII only ("Š" and "š" differ), so uniqueness rests on the Unicode-aware key.
-        builder.Property(qc => qc.NameKey)
+        builder.Property(qc => qc.NameEn)
+            .IsRequired()
+            .HasMaxLength(QuestionCategory.NameMaxLength)
+            .UseCollation("NOCASE");
+
+        // NOCASE folds ASCII only ("Š" and "š" differ), so uniqueness rests on the Unicode-aware keys, one per language.
+        builder.Property(qc => qc.NameSkKey)
             .IsRequired()
             .HasMaxLength(QuestionCategory.NameMaxLength);
 
-        builder.HasIndex(qc => qc.NameKey).IsUnique();
+        builder.Property(qc => qc.NameEnKey)
+            .IsRequired()
+            .HasMaxLength(QuestionCategory.NameMaxLength);
+
+        builder.HasIndex(qc => qc.NameSkKey).IsUnique();
+        builder.HasIndex(qc => qc.NameEnKey).IsUnique();
     }
 }

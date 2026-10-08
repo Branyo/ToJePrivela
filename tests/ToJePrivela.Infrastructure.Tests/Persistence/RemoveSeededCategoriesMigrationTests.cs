@@ -25,16 +25,18 @@ public class RemoveSeededCategoriesMigrationTests : IDisposable
     [Fact]
     public async Task Upgrade_KeepsASeededCategoryThatHoldsQuestions()
     {
+        // Raw SQL: the entities already have the columns of later migrations.
         await using (var before = CreateContext())
         {
-            var sport = await before.QuestionCategories.SingleAsync(c => c.Id == 2);
-            before.Questions.Add(new Question("How many players has a football team?", "11", sport, 2, QuestionSource.Manual, DateTime.UtcNow));
-            await before.SaveChangesAsync();
+            await before.Database.ExecuteSqlRawAsync("""
+                INSERT INTO "Questions" ("Text", "Answer", "CategoryId", "BadPoints", "Source", "CreatedAt", "ViewCount", "Version")
+                VALUES ('How many players has a football team?', '11', 2, 2, 'Manual', '2026-10-01 18:00:00', 0, 0);
+                """);
         }
 
         await using var context = await MigrateToLatestAsync();
 
-        Assert.Equal(["Sport"], await context.QuestionCategories.Select(c => c.Name).ToListAsync());
+        Assert.Equal(["Sport"], await context.QuestionCategories.Select(c => c.NameSk).ToListAsync());
         Assert.Equal(1, await context.Questions.CountAsync());
     }
 

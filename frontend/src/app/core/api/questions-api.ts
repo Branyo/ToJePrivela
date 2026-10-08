@@ -11,6 +11,11 @@ export class QuestionsApi {
     return this.http.get<Question[]>('/api/questions');
   }
 
+  /** Reading a question does not count a view. */
+  get(id: number): Observable<Question> {
+    return this.http.get<Question>(`/api/questions/${id}`);
+  }
+
   /** One of the least viewed questions in the categories (all when empty); does not count a view. */
   getRandom(categoryIds: readonly number[]): Observable<Question> {
     let params = new HttpParams();

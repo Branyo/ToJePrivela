@@ -9,6 +9,7 @@ using ToJePrivela.Application.QuestionGeneration.Mapping;
 using ToJePrivela.Application.Questions.Dtos;
 using ToJePrivela.Application.Questions.Mapping;
 using ToJePrivela.Application.Tests.Common;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Tests.Mapping;
@@ -75,30 +76,27 @@ public class MapperTests
         Assert.Equal([5, 6], details.Players.Select(p => p.PlayerId));
     }
 
-    [Fact]
-    public void QuestionCategoryMapper_CopiesIdAndName()
+    [Theory]
+    [InlineData(Language.Sk, "Šport")]
+    [InlineData(Language.En, "Sport")]
+    public void QuestionCategoryMapper_GivesTheNameInTheLanguageAndBothNames(Language language, string name)
     {
-        Assert.Equal(new QuestionCategoryDto(1, "Sport"), QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Sport")));
-    }
-
-    [Fact]
-    public void QuestionCategoryMapper_BuildsEntityFromRequest()
-    {
-        var category = QuestionCategoryMapper.ToEntity(
-            new CreateQuestionCategoryRequest { Name = " Sport " });
-
-        Assert.Equal("Sport", category.Name);
+        Assert.Equal(
+            new QuestionCategoryDto(1, name, "Šport", "Sport"),
+            QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Šport", "Sport"), language));
     }
 
     [Fact]
     public void QuestionCategoryMapper_ToCreatedDto_IncludesTheGenerationSummary()
     {
-        var category = TestEntities.Category(4, "Music");
+        var category = TestEntities.Category(4, "Hudba", "Music");
 
-        var dto = QuestionCategoryMapper.ToCreatedDto(category, new QuestionGenerationResult([], 10, 3));
+        var dto = QuestionCategoryMapper.ToCreatedDto(category, new QuestionGenerationResult([], 10, 3), Language.En);
 
         Assert.Equal(4, dto.Id);
         Assert.Equal("Music", dto.Name);
+        Assert.Equal("Hudba", dto.NameSk);
+        Assert.Equal("Music", dto.NameEn);
         Assert.Equal(new QuestionGenerationSummaryDto(10, 0, 3), dto.QuestionGeneration);
     }
 
@@ -106,9 +104,9 @@ public class MapperTests
     public void QuestionMapper_CopiesEveryField()
     {
         var question = TestEntities.Question(
-            9, "Which year was ChatGPT publicly released?", "2022", TestEntities.Category(3, "History"), 4, QuestionSource.Ai);
+            9, "Which year was ChatGPT publicly released?", "2022", TestEntities.Category(3, "História", "History"), 4, QuestionSource.Ai);
 
-        var dto = QuestionMapper.ToDto(question);
+        var dto = QuestionMapper.ToDto(question, Language.En);
 
         Assert.Equal(9, dto.Id);
         Assert.Equal("Which year was ChatGPT publicly released?", dto.Text);

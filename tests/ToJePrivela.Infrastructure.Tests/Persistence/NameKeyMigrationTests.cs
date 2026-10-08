@@ -39,7 +39,7 @@ public class NameKeyMigrationTests : IDisposable
         var categories = await context.QuestionCategories.ToListAsync();
 
         Assert.All(players, player => Assert.Equal(NameKeys.Of(player.Name), player.NameKey));
-        Assert.All(categories, category => Assert.Equal(NameKeys.Of(category.Name), category.NameKey));
+        Assert.All(categories, category => Assert.Equal(NameKeys.Of(category.NameSk), category.NameSkKey));
         Assert.Contains(players, player => player.Name == "Ľubomír" && player.NameKey == "ľubomír");
         Assert.Contains(players, player => player.NameKey == "árpád žigo");
     }
@@ -55,8 +55,8 @@ public class NameKeyMigrationTests : IDisposable
 
         Assert.Equal("Štefan", stefans[0].Name);
         Assert.Equal($"štefan #{stefans[1].Id}", stefans[1].Name);
-        Assert.Equal("Šport", sport[0].Name);
-        Assert.Equal($"šport #{sport[1].Id}", sport[1].Name);
+        Assert.Equal("Šport", sport[0].NameSk);
+        Assert.Equal($"šport #{sport[1].Id}", sport[1].NameSk);
     }
 
     private ToJePrivelaDbContext CreateContext() =>

@@ -70,6 +70,35 @@ describe('PlayStore', () => {
     expect(store.seats().map((p) => p.playerId)).toEqual([1, 2]);
   });
 
+  it('fetches the current question again in place, keeping the round where it is', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    const refreshed = store.refreshQuestion();
+    http.expectOne({ method: 'GET', url: '/api/questions/42' }).flush({ ...question, categoryName: 'Hudba' });
+    await refreshed;
+
+    expect(store.question()?.categoryName).toBe('Hudba');
+    expect(store.phase()).toBe('revealed');
+    expect(store.questionNumber()).toBe(1);
+  });
+
+  it('keeps the question as it was when fetching it again fails', async () => {
+    await startWithQuestion();
+
+    const refreshed = store.refreshQuestion();
+    http.expectOne('/api/questions/42').flush(null, { status: 500, statusText: 'Server Error' });
+    await refreshed;
+
+    expect(store.question()).toEqual(question);
+  });
+
+  it('has nothing to fetch again before the first question', async () => {
+    await store.refreshQuestion();
+
+    http.expectNone('/api/questions/42');
+  });
+
   it('asks only for the chosen categories', async () => {
     const started = store.start(5, [3, 4]);
     http.expectOne('/api/games/5/details').flush(game());

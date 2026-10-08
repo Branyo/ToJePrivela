@@ -18,7 +18,9 @@ public static class TestEntities
         QuestionSource source = QuestionSource.Manual) =>
         WithId(new Question(text, answer, category, badPoints, source, CreatedAt), id);
 
-    public static QuestionCategory Category(int id, string name) => WithId(new QuestionCategory(name), id);
+    /// <summary>The English name is the Slovak one unless given.</summary>
+    public static QuestionCategory Category(int id, string nameSk, string? nameEn = null) =>
+        WithId(new QuestionCategory(nameSk, nameEn ?? nameSk), id);
 
     public static Game Game(
         int id,

@@ -3,13 +3,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Question, QuestionCategory } from '../../core/api/models';
+import { LanguageService } from '../../core/i18n/language';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { TEST_RULES } from '../../core/rules/testing';
 import { AiQuestionsSection } from './ai-questions-section';
 
 const CATEGORIES: QuestionCategory[] = [
-  { id: 2, name: 'Sport' },
-  { id: 1, name: 'Cars' },
+  { id: 2, name: 'Šport', nameSk: 'Šport', nameEn: 'Sport' },
+  { id: 1, name: 'Autá', nameSk: 'Autá', nameEn: 'Cars' },
 ];
 
 const question = (id: number, categoryId: number, source: Question['source']): Question => ({
@@ -55,7 +56,37 @@ describe('AiQuestionsSection', () => {
   it('lists the categories by name', async () => {
     const { page } = await render();
 
-    expect([...page.querySelectorAll('.row__name')].map((name) => name.textContent?.trim())).toEqual(['Cars', 'Sport']);
+    expect([...page.querySelectorAll('.row__name')].map((name) => name.textContent?.trim())).toEqual(['Autá', 'Šport']);
+    expect([...page.querySelectorAll('.row__other')].map((name) => name.textContent?.trim())).toEqual(['Cars', 'Sport']);
+  });
+
+  it('loads the categories again after a language switch, for their names in that language', async () => {
+    const { fixture } = await render();
+
+    await TestBed.inject(LanguageService).use('en');
+    fixture.detectChanges();
+
+    const reload = http.expectOne('/api/question-categories');
+    expect(reload.request.method).toBe('GET');
+    reload.flush(CATEGORIES);
+    http.expectOne('/api/questions').flush([]);
+  });
+
+  it('sends the new name in the language picked for it, for the AI to translate', async () => {
+    const { fixture, page } = await render();
+
+    [...page.querySelectorAll<HTMLButtonElement>('.name-language .chip')].find((chip) => chip.textContent?.trim() === 'EN')!.click();
+    const name = page.querySelector<HTMLInputElement>('form .text-input:not(.count)')!;
+    name.value = 'Birds';
+    name.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    page.querySelector<HTMLButtonElement>('form button[type="submit"]')!.click();
+    const request = http.expectOne({ method: 'POST', url: '/api/question-categories' });
+    expect(request.request.body).toEqual({ nameEn: 'Birds', questionCount: 100 });
+    request.flush({ id: 3, name: 'Vtáky', nameSk: 'Vtáky', nameEn: 'Birds', questionGeneration: { requested: 100, created: 100, discarded: 0 } });
+    flushLoad();
+    await fixture.whenStable();
   });
 
   it('creates a new category with 100 AI questions unless told otherwise', async () => {
@@ -69,8 +100,8 @@ describe('AiQuestionsSection', () => {
 
     page.querySelector<HTMLButtonElement>('form button[type="submit"]')!.click();
     const request = http.expectOne({ method: 'POST', url: '/api/question-categories' });
-    expect(request.request.body).toEqual({ name: 'Music', questionCount: 100 });
-    request.flush({ id: 3, name: 'Music', questionGeneration: { requested: 100, created: 100, discarded: 0 }, questions: [] });
+    expect(request.request.body).toEqual({ nameSk: 'Music', questionCount: 100 });
+    request.flush({ id: 3, name: 'Music', nameSk: 'Music', nameEn: 'Music', questionGeneration: { requested: 100, created: 100, discarded: 0 }, questions: [] });
     flushLoad();
     await fixture.whenStable();
   });

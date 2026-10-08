@@ -114,7 +114,9 @@
       "count": "Počet otázok",
       "thinking": "Premýšľam…",
       "generate": "✨ Vygenerovať",
-      "done": "Kategória „{{name}}“ je pripravená, nových otázok: {{count}}! ✨"
+      "done": "Kategória „{{name}}“ je pripravená, nových otázok: {{count}}! ✨",
+      "nameLanguage": "Jazyk názvu",
+      "translated": "Názov do druhého jazyka preloží AI."
     },
     "start": "🚀 Poďme hrať!",
     "starting": "Miešam… 🃏",
@@ -293,7 +295,10 @@
       },
       "QuestionCategory": {
         "NotFound": "Táto kategória neexistuje.",
-        "NameTaken": "Kategória s týmto názvom už existuje."
+        "NameTaken": "Kategória s týmto názvom už existuje.",
+        "TranslationNameTaken": "Preklad tohto názvu už existuje ako kategória. Skúste iný názov.",
+        "TranslationUnavailable": "AI prekladač teraz nie je dostupný. Skúste to neskôr.",
+        "TranslationFailed": "Názov sa nepodarilo preložiť. Skúste to znova."
       },
       "QuestionGeneration": {
         "Failed": "Nepodarilo sa vygenerovať žiadne otázky. Skúste to znova."

@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Abstractions.Localization;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Questions.Dtos;
@@ -15,6 +16,7 @@ public sealed class QuestionService : IQuestionService
     private readonly IBadPointsPicker _badPoints;
     private readonly IQuestionPicker _questionPicker;
     private readonly TimeProvider _timeProvider;
+    private readonly ICurrentLanguage _language;
     private readonly IUnitOfWork _unitOfWork;
 
     public QuestionService(
@@ -23,6 +25,7 @@ public sealed class QuestionService : IQuestionService
         IBadPointsPicker badPoints,
         IQuestionPicker questionPicker,
         TimeProvider timeProvider,
+        ICurrentLanguage language,
         IUnitOfWork unitOfWork)
     {
         _questions = questions;
@@ -30,6 +33,7 @@ public sealed class QuestionService : IQuestionService
         _badPoints = badPoints;
         _questionPicker = questionPicker;
         _timeProvider = timeProvider;
+        _language = language;
         _unitOfWork = unitOfWork;
     }
 
@@ -41,7 +45,7 @@ public sealed class QuestionService : IQuestionService
         }
 
         var questions = await _questions.FindAsync(filter.CategoryId, filter.Source, cancellationToken);
-        return Result.Success(QuestionMapper.ToDtos(questions));
+        return Result.Success(QuestionMapper.ToDtos(questions, _language.Language));
     }
 
     public async Task<Result<QuestionDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -50,7 +54,7 @@ public sealed class QuestionService : IQuestionService
 
         return question is null
             ? Result.Failure<QuestionDto>(QuestionErrors.NotFound(id))
-            : Result.Success(QuestionMapper.ToDto(question));
+            : Result.Success(QuestionMapper.ToDto(question, _language.Language));
     }
 
     public async Task<Result<QuestionDto>> GetRandomAsync(RandomQuestionFilter filter, CancellationToken cancellationToken = default)
@@ -92,7 +96,7 @@ public sealed class QuestionService : IQuestionService
         // Deleted between the two reads: the client simply asks again.
         return question is null
             ? Result.Failure<QuestionDto>(QuestionErrors.NotFound(id))
-            : Result.Success(QuestionMapper.ToDto(question));
+            : Result.Success(QuestionMapper.ToDto(question, _language.Language));
     }
 
     public async Task<Result<QuestionDto>> RecordViewAsync(int id, CancellationToken cancellationToken = default)
@@ -111,7 +115,7 @@ public sealed class QuestionService : IQuestionService
             try
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
-                return Result.Success(QuestionMapper.ToDto(question));
+                return Result.Success(QuestionMapper.ToDto(question, _language.Language));
             }
             catch (ConcurrencyConflictException)
             {
@@ -150,7 +154,7 @@ public sealed class QuestionService : IQuestionService
         await _questions.AddAsync(question, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success(QuestionMapper.ToDto(question));
+        return Result.Success(QuestionMapper.ToDto(question, _language.Language));
     }
 
     public async Task<Result> UpdateAsync(int id, UpdateQuestionRequest request, CancellationToken cancellationToken = default)

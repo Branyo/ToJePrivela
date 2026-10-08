@@ -6,15 +6,30 @@ namespace ToJePrivela.Domain.Tests.Entities;
 public class QuestionCategoryTests
 {
     [Fact]
-    public void Constructor_KeepsTheTrimmedName()
+    public void Constructor_KeepsBothTrimmedNames()
     {
-        Assert.Equal("Sport", new QuestionCategory(" Sport ").Name);
+        var category = new QuestionCategory(" Šport ", " Sport ");
+
+        Assert.Equal("Šport", category.NameSk);
+        Assert.Equal("Sport", category.NameEn);
     }
 
     [Fact]
-    public void Constructor_KeepsTheNameKey()
+    public void Constructor_KeepsANameKeyPerLanguage()
     {
-        Assert.Equal("šport", new QuestionCategory(" Šport ").NameKey);
+        var category = new QuestionCategory(" Šport ", " SPORT ");
+
+        Assert.Equal("šport", category.NameSkKey);
+        Assert.Equal("sport", category.NameEnKey);
+    }
+
+    [Fact]
+    public void NameIn_GivesTheNameInThatLanguage()
+    {
+        var category = new QuestionCategory("Vtáky", "Birds");
+
+        Assert.Equal("Vtáky", category.NameIn(Language.Sk));
+        Assert.Equal("Birds", category.NameIn(Language.En));
     }
 
     [Theory]
@@ -22,7 +37,8 @@ public class QuestionCategoryTests
     [InlineData("S")]
     public void Constructor_RejectsTooShortName(string name)
     {
-        Assert.Throws<DomainException>(() => new QuestionCategory(name));
+        Assert.Throws<DomainException>(() => new QuestionCategory(name, "Sport"));
+        Assert.Throws<DomainException>(() => new QuestionCategory("Šport", name));
     }
 
     [Fact]
@@ -30,6 +46,17 @@ public class QuestionCategoryTests
     {
         var name = new string('x', QuestionCategory.NameMaxLength + 1);
 
-        Assert.Throws<DomainException>(() => new QuestionCategory(name));
+        Assert.Throws<DomainException>(() => new QuestionCategory(name, "Sport"));
+        Assert.Throws<DomainException>(() => new QuestionCategory("Šport", name));
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData(" S ", false)]
+    [InlineData("Šport", true)]
+    [InlineData("  Šport  ", true)]
+    public void IsValidName_MatchesTheConstructor(string? name, bool expected)
+    {
+        Assert.Equal(expected, QuestionCategory.IsValidName(name));
     }
 }

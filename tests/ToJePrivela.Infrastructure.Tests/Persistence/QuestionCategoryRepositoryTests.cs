@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence.Repositories;
 
@@ -17,10 +18,21 @@ public class QuestionCategoryRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new QuestionCategoryRepository(context);
 
-        var category = await sut.GetByNameAsync(name);
+        var category = await sut.GetByNameAsync(name, Language.En);
 
         Assert.NotNull(category);
-        Assert.Equal("Sport", category!.Name);
+        Assert.Equal("Sport", category!.NameEn);
+    }
+
+    [Fact]
+    public async Task GetByNameAsync_ComparesWithTheNameInTheGivenLanguageOnly()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionCategoryRepository(context);
+
+        Assert.Equal(2, (await sut.GetByNameAsync("Šport", Language.Sk))?.Id);
+        Assert.Null(await sut.GetByNameAsync("Šport", Language.En));
+        Assert.Null(await sut.GetByNameAsync("Sport", Language.Sk));
     }
 
     [Fact]
@@ -39,7 +51,7 @@ public class QuestionCategoryRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new QuestionCategoryRepository(context);
 
-        Assert.Null(await sut.GetByNameAsync("Aliens"));
+        Assert.Null(await sut.GetByNameAsync("Aliens", Language.En));
     }
 
     [Fact]
@@ -50,21 +62,21 @@ public class QuestionCategoryRepositoryTests : IDisposable
 
         var categories = await sut.GetAllAsync();
 
-        Assert.Equal(["Cars", "Sport", "History"], categories.OrderBy(c => c.Id).Select(c => c.Name));
+        Assert.Equal(["Cars", "Sport", "History"], categories.OrderBy(c => c.Id).Select(c => c.NameEn));
     }
 
     [Fact]
-    public async Task AddAsync_StoresTheCategory()
+    public async Task AddAsync_StoresTheCategoryInBothLanguages()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionCategoryRepository(context);
 
-        await sut.AddAsync(new QuestionCategory("Music"));
+        await sut.AddAsync(new QuestionCategory("Hudba", "Music"));
         await context.SaveChangesAsync();
 
-        var stored = await sut.GetByNameAsync("Music");
+        var stored = await sut.GetByNameAsync("Music", Language.En);
         Assert.NotNull(stored);
-        Assert.Equal("music", stored!.NameKey);
+        Assert.Equal(("hudba", "music"), (stored!.NameSkKey, stored.NameEnKey));
     }
 
     [Theory]
@@ -73,28 +85,31 @@ public class QuestionCategoryRepositoryTests : IDisposable
     [InlineData("ŠPORT")]
     public async Task GetByNameAsync_IgnoresCaseOfAccentedLetters(string name)
     {
-        await using (var context = _database.CreateContext())
-        {
-            await new QuestionCategoryRepository(context).AddAsync(new QuestionCategory("Šport"));
-            await context.SaveChangesAsync();
-        }
-
         await using var lookup = _database.CreateContext();
-        var found = await new QuestionCategoryRepository(lookup).GetByNameAsync(name);
+        var found = await new QuestionCategoryRepository(lookup).GetByNameAsync(name, Language.Sk);
 
         Assert.NotNull(found);
-        Assert.Equal("Šport", found!.Name);
+        Assert.Equal("Šport", found!.NameSk);
     }
 
     [Fact]
-    public async Task SaveChanges_RejectsANameDifferingOnlyInTheCaseOfAnAccentedLetter()
+    public async Task SaveChanges_RejectsASlovakNameDifferingOnlyInTheCaseOfAnAccentedLetter()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionCategoryRepository(context);
 
-        await sut.AddAsync(new QuestionCategory("Šport"));
-        await context.SaveChangesAsync();
-        await sut.AddAsync(new QuestionCategory("šport"));
+        await sut.AddAsync(new QuestionCategory("šport", "Athletics"));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task SaveChanges_RejectsATakenEnglishName()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionCategoryRepository(context);
+
+        await sut.AddAsync(new QuestionCategory("Športy", "SPORT"));
 
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }

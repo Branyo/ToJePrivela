@@ -26,6 +26,20 @@
   gap: 10px;
 }
 
+.name-language {
+  display: flex;
+  gap: 6px;
+}
+
+.hint {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+}
+
+.row__other {
+  font-style: italic;
+}
+
 .count {
   flex: 0 0 96px;
   width: 96px;

@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using ToJePrivela.Application.Abstractions.Localization;
 using ToJePrivela.Application.Questions;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence;
@@ -58,6 +60,7 @@ public class QuestionViewConcurrencyTests : IDisposable
         new RandomBadPointsPicker(),
         new RandomQuestionPicker(),
         TimeProvider.System,
+        Substitute.For<ICurrentLanguage>(),
         new UnitOfWork(context));
 
     public void Dispose() => _database.Dispose();

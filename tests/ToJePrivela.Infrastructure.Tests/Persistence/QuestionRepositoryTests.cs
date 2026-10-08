@@ -52,7 +52,7 @@ public class QuestionRepositoryTests : IDisposable
         var questions = await sut.FindAsync(HistoryId, null);
 
         Assert.Equal(2, questions.Count);
-        Assert.All(questions, question => Assert.Equal("History", question.Category!.Name));
+        Assert.All(questions, question => Assert.Equal("History", question.Category!.NameEn));
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class QuestionRepositoryTests : IDisposable
 
         var question = await sut.GetByIdAsync(id);
 
-        Assert.Equal("Sport", question!.Category!.Name);
+        Assert.Equal("Sport", question!.Category!.NameEn);
     }
 
     [Fact]
