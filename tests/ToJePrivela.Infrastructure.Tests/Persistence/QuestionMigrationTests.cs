@@ -47,8 +47,10 @@ public class QuestionMigrationTests : IDisposable
 
         var music = await context.QuestionCategories.SingleAsync(c => c.Name == "Music");
         var musicQuestions = await context.Questions.Where(q => q.CategoryId == music.Id).CountAsync();
+        var names = await context.QuestionCategories.OrderBy(c => c.Id).Select(c => c.Name).ToListAsync();
 
-        Assert.Equal(4, await context.QuestionCategories.CountAsync());
+        // The seeded Cars and Sport held no questions, so a later migration removed them again.
+        Assert.Equal(["History", "Music"], names);
         Assert.Equal(2, musicQuestions);
     }
 

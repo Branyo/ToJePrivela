@@ -58,6 +58,23 @@ describe('AiQuestionsSection', () => {
     expect([...page.querySelectorAll('.row__name')].map((name) => name.textContent?.trim())).toEqual(['Cars', 'Sport']);
   });
 
+  it('creates a new category with 100 AI questions unless told otherwise', async () => {
+    const { fixture, page } = await render();
+
+    const name = page.querySelector<HTMLInputElement>('form .text-input:not(.count)')!;
+    name.value = 'Music';
+    name.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(page.querySelector<HTMLInputElement>('form .count')!.value).toBe('100');
+
+    page.querySelector<HTMLButtonElement>('form button[type="submit"]')!.click();
+    const request = http.expectOne({ method: 'POST', url: '/api/question-categories' });
+    expect(request.request.body).toEqual({ name: 'Music', questionCount: 100 });
+    request.flush({ id: 3, name: 'Music', questionGeneration: { requested: 100, created: 100, discarded: 0 }, questions: [] });
+    flushLoad();
+    await fixture.whenStable();
+  });
+
   it('adds AI questions to a category and reloads the counts', async () => {
     const { fixture, page } = await render();
 

@@ -24,10 +24,10 @@ export function safeReturnUrl(url: string | undefined): string {
 }
 
 /**
- * `form`: name and password. `ask`: the name is unknown, so the user is asked whether to create it. `create`: a small
- * window with the name (prefilled, still editable), the password and its repetition.
+ * `form`: name and password, only ever to sign in. `create`: a small window, opened by the button next to the "new here"
+ * hint, with the new login's name, the password and its repetition.
  */
-type Step = 'form' | 'ask' | 'create';
+type Step = 'form' | 'create';
 
 @Component({
   selector: 'app-sign-in',
@@ -59,22 +59,15 @@ export class SignIn {
   protected readonly error = signal<Message | null>(null);
   protected readonly dialogError = signal<Message | null>(null);
 
-  /** The name the server did not know, as typed. */
-  protected readonly unknownName = signal('');
-
-  private readonly askYes = viewChild<ElementRef<HTMLButtonElement>>('askYes');
   private readonly createName = viewChild<ElementRef<HTMLInputElement>>('createName');
 
   constructor() {
     // The backend may have been down when the app started; try again so the limits are there for a new login.
     void this.rulesStore.ensureLoaded();
 
-    // Each dialog takes the focus when it opens, so the keyboard lands inside it.
+    // The window takes the focus when it opens, so the keyboard lands inside it.
     afterRenderEffect(() => {
-      const step = this.step();
-      if (step === 'ask') {
-        this.askYes()?.nativeElement.focus();
-      } else if (step === 'create') {
+      if (this.step() === 'create') {
         this.createName()?.nativeElement.focus();
       }
     });
@@ -92,24 +85,23 @@ export class SignIn {
       await this.auth.signIn(name, this.password());
       await this.leave();
     } catch (error) {
-      const problem = toProblem(error);
-      if (problem.code === 'Auth.UnknownLogin') {
-        this.unknownName.set(name);
-        this.step.set('ask');
-      } else {
-        this.error.set(problem.message);
-      }
+      this.error.set(toProblem(error).message);
     } finally {
       this.busy.set(false);
     }
   }
 
-  /** "Yes, create it": the name comes along, the password is chosen (and repeated) in the next window. */
+  /** "Create a login": a fresh window; whatever is typed in the sign-in form stays there. */
   protected startCreating(): void {
-    this.newName.set(this.unknownName());
+    if (this.busy()) {
+      return;
+    }
+
+    this.newName.set('');
     this.newPassword.set('');
     this.repeatPassword.set('');
     this.dialogError.set(null);
+    this.error.set(null);
     this.step.set('create');
   }
 

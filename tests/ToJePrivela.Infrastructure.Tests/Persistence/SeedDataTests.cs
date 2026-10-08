@@ -4,7 +4,7 @@ namespace ToJePrivela.Infrastructure.Tests.Persistence;
 
 public class SeedDataTests : IDisposable
 {
-    private readonly SqliteTestDatabase _database = new();
+    private readonly SqliteTestDatabase _database = new(withTestCategories: false);
 
     [Fact]
     public async Task Migrations_SeedTheDefaultPlayers()
@@ -13,7 +13,7 @@ public class SeedDataTests : IDisposable
 
         var names = await context.Players.OrderBy(p => p.Id).Select(p => p.Name).ToListAsync();
 
-        Assert.Equal(["Admin", "Brano", "Duri"], names);
+        Assert.Equal(["Peter", "Brano", "Duri"], names);
     }
 
     [Fact]
@@ -27,13 +27,11 @@ public class SeedDataTests : IDisposable
     }
 
     [Fact]
-    public async Task Migrations_SeedTheDefaultCategories()
+    public async Task Migrations_SeedNoCategories()
     {
         await using var context = _database.CreateContext();
 
-        var categories = await context.QuestionCategories.OrderBy(c => c.Id).ToListAsync();
-
-        Assert.Equal(["Cars", "Sport", "History"], categories.Select(c => c.Name));
+        Assert.Empty(await context.QuestionCategories.ToListAsync());
     }
 
     [Fact]

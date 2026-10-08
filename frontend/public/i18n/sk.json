@@ -21,7 +21,6 @@
   "common": {
     "dateTime": "d. M. HH:mm",
     "and": "a",
-    "gameNumber": "Hra č. {{id}}",
     "newGame": "🎲 Nová hra",
     "badPoints": "Trestné body: {{points}}",
     "unknownPlayer": "Neznámy hráč"
@@ -42,8 +41,8 @@
         "text": "Hráči sa striedajú jeden po druhom a každý musí povedať vyšší odhad ako hráč pred ním."
       },
       "double": {
-        "title": "Zdvojovač",
-        "text": "Ak si myslíš, že predchádzajúci odhad je prinízky, povedz „Zdvojovač!“ a odhad aspoň zdvojnásob. Keď ďalší hráč prihodí alebo neúspešne zvolá „To je priveľa!“, zdvojovač vyšiel a na konci hry ti odráta jedného somára."
+        "title": "Double",
+        "text": "Ak si myslíš, že predchádzajúci odhad je prinízky, povedz „Double!“ a odhad aspoň zdvojnásob. Keď ďalší hráč prihodí alebo neúspešne zvolá „To je priveľa!“, Double vyšiel a na konci hry ti odráta jedného somára."
       },
       "call": {
         "title": "„To je priveľa!“",
@@ -59,7 +58,7 @@
       },
       "end": {
         "title": "Koniec hry",
-        "text": "Keď niekto nazbiera priveľa kariet, hra končí. Každý vydarený zdvojovač odráta jedného somára a prehráva hráč, ktorému ich zostane najviac."
+        "text": "Keď niekto nazbiera priveľa kariet, hra končí. Každý vydarený Double odráta jedného somára a prehráva hráč, ktorému ich zostane najviac."
       }
     }
   },
@@ -158,23 +157,23 @@
     "answer": "Správna odpoveď je",
     "reveal": "✋ To je priveľa! Ukázať odpoveď",
     "skip": "😴 Priľahké, preskočiť (bez somárov)",
-    "doubleRule": "Vyšiel niekomu zdvojovač? Ďalší hráč prihodil, tak ťuknite na + pri ✌️ u hráča, ktorý ho vyhlásil – na konci hry mu odráta jedného somára. Omyl opravíte tlačidlom −.",
+    "doubleRule": "Vyšiel niekomu Double? Ďalší hráč prihodil, tak ťuknite na + pri ✌️ u hráča, ktorý ho vyhlásil – na konci hry mu odráta jedného somára. Omyl opravíte tlačidlom −.",
     "whoTakes": "Kto berie kartu <strong>🫏 ×{{points}}</strong>?",
     "tapPlayer": "Ťuknite na hráča 👇",
     "nobody": "🙅 Nikto, ďalšia otázka",
     "cardRule": "Bol posledný odhad vyšší ako odpoveď? Kartu berie ten, kto ho povedal. Ak nie, berie ju ten, kto zvolal „To je priveľa!“.",
-    "doublesFirst": "Najprv pridajte (+) zdvojovače ✌️, ktoré vyšli, a až potom priraďte kartu.",
+    "doublesFirst": "Najprv pridajte (+) každý Double ✌️, ktorý vyšiel, a až potom priraďte kartu.",
     "double": {
-      "group": "Zdvojovače hráča {{name}}",
-      "label": "Zdvojovač vyšiel: {{name}} (−1 somár)",
-      "remove": "Ubrať zdvojovač: {{name}}"
+      "group": "Double hráča {{name}}",
+      "label": "Double vyšiel: {{name}} (−1 somár)",
+      "remove": "Ubrať Double: {{name}}"
     },
     "incoming": "Letia somáre! 🫏💨",
-    "seat": "{{name}}, karty: {{cards}}, zdvojovače: {{doubles}}, výsledné trestné body: {{points}}",
+    "seat": "{{name}}, karty: {{cards}}, Double: {{doubles}}, výsledné trestné body: {{points}}",
     "onTheEdge": "🔥 na hrane",
     "confirmEnd": {
       "title": "Ukončiť hru teraz?",
-      "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi po odrátaní zdvojovačov.",
+      "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi po odrátaní Double.",
       "yes": "Áno, zobraziť výsledky",
       "no": "Hrať ďalej"
     },
@@ -192,8 +191,10 @@
     "handedOut": "rozdané somárske karty: {{count}}",
     "nobody": "Nikto nedostal ani jedného somára.",
     "wellBehaved": "Podozrivo slušný stôl…",
-    "bigDonkey": "je veľký somár!",
-    "tie": "Na chvoste je remíza!",
+    "lost": {
+      "single": "prehráva túto hru!",
+      "tie": "prehrávajú túto hru!"
+    },
     "score": {
       "one": "🫏 trestné body: {{points}} z {{count}} karty",
       "few": "🫏 trestné body: {{points}} z {{count}} kariet",
@@ -201,7 +202,7 @@
       "other": "🫏 trestné body: {{points}} z {{count}} kariet"
     },
     "doublesOff": "(✌️ −{{count}})",
-    "doublesLabel": "zdvojovače: {{count}}",
+    "doublesLabel": "Double: {{count}}",
     "board": "📊 Počet somárov",
     "rematch": "🔁 Odveta s rovnakými hráčmi",
     "back": "▶️ Späť do hry",
@@ -210,19 +211,14 @@
   },
   "signIn": {
     "title": "Prihláste sa a hrajte",
-    "text": "Vaši hráči a hry zostávajú pri vašom prihlásení. Otázky sú pre všetkých rovnaké.",
+    "text": "Prihlásenie je spoločné pre celú partiu, nie pre jedného človeka. Ktokoľvek ho môže vytvoriť a pridať pod neho hráčov, ktorí spolu hrávajú.",
     "name": "Prihlasovacie meno",
     "password": "Heslo",
     "submit": "Prihlásiť",
     "signingIn": "Prihlasujem…",
-    "newHint": "Ste tu nový? Napíšte prihlasovacie meno, ktoré chcete, a stlačte Prihlásiť.",
-    "ask": {
-      "title": "Nové prihlásenie?",
-      "text": "Prihlásenie s menom „{{name}}“ ešte neexistuje. Chcete ho vytvoriť?",
-      "yes": "Áno, vytvoriť",
-      "no": "Nie"
-    },
+    "newHint": "Ste tu nový? Vytvorte prihlásenie pre vašu partiu.",
     "create": {
+      "start": "Vytvoriť prihlásenie",
       "title": "Vytvoriť prihlásenie",
       "repeat": "Zopakujte heslo",
       "passwordHelp": "{{min}} až {{max}} znakov.",
@@ -287,7 +283,7 @@
         "UnknownPlayers": "Niektorí hráči neexistujú.",
         "PlayerNotInGame": "Tento hráč v hre nehrá.",
         "UnknownQuestion": "Táto otázka neexistuje.",
-        "NoDoubleToRemove": "Tento hráč nemá žiadny zdvojovač na ubratie.",
+        "NoDoubleToRemove": "Tento hráč nemá žiadny Double na ubratie.",
         "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz."
       },
       "Player": {

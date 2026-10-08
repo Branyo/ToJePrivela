@@ -21,7 +21,7 @@ public class PlayersEndpointsTests : IClassFixture<ApiFactory>
         var players = await _client.GetFromJsonAsync<List<PlayerDto>>("/api/players");
 
         Assert.NotNull(players);
-        Assert.Contains(players!, player => player.Name == "Admin");
+        Assert.Contains(players!, player => player.Name == "Peter");
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class PlayersEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task PostPlayer_RejectsDuplicateName()
     {
-        var response = await _client.PostAsJsonAsync("/api/players", new { name = "Admin" });
+        var response = await _client.PostAsJsonAsync("/api/players", new { name = "Peter" });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }

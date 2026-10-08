@@ -12,5 +12,5 @@ export const TEST_RULES: GameRules = {
   maxAiQuestionCount: 200,
   avatars: ['🦊', '🐸', '🐼'],
   loginName: { min: 3, max: 30 },
-  password: { min: 8, max: 128 },
+  password: { min: 6, max: 128 },
 };

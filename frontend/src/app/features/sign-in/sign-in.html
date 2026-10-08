@@ -38,30 +38,14 @@
         {{ (busy() ? 'signIn.signingIn' : 'signIn.submit') | translate }}
       </button>
     </form>
-    <p class="muted hint">{{ 'signIn.newHint' | translate }}</p>
-  </div>
-</section>
-
-@if (step() === 'ask') {
-  <div class="backdrop" (click)="closeDialog()">
-    <div
-      class="dialog panel ask"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="ask-title"
-      (click)="$event.stopPropagation()"
-    >
-      <h2 id="ask-title" class="dialog__title">{{ 'signIn.ask.title' | translate }}</h2>
-      <p>{{ 'signIn.ask.text' | translate: { name: unknownName() } }}</p>
-      <div class="dialog__actions">
-        <button type="button" class="btn btn--ghost ask__no" (click)="closeDialog()">{{ 'signIn.ask.no' | translate }}</button>
-        <button #askYes type="button" class="btn btn--primary ask__yes" (click)="startCreating()">
-          {{ 'signIn.ask.yes' | translate }}
-        </button>
-      </div>
+    <div class="new-login">
+      <p class="muted hint">{{ 'signIn.newHint' | translate }}</p>
+      <button type="button" class="btn btn--sky new-login__start" [disabled]="busy()" (click)="startCreating()">
+        {{ 'signIn.create.start' | translate }}
+      </button>
     </div>
   </div>
-}
+</section>
 
 @if (step() === 'create') {
   <div class="backdrop" (click)="closeDialog()">

@@ -37,6 +37,8 @@ export class Summary implements OnInit {
       .map((p) => p.name ?? this.i18n.instant('common.unknownPlayer'))
       .join(` ${this.i18n.instant('common.and')} `),
   );
+  /** The donkeys doing a Mexican wave next to the loser's name. */
+  protected readonly waveDonkeys = Array.from({ length: 5 });
   /** A rematch needs every player of this game; a deleted one cannot be seated again. */
   protected readonly canRematch = computed(() => this.game()?.players.every((p) => p.playerId !== null) ?? false);
   protected readonly maxPoints = computed(() => Math.max(1, ...this.ranking().map((p) => p.finalBadPoints)));

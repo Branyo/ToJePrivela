@@ -73,6 +73,30 @@ describe('Summary', () => {
     expect(page.querySelector('.btn--fun')).toBeNull();
   });
 
+  it('says who lost the game, with a wave of donkeys next to the name', async () => {
+    const page = await render(game({ players: [seat(1, 'Ana', { badCards: 3, finalBadPoints: 7, isLoser: true }), seat(2, 'Bo')] }));
+
+    const title = page.querySelector('.spotlight__title');
+    expect(title?.querySelector('.name')?.textContent).toBe('Ana');
+    expect(title?.textContent).toContain('summary.lost.single');
+    expect(title?.querySelectorAll('.donkey-wave__donkey').length).toBe(5);
+  });
+
+  it('names every loser of a tie together', async () => {
+    const page = await render(
+      game({
+        players: [
+          seat(1, 'Ana', { badCards: 3, finalBadPoints: 7, isLoser: true }),
+          seat(2, 'Bo', { badCards: 3, finalBadPoints: 7, isLoser: true }),
+        ],
+      }),
+    );
+
+    const title = page.querySelector('.spotlight__title');
+    expect(title?.querySelector('.name')?.textContent).toBe('Ana common.and Bo');
+    expect(title?.textContent).toContain('summary.lost.tie');
+  });
+
   it('offers a rematch when every player still exists', async () => {
     const page = await render(game());
 

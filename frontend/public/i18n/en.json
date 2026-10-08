@@ -21,7 +21,6 @@
   "common": {
     "dateTime": "d MMM, HH:mm",
     "and": "&",
-    "gameNumber": "Game #{{id}}",
     "newGame": "🎲 New game",
     "badPoints": "{{points}} bad points",
     "unknownPlayer": "Unknown player"
@@ -43,7 +42,7 @@
       },
       "double": {
         "title": "Double",
-        "text": "If you think the previous estimate is too low, call \"Double!\" and at least double it. When the next player raises it or wrongly calls \"To je priveľa!\", your double held and takes one donkey off your score at the end."
+        "text": "If you think the previous estimate is too low, call \"Double!\" and at least double it. When the next player raises it or wrongly calls \"To je priveľa!\", your Double held and takes one donkey off your score at the end."
       },
       "call": {
         "title": "\"To je priveľa!\"",
@@ -59,7 +58,7 @@
       },
       "end": {
         "title": "Game over",
-        "text": "When someone collects too many cards, the game ends. Every double that held takes one donkey off, and the player left with the most donkeys loses."
+        "text": "When someone collects too many cards, the game ends. Every Double that held takes one donkey off, and the player left with the most donkeys loses."
       }
     }
   },
@@ -150,23 +149,23 @@
     "answer": "The answer is",
     "reveal": "✋ To je priveľa! Show the answer",
     "skip": "😴 Too easy, skip it (no donkeys)",
-    "doubleRule": "Did a double hold? The next player raised it, so tap + by the ✌️ of whoever called it – it takes one donkey off their score at the end. Fix a mis-tap with −.",
+    "doubleRule": "Did a Double hold? The next player raised it, so tap + by the ✌️ of whoever called it – it takes one donkey off their score at the end. Fix a mis-tap with −.",
     "whoTakes": "Who takes the <strong>🫏 ×{{points}}</strong> card?",
     "tapPlayer": "Tap a player 👇",
     "nobody": "🙅 Nobody, next question",
     "cardRule": "Was the last estimate over the answer? Whoever said it takes the card. If not, the one who called \"To je priveľa!\" takes it.",
-    "doublesFirst": "Add (+) every double ✌️ that held first, and only then hand out the card.",
+    "doublesFirst": "Add (+) every Double ✌️ that held first, and only then hand out the card.",
     "double": {
-      "group": "{{name}}'s doubles",
+      "group": "{{name}}'s Doubles",
       "label": "Double held: {{name}} (−1 donkey)",
-      "remove": "Take back a double: {{name}}"
+      "remove": "Take back a Double: {{name}}"
     },
     "incoming": "Incoming donkeys! 🫏💨",
-    "seat": "{{name}}, {{cards}} cards, {{doubles}} doubles, {{points}} final bad points",
+    "seat": "{{name}}, {{cards}} cards, {{doubles}} Doubles, {{points}} final bad points",
     "onTheEdge": "🔥 on the edge",
     "confirmEnd": {
       "title": "End the game now?",
-      "text": "Results are counted as they stand, and the player with the most donkeys after doubles loses.",
+      "text": "Results are counted as they stand, and the player with the most donkeys after Doubles loses.",
       "yes": "Yes, show results",
       "no": "Keep playing"
     },
@@ -184,14 +183,16 @@
     "handedOut": "{{count}} donkey cards handed out",
     "nobody": "Nobody got a single donkey.",
     "wellBehaved": "Suspiciously well-behaved table…",
-    "bigDonkey": "is the big donkey!",
-    "tie": "It's a tie at the bottom!",
+    "lost": {
+      "single": "loses this game!",
+      "tie": "lose this game!"
+    },
     "score": {
       "one": "🫏 {{points}} bad points from {{count}} card",
       "other": "🫏 {{points}} bad points from {{count}} cards"
     },
     "doublesOff": "(✌️ −{{count}})",
-    "doublesLabel": "{{count}} doubles",
+    "doublesLabel": "{{count}} Doubles",
     "board": "📊 Donkey count",
     "rematch": "🔁 Rematch, same players",
     "back": "▶️ Back to the game",
@@ -200,19 +201,14 @@
   },
   "signIn": {
     "title": "Sign in to play",
-    "text": "Your players and games stay with your login. Everyone plays with the same questions.",
+    "text": "A login is shared by a whole group, not one person. Anyone can create one and add the players who play together under it.",
     "name": "Login name",
     "password": "Password",
     "submit": "Sign in",
     "signingIn": "Signing in…",
-    "newHint": "New here? Type the login name you want and press Sign in.",
-    "ask": {
-      "title": "New login?",
-      "text": "There is no login named \"{{name}}\" yet. Do you want to create it?",
-      "yes": "Yes, create it",
-      "no": "No"
-    },
+    "newHint": "New here? Create a login for your group.",
     "create": {
+      "start": "Create a login",
       "title": "Create a login",
       "repeat": "Repeat password",
       "passwordHelp": "{{min}} to {{max}} characters.",
@@ -277,7 +273,7 @@
         "UnknownPlayers": "Some of the players do not exist.",
         "PlayerNotInGame": "This player is not in the game.",
         "UnknownQuestion": "This question does not exist.",
-        "NoDoubleToRemove": "This player has no double to take back.",
+        "NoDoubleToRemove": "This player has no Double to take back.",
         "StartsInFuture": "A game cannot start later than now."
       },
       "Player": {

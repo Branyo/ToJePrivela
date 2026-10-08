@@ -19,12 +19,13 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task GetCategories_ReturnsTheSeededCategories()
+    public async Task GetCategories_ReturnsTheStoredCategories()
     {
         var categories = await _client.GetFromJsonAsync<List<QuestionCategoryDto>>("/api/question-categories");
 
-        var seeded = categories!.Where(category => category.Id <= 3).ToList();
-        Assert.Equal(["Cars", "Sport", "History"], seeded.Select(category => category.Name));
+        // The factory's test categories; other tests in this class add more.
+        var testCategories = categories!.Where(category => category.Id <= 3).ToList();
+        Assert.Equal(["Cars", "Sport", "History"], testCategories.Select(category => category.Name));
     }
 
     [Fact]

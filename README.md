@@ -82,21 +82,22 @@ address added any other way stops it at once after startup (exit code 1).
 dotnet user-secrets set "OpenAi:ApiKey" "sk-..." --project src/ToJePrivela.Api
 dotnet user-secrets set "Authentication:Jwt:SigningKey" "<32+ random characters>" --project src/ToJePrivela.Api
 dotnet user-secrets set "Authentication:Admins:0:Name" "Brano" --project src/ToJePrivela.Api
-dotnet user-secrets set "Authentication:Admins:0:Password" "<8+ characters>" --project src/ToJePrivela.Api
+dotnet user-secrets set "Authentication:Admins:0:Password" "<6+ characters>" --project src/ToJePrivela.Api
 ```
 
 ### Logins and admins
 
-A login is a name (3–30 characters, unique case-insensitively, accented letters included) and a password (8–128
+A login is a name (3–30 characters, unique case-insensitively, accented letters included) and a password (6–128
 characters). The password is never stored: `ToJePrivela.Identity` keeps an ASP.NET Core Identity hash of it (PBKDF2
 with HMAC-SHA512, 210 000 iterations, a random salt per password). Older, weaker hashes are replaced at the next
 sign-in. `POST /api/auth/sign-in` and `POST /api/auth/accounts` answer with a JWT that every other endpoint except
 `GET /api/rules` needs as `Authorization: Bearer …`.
 
-Signing in with an unknown name answers 404 `Auth.UnknownLogin` on purpose, so the client can offer to create the
-login; both endpoints are rate limited instead. The limit counts per client address **and** login name (compared
-like login names, so `" Brano"` and `"brano"` share it): people at one party behind the same address each get their own
-attempts, while guessing one login's password stays slow. On top of that, one address may make at most
+Signing in with an unknown name answers 404 `Auth.UnknownLogin` on purpose, so the sign-in form can say the login does
+not exist and point to *Create a login*; both endpoints are rate limited instead. The limit counts per client address
+**and** login name (compared like login names, so `" Brano"` and `"brano"` share it): people at one party behind the
+same address each get their own attempts, while guessing one login's password stays slow. On top of that,
+one address may make at most
 `AddressPermitLimit` such attempts per window whatever the names, so it cannot try many names, or create many
 logins, at speed either. A successful sign-in is not counted there, so people who know their passwords never use up
 their address's cap; an address over it is refused before its request body is read. Behind a reverse proxy, list the

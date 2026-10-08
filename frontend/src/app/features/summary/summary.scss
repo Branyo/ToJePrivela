@@ -74,6 +74,22 @@
   background: var(--sun);
 }
 
+.donkey-wave {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.donkey-wave__donkey {
+  display: inline-block;
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-14px); }
+}
+
 .spotlight__score {
   font-size: 1.2rem;
   font-weight: 600;
