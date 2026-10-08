@@ -72,7 +72,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
     {
         using var request = new HttpRequestMessage(new HttpMethod(method), url)
         {
-            Content = JsonContent.Create(new { count = 1, text = "Q?", answer = "1", categoryId = 1 })
+            Content = JsonContent.Create(new { count = 1, textSk = "Q?", textEn = "Q?", answer = "1", categoryId = 1 })
         };
 
         var response = await _member.SendAsync(request);

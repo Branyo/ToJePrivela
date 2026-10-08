@@ -9,14 +9,23 @@ public static class TestEntities
 
     public static Player Player(int id, string name) => WithId(new Player(TestAccountId, name, "🦊"), id);
 
+    /// <summary>The English text is the Slovak one unless given.</summary>
     public static Question Question(
         int id,
-        string text,
+        string textSk,
         string answer,
         QuestionCategory category,
         int badPoints = 3,
-        QuestionSource source = QuestionSource.Manual) =>
-        WithId(new Question(text, answer, category, badPoints, source, CreatedAt), id);
+        QuestionSource source = QuestionSource.Manual,
+        string? textEn = null) =>
+        WithId(new Question(textSk, textEn ?? textSk, answer, category, badPoints, source, CreatedAt), id);
+
+    /// <summary>Like a question stored before texts became bilingual; the domain itself never creates one.</summary>
+    public static Question WithoutEnglish(Question question)
+    {
+        typeof(Question).GetProperty(nameof(Domain.Entities.Question.TextEn))!.SetValue(question, null);
+        return question;
+    }
 
     /// <summary>The English name is the Slovak one unless given.</summary>
     public static QuestionCategory Category(int id, string nameSk, string? nameEn = null) =>

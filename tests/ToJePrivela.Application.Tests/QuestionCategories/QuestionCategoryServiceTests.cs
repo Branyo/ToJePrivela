@@ -374,7 +374,7 @@ public class QuestionCategoryServiceTests
     private static QuestionGenerationResult Generated(QuestionCategory category, int requested, int created, int discarded = 0) =>
         new(
             Enumerable.Range(1, created)
-                .Select(n => new Question($"Generated question number {n}?", n.ToString(), category, 3, QuestionSource.Ai, TestEntities.CreatedAt))
+                .Select(n => new Question($"Vygenerovaná otázka číslo {n}?", $"Generated question number {n}?", n.ToString(), category, 3, QuestionSource.Ai, TestEntities.CreatedAt))
                 .ToList(),
             requested,
             discarded);

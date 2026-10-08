@@ -5,6 +5,7 @@ namespace ToJePrivela.Domain.Tests.Entities;
 
 public class QuestionTests
 {
+    private const string ValidTextSk = "V ktorom roku bol verejne spustený ChatGPT?";
     private const string ValidText = "Which year was ChatGPT publicly released?";
 
     private static readonly DateTime CreatedAt = new(2026, 9, 24, 10, 0, 0, DateTimeKind.Utc);
@@ -14,9 +15,10 @@ public class QuestionTests
     [Fact]
     public void Constructor_KeepsEveryValue()
     {
-        var question = new Question(ValidText, "2022", History, 4, QuestionSource.Ai, CreatedAt);
+        var question = new Question($" {ValidTextSk} ", $" {ValidText} ", "2022", History, 4, QuestionSource.Ai, CreatedAt);
 
-        Assert.Equal(ValidText, question.Text);
+        Assert.Equal(ValidTextSk, question.TextSk);
+        Assert.Equal(ValidText, question.TextEn);
         Assert.Equal("2022", question.Answer);
         Assert.Same(History, question.Category);
         Assert.Equal(4, question.BadPoints);
@@ -48,7 +50,7 @@ public class QuestionTests
 
         question.MarkViewed(CreatedAt);
         var afterView = question.Version;
-        question.Update(ValidText, "2023", History, 3);
+        question.Update(ValidTextSk, ValidText, "2023", History, 3);
 
         Assert.True(afterView > initial);
         Assert.True(question.Version > afterView);
@@ -60,7 +62,7 @@ public class QuestionTests
         var question = Create();
         var initial = question.Version;
 
-        Assert.Throws<DomainException>(() => question.Update(ValidText, "not a number", History, 3));
+        Assert.Throws<DomainException>(() => question.Update(ValidTextSk, ValidText, "not a number", History, 3));
         Assert.Equal(initial, question.Version);
     }
 
@@ -104,20 +106,39 @@ public class QuestionTests
     [Fact]
     public void Constructor_RejectsTooShortText()
     {
-        Assert.Throws<DomainException>(() => Create(text: "Short"));
+        Assert.Throws<DomainException>(() => Create(textSk: "Krátka"));
+        Assert.Throws<DomainException>(() => Create(textEn: "Short"));
     }
 
     [Fact]
     public void Constructor_RejectsTooLongText()
     {
-        Assert.Throws<DomainException>(() => Create(text: new string('x', Question.TextMaxLength + 1)));
+        Assert.Throws<DomainException>(() => Create(textSk: new string('x', Question.TextMaxLength + 1)));
+        Assert.Throws<DomainException>(() => Create(textEn: new string('x', Question.TextMaxLength + 1)));
     }
 
     [Fact]
     public void Constructor_RequiresACategory()
     {
         Assert.Throws<ArgumentNullException>(
-            () => new Question(ValidText, "2022", null!, 3, QuestionSource.Manual, CreatedAt));
+            () => new Question(ValidTextSk, ValidText, "2022", null!, 3, QuestionSource.Manual, CreatedAt));
+    }
+
+    [Fact]
+    public void TextIn_GivesTheTextInThatLanguage()
+    {
+        var question = Create();
+
+        Assert.Equal(ValidTextSk, question.TextIn(Language.Sk));
+        Assert.Equal(ValidText, question.TextIn(Language.En));
+    }
+
+    [Fact]
+    public void TextIn_FallsBackToSlovakWithoutAnEnglishText()
+    {
+        var question = WithoutEnglish(Create());
+
+        Assert.Equal(ValidTextSk, question.TextIn(Language.En));
     }
 
     [Fact]
@@ -125,9 +146,10 @@ public class QuestionTests
     {
         var question = Create();
 
-        question.Update("How many players are on a football pitch?", "11", Sport, 1);
+        question.Update("Koľko hráčov je na futbalovom ihrisku?", "How many players are on a football pitch?", "11", Sport, 1);
 
-        Assert.Equal("How many players are on a football pitch?", question.Text);
+        Assert.Equal("Koľko hráčov je na futbalovom ihrisku?", question.TextSk);
+        Assert.Equal("How many players are on a football pitch?", question.TextEn);
         Assert.Equal("11", question.Answer);
         Assert.Same(Sport, question.Category);
         Assert.Equal(1, question.BadPoints);
@@ -139,9 +161,39 @@ public class QuestionTests
     {
         var question = Create(source: QuestionSource.Ai);
 
-        question.Update(ValidText, "2022", History, 3);
+        question.Update(ValidTextSk, ValidText, "2022", History, 3);
 
         Assert.Equal(QuestionSource.Manual, question.Source);
+    }
+
+    [Fact]
+    public void Update_LeavesAQuestionWithoutEnglishTextWithoutOne()
+    {
+        var question = WithoutEnglish(Create());
+
+        question.Update(ValidTextSk, null, "2023", History, 3);
+
+        Assert.Null(question.TextEn);
+        Assert.Equal("2023", question.Answer);
+    }
+
+    [Fact]
+    public void Update_GivesAQuestionWithoutEnglishTextOne()
+    {
+        var question = WithoutEnglish(Create());
+
+        question.Update(ValidTextSk, ValidText, "2022", History, 3);
+
+        Assert.Equal(ValidText, question.TextEn);
+    }
+
+    [Fact]
+    public void Update_NeverRemovesTheEnglishText()
+    {
+        var question = Create();
+
+        Assert.Throws<DomainException>(() => question.Update(ValidTextSk, null, "2022", History, 3));
+        Assert.Equal(ValidText, question.TextEn);
     }
 
     [Fact]
@@ -149,7 +201,7 @@ public class QuestionTests
     {
         var question = Create(source: QuestionSource.Ai);
 
-        Assert.Throws<DomainException>(() => question.Update(ValidText, "not a number", Sport, 3));
+        Assert.Throws<DomainException>(() => question.Update(ValidTextSk, ValidText, "not a number", Sport, 3));
         Assert.Equal("2022", question.Answer);
         Assert.Same(History, question.Category);
         Assert.Equal(QuestionSource.Ai, question.Source);
@@ -160,14 +212,22 @@ public class QuestionTests
     {
         var question = Create();
 
-        Assert.Throws<DomainException>(() => question.Update(ValidText, "2022", History, 9));
+        Assert.Throws<DomainException>(() => question.Update(ValidTextSk, ValidText, "2022", History, 9));
         Assert.Equal(3, question.BadPoints);
     }
 
     private static Question Create(
-        string text = ValidText,
+        string textSk = ValidTextSk,
+        string textEn = ValidText,
         string answer = "2022",
         int badPoints = 3,
         QuestionSource source = QuestionSource.Manual) =>
-        new(text, answer, History, badPoints, source, CreatedAt);
+        new(textSk, textEn, answer, History, badPoints, source, CreatedAt);
+
+    /// <summary>Like a question stored before texts became bilingual; the domain itself never creates one.</summary>
+    private static Question WithoutEnglish(Question question)
+    {
+        typeof(Question).GetProperty(nameof(Question.TextEn))!.SetValue(question, null);
+        return question;
+    }
 }

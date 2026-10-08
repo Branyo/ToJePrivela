@@ -10,7 +10,7 @@ namespace ToJePrivela.Application.QuestionGeneration;
 /// <summary>
 /// Splits a request into calls of <see cref="QuestionGenerationOptions.QuestionsPerRequest"/>, runs them in
 /// parallel on distinct subtopics, drops unusable items (<see cref="GeneratedQuestionFilter"/>) and duplicates
-/// (against the category and each other) and tops up the shortfall until the requested count is reached or
+/// (by Slovak text, against the category and each other) and tops up the shortfall until the requested count is reached or
 /// the call budget is spent.
 /// </summary>
 /// <remarks>
@@ -70,7 +70,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
         {
             try
             {
-                subtopics = await _generator.GenerateSubtopicsAsync(category.NameSk, plannedCalls, cancellationToken);
+                subtopics = await _generator.GenerateSubtopicsAsync(category.NameEn, plannedCalls, cancellationToken);
             }
             catch (QuestionGeneratorUnavailableException exception)
             {
@@ -86,7 +86,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
 
         while (accepted.Count < count && callsMade < callBudget && !providerUnavailable)
         {
-            var excluded = accepted.Select(q => q.Text).Reverse()
+            var excluded = accepted.Select(q => q.TextSk).Reverse()
                 .Concat(existing)
                 .Take(_options.MaxExcludedQuestions)
                 .ToList();
@@ -94,7 +94,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
             var requests = SplitIntoBatches(count - accepted.Count)
                 .Take(callBudget - callsMade)
                 .Select((size, index) => new QuestionGenerationRequest(
-                    category.NameSk,
+                    category.NameEn,
                     size,
                     PickSubtopic(subtopics, callsMade + index),
                     excluded))
@@ -114,7 +114,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
                 // Unusable items are dropped before anything else, as if the provider never sent them.
                 foreach (var question in reply.Where(GeneratedQuestionFilter.IsUsable))
                 {
-                    if (accepted.Count < count && knownTexts.Add(QuestionTextNormalizer.Normalize(question.Text)))
+                    if (accepted.Count < count && knownTexts.Add(QuestionTextNormalizer.Normalize(question.TextSk)))
                     {
                         accepted.Add(question);
                     }
@@ -130,7 +130,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
 
         var createdAt = _timeProvider.GetUtcNow().UtcDateTime;
         var questions = accepted
-            .Select(q => new Question(q.Text, q.Answer, category, _badPoints.Pick(), QuestionSource.Ai, createdAt))
+            .Select(q => new Question(q.TextSk, q.TextEn, q.Answer, category, _badPoints.Pick(), QuestionSource.Ai, createdAt))
             .ToList();
 
         return new QuestionGenerationResult(questions, count, discarded, providerUnavailable);

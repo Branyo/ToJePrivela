@@ -9,19 +9,20 @@ public class GeneratedQuestionParserTests
     [Fact]
     public void Parse_ReadsAPlainJsonArray()
     {
-        const string reply = """[{"question": "Which year was ChatGPT released?", "answer": 2022}]""";
+        const string reply = """[{"questionSk": "V ktorom roku vyšiel ChatGPT?", "questionEn": "Which year was ChatGPT released?", "answer": 2022}]""";
 
         var questions = _sut.Parse(reply);
 
         var question = Assert.Single(questions);
-        Assert.Equal("Which year was ChatGPT released?", question.Question);
+        Assert.Equal("V ktorom roku vyšiel ChatGPT?", question.QuestionSk);
+        Assert.Equal("Which year was ChatGPT released?", question.QuestionEn);
         Assert.Equal("2022", question.Answer);
     }
 
     [Fact]
     public void Parse_ReadsQuotedAnswers()
     {
-        const string reply = """[{"question": "Which year was ChatGPT released?", "answer": "2022"}]""";
+        const string reply = """[{"questionSk": "V ktorom roku vyšiel ChatGPT?", "questionEn": "Which year was ChatGPT released?", "answer": "2022"}]""";
 
         Assert.Equal("2022", Assert.Single(_sut.Parse(reply)).Answer);
     }
@@ -31,7 +32,7 @@ public class GeneratedQuestionParserTests
     {
         const string reply = """
             ```json
-            [{"question": "Which year was ChatGPT released?", "answer": 2022}]
+            [{"questionSk": "V ktorom roku vyšiel ChatGPT?", "questionEn": "Which year was ChatGPT released?", "answer": 2022}]
             ```
             """;
 
@@ -43,7 +44,7 @@ public class GeneratedQuestionParserTests
     {
         const string reply = """
             Sure, here are the questions:
-            [{"question": "Which year was ChatGPT released?", "answer": 2022}]
+            [{"questionSk": "V ktorom roku vyšiel ChatGPT?", "questionEn": "Which year was ChatGPT released?", "answer": 2022}]
             Hope this helps!
             """;
 
@@ -55,11 +56,13 @@ public class GeneratedQuestionParserTests
     {
         const string reply = """
             [
-              {"question": "Which year was ChatGPT released?", "answer": 2022},
-              {"question": "Missing answer"},
+              {"questionSk": "V ktorom roku vyšiel ChatGPT?", "questionEn": "Which year was ChatGPT released?", "answer": 2022},
+              {"questionSk": "Chýba odpoveď", "questionEn": "Missing answer"},
+              {"questionSk": "Chýba anglický text?", "answer": 5},
+              {"questionEn": "Missing Slovak text?", "answer": 5},
               {"answer": 5},
               "not an object",
-              {"question": "How many players are on a pitch?", "answer": "11"}
+              {"questionSk": "Koľko hráčov je na ihrisku?", "questionEn": "How many players are on a pitch?", "answer": "11"}
             ]
             """;
 
@@ -74,8 +77,8 @@ public class GeneratedQuestionParserTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("I cannot help with that.")]
-    [InlineData("[{\"question\": broken}]")]
-    [InlineData("{\"question\": \"Not an array\", \"answer\": 1}")]
+    [InlineData("[{\"questionSk\": broken}]")]
+    [InlineData("{\"questionSk\": \"Nie je pole\", \"questionEn\": \"Not an array\", \"answer\": 1}")]
     public void Parse_ReturnsNothingForUnusableReplies(string? reply)
     {
         Assert.Empty(_sut.Parse(reply));

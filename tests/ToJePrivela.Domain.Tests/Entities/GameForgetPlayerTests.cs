@@ -97,5 +97,5 @@ public class GameForgetPlayerTests
     }
 
     private static Question Question(int badPoints) =>
-        new("How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, Start);
+        new("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, Start);
 }

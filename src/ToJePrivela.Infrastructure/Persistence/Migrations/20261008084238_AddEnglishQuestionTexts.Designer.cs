@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ToJePrivela.Infrastructure.Persistence;
 
@@ -10,9 +11,11 @@ using ToJePrivela.Infrastructure.Persistence;
 namespace ToJePrivela.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ToJePrivelaDbContext))]
-    partial class ToJePrivelaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008084238_AddEnglishQuestionTexts")]
+    partial class AddEnglishQuestionTexts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");

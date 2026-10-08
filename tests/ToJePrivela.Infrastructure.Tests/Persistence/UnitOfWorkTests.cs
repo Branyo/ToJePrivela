@@ -71,7 +71,7 @@ public class UnitOfWorkTests : IDisposable
         typeof(QuestionCategory).GetProperty(nameof(QuestionCategory.Id))!.SetValue(missingCategory, 999);
         context.Attach(missingCategory);
         context.Questions.Add(new Question(
-            "How many wheels does a car have?", "4", missingCategory, 1, QuestionSource.Manual, DateTime.UtcNow));
+            "Koľko kolies má auto?", "How many wheels does a car have?", "4", missingCategory, 1, QuestionSource.Manual, DateTime.UtcNow));
 
         await Assert.ThrowsAsync<DbUpdateException>(() => sut.SaveChangesAsync());
     }

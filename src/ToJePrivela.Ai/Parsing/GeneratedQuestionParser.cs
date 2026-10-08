@@ -51,12 +51,14 @@ public sealed class GeneratedQuestionParser : IGeneratedQuestionParser
             return null;
         }
 
-        var question = ReadString(element, "question");
+        var questionSk = ReadString(element, "questionSk");
+        var questionEn = ReadString(element, "questionEn");
         var answer = ReadString(element, "answer");
 
-        return string.IsNullOrWhiteSpace(question) || string.IsNullOrWhiteSpace(answer)
+        // A question without both of its texts cannot be stored, so it counts as malformed.
+        return string.IsNullOrWhiteSpace(questionSk) || string.IsNullOrWhiteSpace(questionEn) || string.IsNullOrWhiteSpace(answer)
             ? null
-            : new ParsedQuestion(question, answer);
+            : new ParsedQuestion(questionSk, questionEn, answer);
     }
 
     /// <summary>The model answers with either a JSON number or a quoted number.</summary>

@@ -43,7 +43,7 @@ public class ErrorResponseTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/api/questions",
-            new { text = "How many legs has a spider?", answer = "eight", categoryId = 1 });
+            new { textSk = "How many legs has a spider?", textEn = "How many legs has a spider?", answer = "eight", categoryId = 1 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("Request.Invalid", await ProblemResponse.CodeOf(response));
@@ -54,7 +54,7 @@ public class ErrorResponseTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/api/questions",
-            new { text = "     ab        ", answer = "8", categoryId = 1 });
+            new { textSk = "     ab        ", textEn = "     ab        ", answer = "8", categoryId = 1 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("Request.Invalid", await ProblemResponse.CodeOf(response));

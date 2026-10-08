@@ -104,12 +104,20 @@ public class MapperTests
     public void QuestionMapper_CopiesEveryField()
     {
         var question = TestEntities.Question(
-            9, "Which year was ChatGPT publicly released?", "2022", TestEntities.Category(3, "História", "History"), 4, QuestionSource.Ai);
+            9,
+            "V ktorom roku bol verejne spustený ChatGPT?",
+            "2022",
+            TestEntities.Category(3, "História", "History"),
+            4,
+            QuestionSource.Ai,
+            textEn: "Which year was ChatGPT publicly released?");
 
         var dto = QuestionMapper.ToDto(question, Language.En);
 
         Assert.Equal(9, dto.Id);
         Assert.Equal("Which year was ChatGPT publicly released?", dto.Text);
+        Assert.Equal("V ktorom roku bol verejne spustený ChatGPT?", dto.TextSk);
+        Assert.Equal("Which year was ChatGPT publicly released?", dto.TextEn);
         Assert.Equal("2022", dto.Answer);
         Assert.Equal(3, dto.CategoryId);
         Assert.Equal("History", dto.CategoryName);
@@ -120,17 +128,38 @@ public class MapperTests
         Assert.Null(dto.LastViewedAt);
     }
 
+    [Theory]
+    [InlineData(Language.Sk)]
+    [InlineData(Language.En)]
+    public void QuestionMapper_ShowsTheSlovakTextOfAQuestionWithoutAnEnglishOne(Language language)
+    {
+        var question = TestEntities.WithoutEnglish(
+            TestEntities.Question(9, "V ktorom roku bol verejne spustený ChatGPT?", "2022", TestEntities.Category(3, "História", "History")));
+
+        var dto = QuestionMapper.ToDto(question, language);
+
+        Assert.Equal("V ktorom roku bol verejne spustený ChatGPT?", dto.Text);
+        Assert.Null(dto.TextEn);
+    }
+
     [Fact]
     public void QuestionMapper_BuildsAManualEntityFromRequest()
     {
         var category = TestEntities.Category(3, "History");
 
         var question = QuestionMapper.ToEntity(
-            new CreateQuestionRequest { Text = "Which year was ChatGPT publicly released?", Answer = "2022", CategoryId = 3 },
+            new CreateQuestionRequest
+            {
+                TextSk = "V ktorom roku bol verejne spustený ChatGPT?",
+                TextEn = "Which year was ChatGPT publicly released?",
+                Answer = "2022",
+                CategoryId = 3
+            },
             category,
             badPoints: 2,
             createdAt: Start);
 
+        Assert.Equal(("V ktorom roku bol verejne spustený ChatGPT?", "Which year was ChatGPT publicly released?"), (question.TextSk, question.TextEn));
         Assert.Equal("2022", question.Answer);
         Assert.Same(category, question.Category);
         Assert.Equal(3, question.CategoryId);

@@ -7,7 +7,7 @@ namespace ToJePrivela.Application.QuestionGeneration;
 
 /// <summary>
 /// Decides which generated questions are usable, whatever provider wrote them: the domain must accept
-/// them, the answer must be readable in a quiz and the question must not give its answer away.
+/// both texts, the answer must be readable in a quiz and neither text may give the answer away.
 /// </summary>
 public static partial class GeneratedQuestionFilter
 {
@@ -18,14 +18,16 @@ public static partial class GeneratedQuestionFilter
     {
         ArgumentNullException.ThrowIfNull(question);
 
-        if (!Question.IsValidText(question.Text) || !Question.IsValidAnswer(question.Answer))
+        if (!Question.IsValidText(question.TextSk)
+            || !Question.IsValidText(question.TextEn)
+            || !Question.IsValidAnswer(question.Answer))
         {
             return false;
         }
 
         var value = Math.Abs(decimal.Parse(question.Answer, NumberStyles.Float, CultureInfo.InvariantCulture));
 
-        return value <= MaxAnswer && !StatesNumber(question.Text, value);
+        return value <= MaxAnswer && !StatesNumber(question.TextSk, value) && !StatesNumber(question.TextEn, value);
     }
 
     /// <summary>A question that states its own answer gives it away ("In 1969, which year did Apollo 11 land?").</summary>

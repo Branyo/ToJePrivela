@@ -21,7 +21,7 @@ public class QuestionViewConcurrencyTests : IDisposable
         using var context = _database.CreateContext();
 
         var question = new Question(
-            "In which year did the Berlin Wall fall?", "1989", context.QuestionCategories.Find(HistoryId)!, 3,
+            "V ktorom roku padol Berlínsky múr?", "In which year did the Berlin Wall fall?", "1989", context.QuestionCategories.Find(HistoryId)!, 3,
             QuestionSource.Manual, DateTime.UtcNow);
         context.Questions.Add(question);
         context.SaveChanges();

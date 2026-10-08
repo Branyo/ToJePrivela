@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using ToJePrivela.Ai.OpenAi;
 using ToJePrivela.Ai.Parsing;
@@ -11,36 +10,36 @@ namespace ToJePrivela.Ai.Tests.OpenAi;
 public class OpenAiQuestionGeneratorTests
 {
     private const string ValidQuestion = "Which year was ChatGPT publicly released?";
+    private const string ValidSlovakQuestion = "V ktorom roku bol verejne spustený ChatGPT?";
 
     private readonly IChatCompletionClient _client = Substitute.For<IChatCompletionClient>();
     private readonly IQuestionPromptBuilder _promptBuilder = Substitute.For<IQuestionPromptBuilder>();
     private readonly IGeneratedQuestionParser _parser = Substitute.For<IGeneratedQuestionParser>();
-    private readonly OpenAiOptions _options = new() { Language = "Slovak" };
 
     private OpenAiQuestionGenerator CreateSut() => new(
         _client,
         _promptBuilder,
         _parser,
-        Options.Create(_options),
         NullLogger<OpenAiQuestionGenerator>.Instance);
 
     [Fact]
     public async Task GenerateAsync_MapsParsedQuestions()
     {
-        _parser.Parse(Arg.Any<string>()).Returns([new ParsedQuestion($" {ValidQuestion} ", " 2022 ")]);
+        _parser.Parse(Arg.Any<string>()).Returns([new ParsedQuestion($" {ValidSlovakQuestion} ", $" {ValidQuestion} ", " 2022 ")]);
 
         var questions = await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 5));
 
         var question = Assert.Single(questions);
-        Assert.Equal(ValidQuestion, question.Text);
+        Assert.Equal(ValidSlovakQuestion, question.TextSk);
+        Assert.Equal(ValidQuestion, question.TextEn);
         Assert.Equal("2022", question.Answer);
     }
 
     [Fact]
-    public async Task GenerateAsync_BuildsThePromptInTheConfiguredLanguage()
+    public async Task GenerateAsync_SendsTheBuiltPrompt()
     {
         var request = new QuestionGenerationRequest("Sport", 5, "Football", ["Some existing question?"]);
-        _promptBuilder.BuildQuestions(request, "Slovak").Returns("the prompt");
+        _promptBuilder.BuildQuestions(request).Returns("the prompt");
         _parser.Parse(Arg.Any<string>()).Returns([]);
 
         await CreateSut().GenerateAsync(request);
@@ -53,10 +52,10 @@ public class OpenAiQuestionGeneratorTests
     {
         _parser.Parse(Arg.Any<string>()).Returns(
         [
-            new ParsedQuestion(ValidQuestion, "2022"),
-            new ParsedQuestion(ValidQuestion, "two thousand"),
-            new ParsedQuestion("Short", "5"),
-            new ParsedQuestion("In 1969, which year did Apollo 11 land on the Moon?", "1969")
+            new ParsedQuestion(ValidQuestion, ValidQuestion, "2022"),
+            new ParsedQuestion(ValidQuestion, ValidQuestion, "two thousand"),
+            new ParsedQuestion("Short", "Short", "5"),
+            new ParsedQuestion("In 1969, which year did Apollo 11 land on the Moon?", "In 1969, which year did Apollo 11 land on the Moon?", "1969")
         ]);
 
         var questions = await CreateSut().GenerateAsync(new QuestionGenerationRequest("Sport", 2));
@@ -90,7 +89,7 @@ public class OpenAiQuestionGeneratorTests
     [Fact]
     public async Task GenerateSubtopicsAsync_ReturnsTheParsedSubtopics()
     {
-        _promptBuilder.BuildSubtopics("Sport", 3, "Slovak").Returns("subtopic prompt");
+        _promptBuilder.BuildSubtopics("Sport", 3).Returns("subtopic prompt");
         _client.CompleteAsync("subtopic prompt", Arg.Any<CancellationToken>()).Returns("reply");
         _parser.ParseSubtopics("reply").Returns(["Football", "Tennis", "Hockey"]);
 

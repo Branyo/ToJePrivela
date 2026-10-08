@@ -2,6 +2,10 @@ using ToJePrivela.Domain.Common;
 
 namespace ToJePrivela.Domain.Entities;
 
+/// <summary>
+/// Written in Slovak and in English. Questions stored before texts became bilingual have no English text yet;
+/// they show their Slovak one instead.
+/// </summary>
 public class Question
 {
     public const int TextMinLength = 8;
@@ -11,12 +15,13 @@ public class Question
 
     private Question()
     {
-        Text = string.Empty;
+        TextSk = string.Empty;
         Answer = string.Empty;
     }
 
     public Question(
-        string text,
+        string textSk,
+        string textEn,
         string answer,
         QuestionCategory category,
         int badPoints,
@@ -25,7 +30,8 @@ public class Question
     {
         ArgumentNullException.ThrowIfNull(category);
 
-        Text = Guard.AgainstInvalidLength(text, nameof(text), TextMinLength, TextMaxLength);
+        TextSk = Guard.AgainstInvalidLength(textSk, nameof(textSk), TextMinLength, TextMaxLength);
+        TextEn = Guard.AgainstInvalidLength(textEn, nameof(textEn), TextMinLength, TextMaxLength);
         Answer = Guard.AgainstNonNumeric(answer, nameof(answer));
         BadPoints = Guard.AgainstOutOfRange(badPoints, nameof(badPoints), MinBadPoints, MaxBadPoints);
         Category = category;
@@ -34,7 +40,7 @@ public class Question
         CreatedAt = UtcTime.Normalize(createdAt);
     }
 
-    /// <summary>Whether the constructor would accept <paramref name="text"/>, without throwing.</summary>
+    /// <summary>Whether the constructor would accept <paramref name="text"/> in either language, without throwing.</summary>
     public static bool IsValidText(string? text) =>
         text?.Trim().Length is >= TextMinLength and <= TextMaxLength;
 
@@ -44,7 +50,10 @@ public class Question
 
     public int Id { get; private set; }
 
-    public string Text { get; private set; }
+    public string TextSk { get; private set; }
+
+    /// <summary>Null only for a question stored before texts became bilingual.</summary>
+    public string? TextEn { get; private set; }
 
     /// <summary>Stored as text, but always a numeric value.</summary>
     public string Answer { get; private set; }
@@ -71,19 +80,32 @@ public class Question
     /// </summary>
     public long Version { get; private set; }
 
+    /// <summary>The text in <paramref name="language"/>; the Slovak one while an English one is missing.</summary>
+    public string TextIn(Language language) => language == Language.En ? TextEn ?? TextSk : TextSk;
+
     /// <summary>
     /// Validates everything before assigning, so a rejected update leaves the question untouched.
     /// A question someone has edited is theirs now, so it becomes <see cref="QuestionSource.Manual"/>.
     /// </summary>
-    public void Update(string text, string answer, QuestionCategory category, int badPoints)
+    /// <param name="textEn">Null keeps a question without an English text as it is; it never removes one.</param>
+    public void Update(string textSk, string? textEn, string answer, QuestionCategory category, int badPoints)
     {
         ArgumentNullException.ThrowIfNull(category);
 
-        var validatedText = Guard.AgainstInvalidLength(text, nameof(text), TextMinLength, TextMaxLength);
+        if (textEn is null && TextEn is not null)
+        {
+            throw new DomainException("textEn must not be removed.");
+        }
+
+        var validatedTextSk = Guard.AgainstInvalidLength(textSk, nameof(textSk), TextMinLength, TextMaxLength);
+        var validatedTextEn = textEn is null
+            ? null
+            : Guard.AgainstInvalidLength(textEn, nameof(textEn), TextMinLength, TextMaxLength);
         var validatedAnswer = Guard.AgainstNonNumeric(answer, nameof(answer));
         var validatedBadPoints = Guard.AgainstOutOfRange(badPoints, nameof(badPoints), MinBadPoints, MaxBadPoints);
 
-        Text = validatedText;
+        TextSk = validatedTextSk;
+        TextEn = validatedTextEn;
         Answer = validatedAnswer;
         BadPoints = validatedBadPoints;
         Category = category;

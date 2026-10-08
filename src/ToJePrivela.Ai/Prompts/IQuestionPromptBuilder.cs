@@ -4,7 +4,9 @@ namespace ToJePrivela.Ai.Prompts;
 
 public interface IQuestionPromptBuilder
 {
-    string BuildQuestions(QuestionGenerationRequest request, string language);
+    /// <summary>Asks for every question in Slovak and in English.</summary>
+    string BuildQuestions(QuestionGenerationRequest request);
 
-    string BuildSubtopics(string category, int count, string language);
+    /// <summary>Asks for the subtopics in English, like the category name it is given.</summary>
+    string BuildSubtopics(string category, int count);
 }

@@ -80,7 +80,11 @@ export interface CreatedQuestionCategory extends QuestionCategory {
 
 export interface Question {
   id: number;
+  /** In the language the request asked for (`Accept-Language`), ready to show; Slovak while an English one is missing. */
   text: string;
+  textSk: string;
+  /** `null` for a question stored before texts became bilingual. */
+  textEn: string | null;
   answer: string;
   categoryId: number;
   /** In the language the request asked for (`Accept-Language`), ready to show. */

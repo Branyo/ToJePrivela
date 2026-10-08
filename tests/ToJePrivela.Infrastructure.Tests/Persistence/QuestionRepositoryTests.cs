@@ -24,9 +24,9 @@ public class QuestionRepositoryTests : IDisposable
         var history = context.QuestionCategories.Find(HistoryId)!;
 
         context.Questions.AddRange(
-            new Question("Which year was ChatGPT publicly released?", "2022", history, 3, QuestionSource.Manual, CreatedAt),
-            new Question("In which year did the Berlin Wall fall?", "1989", history, 5, QuestionSource.Ai, CreatedAt),
-            new Question("How many players are on a football pitch?", "11", sport, 3, QuestionSource.Ai, CreatedAt));
+            new Question("V ktorom roku bol verejne spustený ChatGPT?", "Which year was ChatGPT publicly released?", "2022", history, 3, QuestionSource.Manual, CreatedAt),
+            new Question("V ktorom roku padol Berlínsky múr?", "In which year did the Berlin Wall fall?", "1989", history, 5, QuestionSource.Ai, CreatedAt),
+            new Question("Koľko hráčov je na futbalovom ihrisku?", "How many players are on a football pitch?", "11", sport, 3, QuestionSource.Ai, CreatedAt));
 
         context.SaveChanges();
     }
@@ -100,14 +100,14 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetTextsAsync_ReturnsTheCategoryTextsNewestFirst()
+    public async Task GetTextsAsync_ReturnsTheCategorySlovakTextsNewestFirst()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
         var texts = await sut.GetTextsAsync(HistoryId);
 
-        Assert.Equal(["In which year did the Berlin Wall fall?", "Which year was ChatGPT publicly released?"], texts);
+        Assert.Equal(["V ktorom roku padol Berlínsky múr?", "V ktorom roku bol verejne spustený ChatGPT?"], texts);
     }
 
     [Fact]
@@ -197,8 +197,8 @@ public class QuestionRepositoryTests : IDisposable
         var cars = (await context.QuestionCategories.FindAsync(CarsId))!;
 
         await sut.AddRangeAsync([
-            new Question("How many wheels does a car have?", "4", cars, 1, QuestionSource.Ai, CreatedAt),
-            new Question("How many doors does a coupe have?", "2", cars, 2, QuestionSource.Ai, CreatedAt)
+            new Question("Koľko kolies má auto?", "How many wheels does a car have?", "4", cars, 1, QuestionSource.Ai, CreatedAt),
+            new Question("Koľko dverí má kupé?", "How many doors does a coupe have?", "2", cars, 2, QuestionSource.Ai, CreatedAt)
         ]);
         await context.SaveChangesAsync();
 

@@ -12,6 +12,7 @@ namespace ToJePrivela.Application.Tests.Questions;
 public class QuestionServiceTests
 {
     private const string ValidText = "Which year was ChatGPT publicly released?";
+    private const string ValidTextSk = "V ktorom roku bol verejne spustený ChatGPT?";
     private const int PickedBadPoints = 2;
 
     private static readonly DateTimeOffset Now = new(2026, 9, 24, 12, 30, 0, TimeSpan.Zero);
@@ -247,13 +248,15 @@ public class QuestionServiceTests
     {
         var result = await _sut.CreateAsync(new CreateQuestionRequest
         {
-            Text = ValidText,
+            TextSk = ValidTextSk,
+            TextEn = ValidText,
             Answer = "2022",
             CategoryId = 3,
             BadPoints = 5
         });
 
         Assert.True(result.IsSuccess);
+        Assert.Equal((ValidTextSk, ValidTextSk, ValidText), (result.Value.Text, result.Value.TextSk, result.Value.TextEn));
         Assert.Equal("2022", result.Value.Answer);
         Assert.Equal("História", result.Value.CategoryName);
         Assert.Equal(5, result.Value.BadPoints);
@@ -264,9 +267,28 @@ public class QuestionServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_RequiresTheEnglishText()
+    {
+        var result = await _sut.CreateAsync(new CreateQuestionRequest { TextSk = ValidTextSk, Answer = "2022", CategoryId = 3 });
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _questions.DidNotReceive().AddAsync(Arg.Any<Question>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsTheQuestionInTheRequestedLanguage()
+    {
+        _language.Language = Language.En;
+
+        var result = await _sut.CreateAsync(new CreateQuestionRequest { TextSk = ValidTextSk, TextEn = ValidText, Answer = "2022", CategoryId = 3 });
+
+        Assert.Equal((ValidText, "History"), (result.Value.Text, result.Value.CategoryName));
+    }
+
+    [Fact]
     public async Task CreateAsync_PicksBadPointsWhenNoneAreGiven()
     {
-        var result = await _sut.CreateAsync(new CreateQuestionRequest { Text = ValidText, Answer = "2022", CategoryId = 3 });
+        var result = await _sut.CreateAsync(new CreateQuestionRequest { TextSk = ValidTextSk, TextEn = ValidText, Answer = "2022", CategoryId = 3 });
 
         Assert.Equal(PickedBadPoints, result.Value.BadPoints);
     }
@@ -274,7 +296,7 @@ public class QuestionServiceTests
     [Fact]
     public async Task CreateAsync_RejectsAnUnknownCategory()
     {
-        var result = await _sut.CreateAsync(new CreateQuestionRequest { Text = ValidText, Answer = "2022", CategoryId = 99 });
+        var result = await _sut.CreateAsync(new CreateQuestionRequest { TextSk = ValidTextSk, TextEn = ValidText, Answer = "2022", CategoryId = 99 });
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.Validation, result.Error.Type);
@@ -289,13 +311,15 @@ public class QuestionServiceTests
 
         var result = await _sut.UpdateAsync(1, new UpdateQuestionRequest
         {
-            Text = "How many players are on a football pitch?",
+            TextSk = "Koľko hráčov je na futbalovom ihrisku?",
+            TextEn = "How many players are on a football pitch?",
             Answer = "11",
             CategoryId = 2,
             BadPoints = 1
         });
 
         Assert.True(result.IsSuccess);
+        Assert.Equal(("Koľko hráčov je na futbalovom ihrisku?", "How many players are on a football pitch?"), (question.TextSk, question.TextEn));
         Assert.Equal("11", question.Answer);
         Assert.Same(_sport, question.Category);
         Assert.Equal(1, question.BadPoints);
@@ -308,9 +332,33 @@ public class QuestionServiceTests
         var question = TestEntities.Question(1, ValidText, "2022", _history, 4);
         _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
 
-        await _sut.UpdateAsync(1, new UpdateQuestionRequest { Text = ValidText, Answer = "2023", CategoryId = 3 });
+        await _sut.UpdateAsync(1, new UpdateQuestionRequest { TextSk = ValidTextSk, Answer = "2023", CategoryId = 3 });
 
         Assert.Equal(4, question.BadPoints);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_KeepsTheEnglishTextWhenNoneIsGiven()
+    {
+        var question = TestEntities.Question(1, ValidTextSk, "2022", _history, 4, textEn: ValidText);
+        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
+
+        await _sut.UpdateAsync(1, new UpdateQuestionRequest { TextSk = "V ktorom roku spustili ChatGPT?", Answer = "2022", CategoryId = 3 });
+
+        Assert.Equal(("V ktorom roku spustili ChatGPT?", ValidText), (question.TextSk, question.TextEn));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_LeavesAQuestionWithoutEnglishTextAsItIsWhenNoneIsGiven()
+    {
+        var question = TestEntities.WithoutEnglish(TestEntities.Question(1, ValidTextSk, "2022", _history, 4));
+        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
+
+        var result = await _sut.UpdateAsync(1, new UpdateQuestionRequest { TextSk = ValidTextSk, Answer = "2023", CategoryId = 3 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(question.TextEn);
+        Assert.Equal("2023", question.Answer);
     }
 
     [Fact]
@@ -319,7 +367,7 @@ public class QuestionServiceTests
         var question = TestEntities.Question(1, ValidText, "2022", _history, 4, QuestionSource.Ai);
         _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
 
-        await _sut.UpdateAsync(1, new UpdateQuestionRequest { Text = ValidText, Answer = "2022", CategoryId = 3 });
+        await _sut.UpdateAsync(1, new UpdateQuestionRequest { TextSk = ValidTextSk, Answer = "2022", CategoryId = 3 });
 
         Assert.Equal(QuestionSource.Manual, question.Source);
     }
@@ -330,7 +378,7 @@ public class QuestionServiceTests
         var question = TestEntities.Question(1, ValidText, "2022", _history, 3);
         _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
 
-        var result = await _sut.UpdateAsync(1, new UpdateQuestionRequest { Text = ValidText, Answer = "2022", CategoryId = 99 });
+        var result = await _sut.UpdateAsync(1, new UpdateQuestionRequest { TextSk = ValidTextSk, Answer = "2022", CategoryId = 99 });
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.Validation, result.Error.Type);
@@ -343,7 +391,7 @@ public class QuestionServiceTests
     {
         _questions.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Question?)null);
 
-        var result = await _sut.UpdateAsync(7, new UpdateQuestionRequest { Text = ValidText, Answer = "2022", CategoryId = 3 });
+        var result = await _sut.UpdateAsync(7, new UpdateQuestionRequest { TextSk = ValidTextSk, Answer = "2022", CategoryId = 3 });
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
