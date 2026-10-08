@@ -4,6 +4,7 @@ using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Questions;
 using ToJePrivela.Application.Questions.Dtos;
 using ToJePrivela.Application.Tests.Common;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Tests.Questions;
@@ -15,8 +16,9 @@ public class QuestionServiceTests
 
     private static readonly DateTimeOffset Now = new(2026, 9, 24, 12, 30, 0, TimeSpan.Zero);
 
-    private readonly QuestionCategory _history = TestEntities.Category(3, "History");
-    private readonly QuestionCategory _sport = TestEntities.Category(2, "Sport");
+    private readonly QuestionCategory _history = TestEntities.Category(3, "História", "History");
+    private readonly QuestionCategory _sport = TestEntities.Category(2, "Šport", "Sport");
+    private readonly FixedCurrentLanguage _language = new();
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly IQuestionCategoryRepository _categories = Substitute.For<IQuestionCategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
@@ -36,7 +38,22 @@ public class QuestionServiceTests
             new FixedBadPointsPicker(PickedBadPoints),
             _questionPicker,
             new FixedTimeProvider(Now),
+            _language,
             _unitOfWork);
+    }
+
+    [Theory]
+    [InlineData(Language.Sk, "História")]
+    [InlineData(Language.En, "History")]
+    public async Task GetByIdAsync_NamesTheCategoryInTheRequestedLanguage(Language language, string categoryName)
+    {
+        _language.Language = language;
+        _questions.GetByIdAsync(8, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(8, ValidText, "2022", _history));
+
+        var result = await _sut.GetByIdAsync(8);
+
+        Assert.Equal(categoryName, result.Value.CategoryName);
     }
 
     [Fact]
@@ -209,7 +226,7 @@ public class QuestionServiceTests
         Assert.True(result.IsSuccess);
         var question = Assert.Single(result.Value);
         Assert.Equal(3, question.CategoryId);
-        Assert.Equal("History", question.CategoryName);
+        Assert.Equal("História", question.CategoryName);
         Assert.Equal("Ai", question.Source);
         Assert.Equal(4, question.BadPoints);
     }
@@ -238,7 +255,7 @@ public class QuestionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal("2022", result.Value.Answer);
-        Assert.Equal("History", result.Value.CategoryName);
+        Assert.Equal("História", result.Value.CategoryName);
         Assert.Equal(5, result.Value.BadPoints);
         Assert.Equal("Manual", result.Value.Source);
         Assert.Equal(Now.UtcDateTime, result.Value.CreatedAt);

@@ -157,7 +157,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/questions` | `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
 | GET | `/api/question-categories` | |
 | GET/DELETE | `/api/question-categories/{id}` | Delete also removes every question in the category |
-| POST | `/api/question-categories` | `questionCount` (0–200) is required; 503 and nothing stored when generation fails |
+| POST | `/api/question-categories` | `nameSk`, `nameEn` or both (the AI translates a missing one); `questionCount` (0–200) is required; 503 and nothing stored when translation or generation fails |
 | POST | `/api/question-categories/{id}/ai-questions` | Body `{ "count": 1–200 }`; adds AI questions, skipping ones the category has |
 | DELETE | `/api/question-categories/{id}/ai-questions` | Removes the AI questions only; returns `{ "deleted": n }` |
 
@@ -172,6 +172,13 @@ answers 403 `Auth.Forbidden` to everyone else; reading questions and recording v
 
 Categories are immutable — there is no PUT; delete the category and create a new one instead. The two
 AI-generating POSTs share one rate limit.
+
+Every category is named in Slovak (`nameSk`) and English (`nameEn`); both names are unique. Creating one needs a name
+in one language at least: the AI translates it into the other with a single, simple prompt (409
+`QuestionCategory.NameTaken` is checked before and after translating; 503 `QuestionCategory.TranslationUnavailable` /
+`QuestionCategory.TranslationFailed` when it cannot). Responses carry both names plus `name` (and a question's
+`categoryName`) in the language the request's `Accept-Language` header asks for — `sk` (the default) or `en` — ready
+to show.
 
 A request a rate limit refuses answers 429 `RateLimit.Exceeded` with `retryAfterSeconds` (also sent as the
 `Retry-After` header): how long until the limit lets the caller try again.

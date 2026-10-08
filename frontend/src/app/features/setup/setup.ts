@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CategoriesApi } from '../../core/api/categories-api';
@@ -107,7 +107,11 @@ export class Setup {
 
   constructor() {
     this.loadPlayers();
-    this.loadCategories();
+    // Category names arrive in the shown language, so they are fetched again after a switch.
+    effect(() => {
+      this.i18n.language();
+      untracked(() => this.loadCategories());
+    });
   }
 
   protected addPlayer(): void {

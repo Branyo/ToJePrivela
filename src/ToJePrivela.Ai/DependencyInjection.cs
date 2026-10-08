@@ -19,6 +19,8 @@ public static class DependencyInjection
 
         services.AddSingleton<IQuestionPromptBuilder, QuestionPromptBuilder>();
         services.AddSingleton<IGeneratedQuestionParser, GeneratedQuestionParser>();
+        services.AddSingleton<ITranslationPromptBuilder, TranslationPromptBuilder>();
+        services.AddSingleton<ITranslationParser, TranslationParser>();
 
         services.AddHttpClient<IChatCompletionClient, OpenAiChatCompletionClient>((provider, client) =>
         {
@@ -28,6 +30,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IQuestionGenerator, OpenAiQuestionGenerator>();
+        services.AddScoped<ITextTranslator, OpenAiTextTranslator>();
 
         return services;
     }

@@ -54,7 +54,7 @@ public class UnitOfWorkTests : IDisposable
         var categories = new QuestionCategoryRepository(context);
         var sut = new UnitOfWork(context);
 
-        await categories.AddAsync(new QuestionCategory("sport"));
+        await categories.AddAsync(new QuestionCategory("šport", "Sports"));
 
         var exception = await Assert.ThrowsAsync<UniqueConstraintException>(() => sut.SaveChangesAsync());
         Assert.IsType<DbUpdateException>(exception.InnerException);
@@ -67,7 +67,7 @@ public class UnitOfWorkTests : IDisposable
         var sut = new UnitOfWork(context);
 
         // A question pointing at a category that does not exist breaks the foreign key, not a unique index.
-        var missingCategory = new QuestionCategory("Missing");
+        var missingCategory = new QuestionCategory("Chýba", "Missing");
         typeof(QuestionCategory).GetProperty(nameof(QuestionCategory.Id))!.SetValue(missingCategory, 999);
         context.Attach(missingCategory);
         context.Questions.Add(new Question(

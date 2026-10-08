@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { QuestionsApi } from '../../core/api/questions-api';
-import { LanguageService, Message, compareNames } from '../../core/i18n/language';
+import { LanguageCode, LanguageService, Message, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 
@@ -39,7 +39,7 @@ type PendingDelete = { id: number; what: 'ai' | 'category' };
 export class AiQuestionsSection {
   private readonly categoriesApi = inject(CategoriesApi);
   private readonly questionsApi = inject(QuestionsApi);
-  private readonly i18n = inject(LanguageService);
+  protected readonly i18n = inject(LanguageService);
   private readonly rulesStore = inject(GameRulesStore);
 
   /** `null` while the backend's rules are missing; the inputs then take anything and the actions say so. */
@@ -50,6 +50,8 @@ export class AiQuestionsSection {
   private readonly counts = signal<ReadonlyMap<number, { total: number; ai: number }>>(new Map());
 
   protected readonly newName = signal('');
+  /** The language the new name is typed in; the AI translates it to the other one. */
+  protected readonly newNameLanguage = signal<LanguageCode>(this.i18n.language());
   protected readonly newCount = signal(NEW_CATEGORY_COUNT);
   /** Per category: how many AI questions to add. */
   protected readonly moreCounts = signal<ReadonlyMap<number, number>>(new Map());
@@ -72,7 +74,16 @@ export class AiQuestionsSection {
 
   constructor() {
     void this.rulesStore.ensureLoaded();
-    this.load();
+    // Names arrive in the shown language, so they are fetched again after a switch.
+    effect(() => {
+      this.i18n.language();
+      untracked(() => this.load());
+    });
+  }
+
+  /** The category's name in the language that is not shown, so admins can check the AI's translation. */
+  protected otherName(category: QuestionCategory): string {
+    return this.i18n.language() === 'sk' ? category.nameEn : category.nameSk;
   }
 
   protected async create(): Promise<void> {
@@ -92,7 +103,7 @@ export class AiQuestionsSection {
     }
 
     this.start('new');
-    this.categoriesApi.create(name, count).subscribe({
+    this.categoriesApi.create(name, this.newNameLanguage(), count).subscribe({
       next: (category) => {
         this.newName.set('');
         this.done({

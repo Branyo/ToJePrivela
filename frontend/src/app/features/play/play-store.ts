@@ -107,6 +107,26 @@ export class PlayStore {
     }
   }
 
+  /**
+   * Fetches the current question again, e.g. after a language switch, so its texts come in the shown language. The
+   * round goes on unchanged; on a failure the question simply stays as it was.
+   */
+  async refreshQuestion(): Promise<void> {
+    const current = this.question();
+    if (!current) {
+      return;
+    }
+
+    try {
+      const fresh = await firstValueFrom(this.questionsApi.get(current.id));
+      if (this.question()?.id === current.id) {
+        this.question.set(fresh);
+      }
+    } catch {
+      // Still readable in the previous language.
+    }
+  }
+
   /** The starting player set the question's worth; now its text is shown. */
   choose(badPoints: number): void {
     const limit = this.rules()?.badPoints;

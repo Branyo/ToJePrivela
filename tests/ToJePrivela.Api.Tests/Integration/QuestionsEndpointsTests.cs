@@ -36,7 +36,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
         var question = await response.Content.ReadFromJsonAsync<QuestionDto>();
         Assert.Equal(2, question!.BadPoints);
         Assert.Equal(HistoryId, question.CategoryId);
-        Assert.Equal("History", question.CategoryName);
+        Assert.Equal("História", question.CategoryName);
         Assert.Equal("Manual", question.Source);
         Assert.NotEqual(default, question.CreatedAt);
     }
@@ -94,9 +94,9 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
         var ai = await _client.GetFromJsonAsync<List<QuestionDto>>($"/api/questions?categoryId={CarsId}&source=Ai");
 
         Assert.NotEmpty(manual!);
-        Assert.All(manual!, question => Assert.Equal(("Cars", "Manual"), (question.CategoryName, question.Source)));
+        Assert.All(manual!, question => Assert.Equal(("Autá", "Manual"), (question.CategoryName, question.Source)));
         Assert.True(ai!.Count >= 2);
-        Assert.All(ai, question => Assert.Equal(("Cars", "Ai"), (question.CategoryName, question.Source)));
+        Assert.All(ai, question => Assert.Equal(("Autá", "Ai"), (question.CategoryName, question.Source)));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
 
         var updated = await _client.GetFromJsonAsync<QuestionDto>($"/api/questions/{question.Id}");
         Assert.Equal("22", updated!.Answer);
-        Assert.Equal("Sport", updated.CategoryName);
+        Assert.Equal("Šport", updated.CategoryName);
         Assert.Equal(5, updated.BadPoints);
     }
 
@@ -284,7 +284,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     private async Task<int> CreateCategoryAsync()
     {
         var name = $"Test {Guid.NewGuid():N}"[..20];
-        var response = await _client.PostAsJsonAsync("/api/question-categories", new { name, questionCount = 0 });
+        var response = await _client.PostAsJsonAsync("/api/question-categories", new { nameSk = name, questionCount = 0 });
         response.EnsureSuccessStatusCode();
 
         return (await response.Content.ReadFromJsonAsync<CreatedQuestionCategoryDto>())!.Id;

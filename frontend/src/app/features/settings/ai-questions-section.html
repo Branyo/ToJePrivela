@@ -12,10 +12,26 @@
   <section class="panel">
     <h2 class="panel__title">{{ 'setup.generator.title' | translate }}</h2>
     <form class="generator" (submit)="$event.preventDefault(); create()">
+      <div class="name-language" role="group" [attr.aria-label]="'setup.generator.nameLanguage' | translate">
+        @for (code of i18n.languages; track code) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--on]="newNameLanguage() === code"
+            [attr.aria-pressed]="newNameLanguage() === code"
+            [title]="'languages.' + code | translate"
+            [disabled]="working() !== null"
+            (click)="newNameLanguage.set(code)"
+          >
+            {{ code.toUpperCase() }}
+          </button>
+        }
+      </div>
       <input
         class="text-input"
         [placeholder]="'setup.generator.namePlaceholder' | translate"
         [attr.aria-label]="'setup.generator.name' | translate"
+        [attr.lang]="newNameLanguage()"
         [attr.maxlength]="nameLimit()?.max ?? null"
         [value]="newName()"
         (input)="onNameInput($event)"
@@ -39,6 +55,7 @@
         }
       </button>
     </form>
+    <p class="muted hint">{{ 'setup.generator.translated' | translate }}</p>
   </section>
 
   <section class="panel">
@@ -54,6 +71,7 @@
           <li class="row" [class.row--busy]="working() === row.category.id">
             <div class="row__head">
               <strong class="row__name">{{ row.category.name }}</strong>
+              <span class="muted row__other" [attr.lang]="i18n.language() === 'sk' ? 'en' : 'sk'">{{ otherName(row.category) }}</span>
               <span class="muted">{{ 'admin.counts' | translate: { total: row.total, ai: row.ai } }}</span>
             </div>
 

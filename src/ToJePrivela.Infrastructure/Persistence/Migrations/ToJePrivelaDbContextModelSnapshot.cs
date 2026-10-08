@@ -249,20 +249,34 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("NameEn")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
-                    b.Property<string>("NameKey")
+                    b.Property<string>("NameEnKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NameSk")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("NameSkKey")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NameKey")
+                    b.HasIndex("NameEnKey")
+                        .IsUnique();
+
+                    b.HasIndex("NameSkKey")
                         .IsUnique();
 
                     b.ToTable("QuestionCategories");

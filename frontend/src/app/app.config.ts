@@ -10,6 +10,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth-interceptor';
 import { AuthStore } from './core/auth/auth-store';
 import { DEFAULT_LANGUAGE, LanguageService } from './core/i18n/language';
+import { languageInterceptor } from './core/i18n/language-interceptor';
 import { TranslatedTitleStrategy } from './core/i18n/translated-title-strategy';
 import { GameRulesStore } from './core/rules/game-rules-store';
 
@@ -20,7 +21,7 @@ registerLocaleData(localeEnGb, 'en-GB');
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, languageInterceptor])),
     provideRouter(routes, withComponentInputBinding()),
     provideTranslateService({
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

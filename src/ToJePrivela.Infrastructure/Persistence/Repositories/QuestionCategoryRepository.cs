@@ -11,10 +11,13 @@ public sealed class QuestionCategoryRepository : Repository<QuestionCategory>, I
     {
     }
 
-    public async Task<QuestionCategory?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+    public async Task<QuestionCategory?> GetByNameAsync(string name, Language language, CancellationToken cancellationToken = default)
     {
         var key = NameKeys.Of(name);
-        return await Set.FirstOrDefaultAsync(qc => qc.NameKey == key, cancellationToken);
+
+        return language == Language.En
+            ? await Set.FirstOrDefaultAsync(qc => qc.NameEnKey == key, cancellationToken)
+            : await Set.FirstOrDefaultAsync(qc => qc.NameSkKey == key, cancellationToken);
     }
 
     public async Task<IReadOnlyList<int>> GetMissingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default)

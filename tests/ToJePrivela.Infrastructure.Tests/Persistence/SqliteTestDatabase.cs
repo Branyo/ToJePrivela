@@ -23,8 +23,10 @@ public sealed class SqliteTestDatabase : IDisposable
         if (withTestCategories)
         {
             context.Database.ExecuteSqlRaw("""
-                INSERT INTO "QuestionCategories" ("Id", "Name", "NameKey") VALUES
-                    (1, 'Cars', 'cars'), (2, 'Sport', 'sport'), (3, 'History', 'history');
+                INSERT INTO "QuestionCategories" ("Id", "NameSk", "NameSkKey", "NameEn", "NameEnKey") VALUES
+                    (1, 'Autá', 'autá', 'Cars', 'cars'),
+                    (2, 'Šport', 'šport', 'Sport', 'sport'),
+                    (3, 'História', 'história', 'History', 'history');
                 """);
         }
     }

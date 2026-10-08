@@ -8,6 +8,7 @@ using ToJePrivela.Ai;
 using ToJePrivela.Api.Common;
 using ToJePrivela.Api.Middleware;
 using ToJePrivela.Application;
+using ToJePrivela.Application.Abstractions.Localization;
 using ToJePrivela.Identity;
 using ToJePrivela.Infrastructure;
 
@@ -24,6 +25,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAiQuestionGeneration(builder.Configuration);
 builder.Services.AddPasswordLogins(builder.Configuration);
 builder.Services.AddAccessTokenAuthentication();
+// Category names and question texts are returned in the language the request's Accept-Language asks for.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentLanguage, HttpCurrentLanguage>();
 
 // Enums travel as their names ("Chooser"), which is a wire-format concern, so it is set here rather than on the DTOs.
 builder.Services.AddControllers()

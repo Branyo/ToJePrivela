@@ -95,7 +95,7 @@ public class GameStandingsTests
     {
         foreach (var points in badPoints)
         {
-            var question = new Question("How many wheels does a car have?", "4", new QuestionCategory("Cars"), points, QuestionSource.Manual, Start);
+            var question = new Question("How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), points, QuestionSource.Manual, Start);
             _game.AwardBadCard(playerId, question, null, Start.AddMinutes(1));
         }
     }

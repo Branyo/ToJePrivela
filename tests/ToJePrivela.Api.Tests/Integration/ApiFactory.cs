@@ -10,6 +10,7 @@ using NSubstitute;
 using ToJePrivela.Api.Common;
 using ToJePrivela.Application.Abstractions.Ai;
 using ToJePrivela.Application.Abstractions.Identity;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Identity.Tokens;
 using ToJePrivela.Infrastructure.Persistence;
@@ -34,6 +35,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     }
 
     public IQuestionGenerator QuestionGenerator { get; } = Substitute.For<IQuestionGenerator>();
+
+    /// <summary>Translates "Name" to "Name (En)" or "Name (Sk)".</summary>
+    public ITextTranslator Translator { get; } = Substitute.For<ITextTranslator>();
 
     /// <summary>
     /// A signed-in admin (<see cref="AdminPassword"/>) owning the seeded players; every client signs in as this login
@@ -79,6 +83,10 @@ public class ApiFactory : WebApplicationFactory<Program>
         QuestionGenerator
             .GenerateSubtopicsAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns([]);
+
+        Translator
+            .TranslateAsync(Arg.Any<string>(), Arg.Any<Language>(), Arg.Any<Language>(), Arg.Any<CancellationToken>())
+            .Returns(call => $"{call.ArgAt<string>(0)} ({call.ArgAt<Language>(2)})");
     }
 
     public void ReplyWithNothing() =>
@@ -112,6 +120,8 @@ public class ApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<IQuestionGenerator>();
             services.AddScoped(_ => QuestionGenerator);
+            services.RemoveAll<ITextTranslator>();
+            services.AddScoped(_ => Translator);
         });
     }
 
@@ -134,8 +144,10 @@ public class ApiFactory : WebApplicationFactory<Program>
 
         // No category is seeded any more; tests use these, with the ids they had as seed data.
         context.Database.ExecuteSqlRaw("""
-            INSERT INTO "QuestionCategories" ("Id", "Name", "NameKey") VALUES
-                (1, 'Cars', 'cars'), (2, 'Sport', 'sport'), (3, 'History', 'history');
+            INSERT INTO "QuestionCategories" ("Id", "NameSk", "NameSkKey", "NameEn", "NameEnKey") VALUES
+                (1, 'Autá', 'autá', 'Cars', 'cars'),
+                (2, 'Šport', 'šport', 'Sport', 'sport'),
+                (3, 'História', 'história', 'History', 'history');
             """);
 
         return host;

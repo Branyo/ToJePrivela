@@ -1,5 +1,6 @@
 namespace ToJePrivela.Application.Questions.Dtos;
 
+/// <param name="CategoryName">The category's name in the request's language, ready to show.</param>
 public sealed record QuestionDto(
     int Id,
     string Text,

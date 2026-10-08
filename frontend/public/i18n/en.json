@@ -110,7 +110,9 @@
       "count": "Number of questions",
       "thinking": "Thinking…",
       "generate": "✨ Generate",
-      "done": "\"{{name}}\" is ready with {{count}} fresh questions! ✨"
+      "done": "\"{{name}}\" is ready with {{count}} fresh questions! ✨",
+      "nameLanguage": "Language of the name",
+      "translated": "The AI translates the name into the other language."
     },
     "start": "🚀 Let's play!",
     "starting": "Shuffling… 🃏",
@@ -283,7 +285,9 @@
       },
       "QuestionCategory": {
         "NotFound": "This category does not exist.",
-        "NameTaken": "A category with this name already exists."
+        "NameTaken": "A category with this name already exists.",
+        "TranslationUnavailable": "The AI translator is not available right now. Please try again later.",
+        "TranslationFailed": "The name could not be translated. Please try again."
       },
       "QuestionGeneration": {
         "Failed": "No questions could be generated. Please try again."
