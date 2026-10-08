@@ -78,7 +78,7 @@ describe('Summary', () => {
 
     const title = page.querySelector('.spotlight__title');
     expect(title?.querySelector('.name')?.textContent).toBe('Ana');
-    expect(title?.textContent).toContain('summary.lost.one');
+    expect(title?.textContent).toContain('summary.lost.single');
     expect(title?.querySelectorAll('.donkey-wave__donkey').length).toBe(5);
   });
 
@@ -94,7 +94,7 @@ describe('Summary', () => {
 
     const title = page.querySelector('.spotlight__title');
     expect(title?.querySelector('.name')?.textContent).toBe('Ana common.and Bo');
-    expect(title?.textContent).toContain('summary.lost.other');
+    expect(title?.textContent).toContain('summary.lost.tie');
   });
 
   it('offers a rematch when every player still exists', async () => {

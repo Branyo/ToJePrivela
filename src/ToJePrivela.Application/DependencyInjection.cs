@@ -8,6 +8,7 @@ using ToJePrivela.Application.QuestionCategories;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.Questions;
 using ToJePrivela.Application.Rules;
+using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application;
 
@@ -24,7 +25,8 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(AdminAccountsOptions.SectionName))
             .Validate(
                 options => options.Admins.All(admin => RequestValidator.Validate(admin) is null),
-                "Every Authentication:Admins entry needs a Name (3–30 characters) and a Password (8–128 characters).")
+                $"Every Authentication:Admins entry needs a Name ({Account.NameMinLength}–{Account.NameMaxLength} characters) " +
+                $"and a Password ({PasswordRules.MinLength}–{PasswordRules.MaxLength} characters).")
             .ValidateOnStart();
 
         services.AddSingleton(TimeProvider.System);

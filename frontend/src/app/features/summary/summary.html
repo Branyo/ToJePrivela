@@ -40,7 +40,7 @@
               <span class="donkey-wave__donkey" [style.animation-delay.ms]="$index * 120">🫏</span>
             }
           </span>
-          {{ (losers().length === 1 ? 'summary.lost.one' : 'summary.lost.other') | translate }}
+          {{ (losers().length === 1 ? 'summary.lost.single' : 'summary.lost.tie') | translate }}
         </h2>
         <p class="spotlight__score">
           {{

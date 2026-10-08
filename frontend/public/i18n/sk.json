@@ -192,8 +192,8 @@
     "nobody": "Nikto nedostal ani jedného somára.",
     "wellBehaved": "Podozrivo slušný stôl…",
     "lost": {
-      "one": "prehral túto hru!",
-      "other": "prehrali túto hru!"
+      "single": "prehráva túto hru!",
+      "tie": "prehrávajú túto hru!"
     },
     "score": {
       "one": "🫏 trestné body: {{points}} z {{count}} karty",

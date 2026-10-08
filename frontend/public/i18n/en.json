@@ -184,8 +184,8 @@
     "nobody": "Nobody got a single donkey.",
     "wellBehaved": "Suspiciously well-behaved table…",
     "lost": {
-      "one": "lost this game!",
-      "other": "lost this game!"
+      "single": "loses this game!",
+      "tie": "lose this game!"
     },
     "score": {
       "one": "🫏 {{points}} bad points from {{count}} card",
