@@ -25,7 +25,7 @@ builder.Host.UseSerilog((context, configuration) =>
 
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddSingleton<IApiInfoService>(new ApiInfoService(typeof(Program).Assembly));
+builder.Services.AddApiInfo(typeof(Program).Assembly);
 builder.Services.AddAiQuestionGeneration(builder.Configuration);
 builder.Services.AddPasswordLogins(builder.Configuration);
 builder.Services.AddAccessTokenAuthentication();
@@ -137,17 +137,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Probes poll /api/health every few seconds; keep them out of the Information log.
+// Probes poll /api/health every few seconds; keep the successful ones out of the Information log, but a failing
+// check (503) or an error must stay visible.
 app.UseSerilogRequestLogging(options => options.GetLevel = (context, _, exception) =>
-    exception is null && context.Request.Path.StartsWithSegments("/api/health")
+    exception is null && context.Response.StatusCode < 400 && IsHealthProbe(context)
         ? LogEventLevel.Verbose
         : LogEventLevel.Information);
 
 // Not in Development: the Angular dev server proxies /api over plain HTTP, and a redirect to the HTTPS port is a
 // cross-origin redirect for the browser, which then drops the Authorization header, so every call would answer 401.
+// Health probes are exempt: they poll over plain HTTP and would read a 307 as a failure.
 if (!isTesting && !app.Environment.IsDevelopment())
 {
-    app.UseHttpsRedirection();
+    app.UseWhen(context => !IsHealthProbe(context), branch => branch.UseHttpsRedirection());
 }
 
 app.UseCors(CorsOptions.PolicyName);
@@ -171,6 +173,8 @@ app.MapHealthChecks("/api/health").AllowAnonymous();
 DeploymentSafety.StopDevelopmentReachableFromNetwork(app);
 
 await app.RunAsync();
+
+static bool IsHealthProbe(HttpContext context) => context.Request.Path.StartsWithSegments("/api/health");
 
 /// <summary>Exposed so the integration tests can host the API.</summary>
 public partial class Program;

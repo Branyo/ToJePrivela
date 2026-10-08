@@ -36,7 +36,7 @@ public class InfoEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var info = (await response.Content.ReadFromJsonAsync<ApiInfoDto>())!;
         Assert.Equal(ApiInfoService.ApiTitle, info.Title);
-        Assert.NotEqual("unknown", info.Version);
+        Assert.NotEqual(ApiInfoService.UnknownVersion, info.Version);
         Assert.Matches(@"^\d+\.\d+\.\d+", info.Version);
         Assert.DoesNotContain('+', info.Version);
     }

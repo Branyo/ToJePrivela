@@ -14,8 +14,10 @@ public static class DependencyInjection
         services.AddDbContext<ToJePrivelaDbContext>(options =>
             options.UseSqlite(SqliteConnectionString.Resolve(configuration)));
 
-        // Readiness: the database must answer, which /api/health reports.
-        services.AddHealthChecks().AddDbContextCheck<ToJePrivelaDbContext>();
+        // Readiness, reported by /api/health: the database must answer a real query, which also needs the migrated
+        // schema (a bare connection test would pass for an empty or unmigrated SQLite file).
+        services.AddHealthChecks().AddDbContextCheck<ToJePrivelaDbContext>(
+            customTestQuery: (db, cancellationToken) => db.Players.AnyAsync(cancellationToken));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAccountRepository, AccountRepository>();

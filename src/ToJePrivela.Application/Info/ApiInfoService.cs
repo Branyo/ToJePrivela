@@ -8,6 +8,7 @@ namespace ToJePrivela.Application.Info;
 public sealed class ApiInfoService : IApiInfoService
 {
     public const string ApiTitle = "ToJePrivela API";
+    public const string UnknownVersion = "unknown";
 
     private readonly ApiInfoDto _info;
 
@@ -18,12 +19,15 @@ public sealed class ApiInfoService : IApiInfoService
 
     public Result<ApiInfoDto> Get() => Result.Success(_info);
 
-    // The informational version may carry a "+commit" build suffix; clients only need the version itself.
-    private static string ReadVersion(Assembly assembly)
-    {
-        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        var core = informational?.Split('+')[0];
+    // No fallback to the assembly version: an unversioned build would report a plausible but wrong "1.0.0".
+    private static string ReadVersion(Assembly assembly) =>
+        StripBuildMetadata(assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
 
-        return !string.IsNullOrWhiteSpace(core) ? core : assembly.GetName().Version?.ToString(3) ?? "unknown";
+    /// <summary>The informational version may carry a "+commit" build suffix; clients only need the version itself.</summary>
+    public static string StripBuildMetadata(string? informationalVersion)
+    {
+        var core = informationalVersion?.Split('+')[0].Trim();
+
+        return string.IsNullOrEmpty(core) ? UnknownVersion : core;
     }
 }

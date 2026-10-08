@@ -21,6 +21,6 @@ public sealed class InfoController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiInfoDto>(StatusCodes.Status200OK)]
     public ActionResult<ApiInfoDto> GetInfo() => _info.Get().ToActionResult();
 }
