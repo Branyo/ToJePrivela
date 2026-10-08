@@ -47,6 +47,14 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task GetCategory_VariesByAcceptLanguage()
+    {
+        var response = await _client.GetAsync("/api/question-categories/2");
+
+        Assert.Contains("Accept-Language", response.Headers.Vary);
+    }
+
+    [Fact]
     public async Task PostCategory_TranslatesTheMissingName()
     {
         var name = NewName();

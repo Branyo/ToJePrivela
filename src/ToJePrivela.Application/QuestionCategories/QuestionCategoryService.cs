@@ -79,12 +79,14 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
                 return Result.Failure<CreatedQuestionCategoryDto>(translation.Error);
             }
 
+            var typedName = nameSk ?? nameEn!;
             nameSk ??= translation.Value;
             nameEn ??= translation.Value;
 
             if (await FindTakenNameAsync(nameSk, nameEn, cancellationToken) is { } takenTranslation)
             {
-                return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(takenTranslation));
+                return Result.Failure<CreatedQuestionCategoryDto>(
+                    QuestionCategoryErrors.TranslationNameTaken(typedName, takenTranslation));
             }
         }
 

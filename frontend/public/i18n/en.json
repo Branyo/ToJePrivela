@@ -286,6 +286,7 @@
       "QuestionCategory": {
         "NotFound": "This category does not exist.",
         "NameTaken": "A category with this name already exists.",
+        "TranslationNameTaken": "The translation of this name is already a category. Try a different name.",
         "TranslationUnavailable": "The AI translator is not available right now. Please try again later.",
         "TranslationFailed": "The name could not be translated. Please try again."
       },
