@@ -1,6 +1,5 @@
 <section class="page play">
   <header class="bar">
-    <span class="pill">🎲 {{ 'common.gameNumber' | translate: { id: id() } }}</span>
     @if (store.questionNumber() > 0) {
       <span class="pill">{{ 'play.question' | translate: { number: store.questionNumber() } }}</span>
     }

@@ -19,8 +19,7 @@
         @for (item of running(); track item.game.id) {
           <li>
             <a class="running__game" [routerLink]="['/games', item.game.id]">
-              <strong>{{ 'common.gameNumber' | translate: { id: item.game.id } }}</strong>
-              <span class="muted">{{ item.names.join(', ') }}</span>
+              <strong>{{ item.names.join(', ') }}</strong>
               <span class="muted">{{ item.game.started | date: ('common.dateTime' | translate) : undefined : i18n.locale() }}</span>
               <span class="running__go">{{ 'home.continue' | translate }}</span>
             </a>

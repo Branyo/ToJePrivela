@@ -69,14 +69,11 @@ describe('SignIn', () => {
     await fixture.whenStable();
   }
 
-  async function signInAsUnknown(fixture: ComponentFixture<SignIn>, page: HTMLElement, name = 'Novak') {
-    type(page, '.sign-in__name', name);
+  async function openCreate(fixture: ComponentFixture<SignIn>, page: HTMLElement, name = 'Novak') {
+    click(page, '.new-login__start');
     await fixture.whenStable();
-    click(page, '.sign-in__submit');
-    http
-      .expectOne('/api/auth/sign-in')
-      .flush({ code: 'Auth.UnknownLogin', detail: 'unknown' }, { status: 404, statusText: 'Not Found' });
-    await settle(fixture);
+    type(page, '.create__name', name);
+    await fixture.whenStable();
   }
 
   it('needs a name before it signs in', async () => {
@@ -119,33 +116,45 @@ describe('SignIn', () => {
     expect(navigateByUrl).not.toHaveBeenCalled();
   });
 
-  it('asks whether to create an unknown login, and can leave it be', async () => {
+  it('only reports an unknown login and never offers to create it from the sign-in form', async () => {
     const { fixture, page } = await render();
 
-    await signInAsUnknown(fixture, page);
-
-    expect(page.querySelector('[role="alertdialog"]')).not.toBeNull();
-    expect(page.querySelector('[role="alertdialog"]')?.textContent).toContain('signIn.ask.text');
-
-    click(page, '.ask__no');
+    type(page, '.sign-in__name', 'Novak');
     await fixture.whenStable();
+    click(page, '.sign-in__submit');
+    http
+      .expectOne('/api/auth/sign-in')
+      .flush({ code: 'Auth.UnknownLogin' }, { status: 404, statusText: 'Not Found' });
+    await settle(fixture);
 
-    expect(page.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(page.querySelector('.error-banner')?.textContent).toContain('errors.api.Auth.UnknownLogin');
     expect(page.querySelector('[role="dialog"]')).toBeNull();
+    http.expectNone('/api/auth/accounts');
   });
 
-  it('creates the login with a name that can still be changed, then signs it in', async () => {
-    const { fixture, page } = await render('/new');
-    await signInAsUnknown(fixture, page);
-
-    click(page, '.ask__yes');
+  it('opens an empty create window from the button next to the hint, and can close it', async () => {
+    const { fixture, page } = await render();
+    type(page, '.sign-in__name', 'Brano');
     await fixture.whenStable();
 
-    const nameInput = page.querySelector<HTMLInputElement>('.create__name')!;
-    expect(nameInput.value).toBe('Novak');
+    click(page, '.new-login__start');
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(page.querySelector<HTMLInputElement>('.create__name')!.value).toBe('');
     expect(page.querySelector<HTMLInputElement>('.create__password')!.value).toBe('');
 
-    type(page, '.create__name', 'Novakova');
+    click(page, '[role="dialog"] .btn--ghost');
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="dialog"]')).toBeNull();
+    expect(page.querySelector<HTMLInputElement>('.sign-in__name')!.value).toBe('Brano');
+  });
+
+  it('creates the login, then signs it in', async () => {
+    const { fixture, page } = await render('/new');
+    await openCreate(fixture, page, 'Novakova');
+
     type(page, '.create__password', 'new-password');
     type(page, '.create__repeat', 'new-password');
     await fixture.whenStable();
@@ -163,9 +172,7 @@ describe('SignIn', () => {
 
   it('refuses passwords that differ or are too short before asking the server', async () => {
     const { fixture, page } = await render();
-    await signInAsUnknown(fixture, page);
-    click(page, '.ask__yes');
-    await fixture.whenStable();
+    await openCreate(fixture, page);
 
     type(page, '.create__password', 'new-password');
     type(page, '.create__repeat', 'other-password');
@@ -184,11 +191,9 @@ describe('SignIn', () => {
     http.expectNone('/api/auth/accounts');
   });
 
-  it('keeps the window open and says so when the name is taken meanwhile', async () => {
+  it('keeps the window open and says so when the name is taken', async () => {
     const { fixture, page } = await render();
-    await signInAsUnknown(fixture, page);
-    click(page, '.ask__yes');
-    await fixture.whenStable();
+    await openCreate(fixture, page);
 
     type(page, '.create__password', 'new-password');
     type(page, '.create__repeat', 'new-password');
@@ -211,9 +216,7 @@ describe('SignIn', () => {
 
     expect(page.querySelector('.sign-in__name')!.hasAttribute('maxlength')).toBe(false);
 
-    await signInAsUnknown(fixture, page);
-    click(page, '.ask__yes');
-    await fixture.whenStable();
+    await openCreate(fixture, page);
     expect(page.querySelector('.field__help')).toBeNull();
 
     type(page, '.create__password', 'new-password');
@@ -232,9 +235,7 @@ describe('SignIn', () => {
     const { fixture, page } = await render();
     http.expectOne('/api/rules').error(new ProgressEvent('error'));
     await settle(fixture);
-    await signInAsUnknown(fixture, page);
-    click(page, '.ask__yes');
-    await fixture.whenStable();
+    await openCreate(fixture, page);
 
     type(page, '.create__password', 'new-password');
     type(page, '.create__repeat', 'new-password');

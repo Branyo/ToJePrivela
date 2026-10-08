@@ -11,7 +11,6 @@
     <header class="head">
       <h1 class="head__title">{{ (g.cancelled ? 'summary.cancelled' : g.finished ? 'summary.finished' : 'summary.running') | translate }}</h1>
       <p class="muted">
-        {{ 'common.gameNumber' | translate: { id: g.id } }} ·
         {{ 'summary.handedOut' | translate: { count: totalCards() } }}
       </p>
     </header>
@@ -35,12 +34,13 @@
           }
         </div>
         <h2 class="spotlight__title">
-          @if (losers().length === 1) {
-            <span class="name">{{ losers()[0].name ?? ('common.unknownPlayer' | translate) }}</span> {{ 'summary.bigDonkey' | translate }}
-          } @else {
-            {{ 'summary.tie' | translate }}
-            <span class="name">{{ loserNames() }}</span>
-          }
+          <span class="name">{{ loserNames() }}</span>
+          <span class="donkey-wave" aria-hidden="true">
+            @for (donkey of waveDonkeys; track $index) {
+              <span class="donkey-wave__donkey" [style.animation-delay.ms]="$index * 120">🫏</span>
+            }
+          </span>
+          {{ (losers().length === 1 ? 'summary.lost.one' : 'summary.lost.other') | translate }}
         </h2>
         <p class="spotlight__score">
           {{

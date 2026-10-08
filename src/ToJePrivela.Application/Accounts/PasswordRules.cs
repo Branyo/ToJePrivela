@@ -6,6 +6,6 @@ namespace ToJePrivela.Application.Accounts;
 /// </summary>
 public static class PasswordRules
 {
-    public const int MinLength = 8;
+    public const int MinLength = 6;
     public const int MaxLength = 128;
 }
