@@ -14,6 +14,9 @@ public static class DependencyInjection
         services.AddDbContext<ToJePrivelaDbContext>(options =>
             options.UseSqlite(SqliteConnectionString.Resolve(configuration)));
 
+        // Readiness: the database must answer, which /api/health reports.
+        services.AddHealthChecks().AddDbContextCheck<ToJePrivelaDbContext>();
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IPlayerRepository, PlayerRepository>();

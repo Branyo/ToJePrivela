@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using Serilog;
+using Serilog.Events;
 using ToJePrivela.Ai;
 using ToJePrivela.Api.Common;
 using ToJePrivela.Api.Middleware;
 using ToJePrivela.Application;
 using ToJePrivela.Application.Abstractions.Localization;
+using ToJePrivela.Application.Info;
 using ToJePrivela.Identity;
 using ToJePrivela.Infrastructure;
 
@@ -23,6 +25,7 @@ builder.Host.UseSerilog((context, configuration) =>
 
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<IApiInfoService>(new ApiInfoService(typeof(Program).Assembly));
 builder.Services.AddAiQuestionGeneration(builder.Configuration);
 builder.Services.AddPasswordLogins(builder.Configuration);
 builder.Services.AddAccessTokenAuthentication();
@@ -44,7 +47,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "ToJePrivela API",
+        Title = ApiInfoService.ApiTitle,
         Version = "v1",
         Description = "Backend for the Slovak trivia game."
     });
@@ -134,7 +137,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSerilogRequestLogging();
+// Probes poll /api/health every few seconds; keep them out of the Information log.
+app.UseSerilogRequestLogging(options => options.GetLevel = (context, _, exception) =>
+    exception is null && context.Request.Path.StartsWithSegments("/api/health")
+        ? LogEventLevel.Verbose
+        : LogEventLevel.Information);
 
 // Not in Development: the Angular dev server proxies /api over plain HTTP, and a redirect to the HTTPS port is a
 // cross-origin redirect for the browser, which then drops the Authorization header, so every call would answer 401.
@@ -159,6 +166,7 @@ app.UseSignInLimits();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/api/health").AllowAnonymous();
 
 DeploymentSafety.StopDevelopmentReachableFromNetwork(app);
 
