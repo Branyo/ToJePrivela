@@ -60,6 +60,31 @@ public class QuestionCategoryServiceTests
     }
 
     [Fact]
+    public async Task GetAllAsync_IncludesTheQuestionCounts()
+    {
+        _categories.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns([TestEntities.Category(1, "Šport", "Sport"), TestEntities.Category(2, "História", "History")]);
+        _questions.CountByCategoryAsync(null, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, QuestionCounts> { [2] = new(7, 3) });
+
+        var result = await _sut.GetAllAsync();
+
+        Assert.Equal([(0, 0), (7, 3)], result.Value.Select(c => (c.QuestionCount, c.AiQuestionCount)));
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_IncludesTheCategorysQuestionCounts()
+    {
+        _categories.GetByIdAsync(2, Arg.Any<CancellationToken>()).Returns(TestEntities.Category(2, "História", "History"));
+        _questions.CountByCategoryAsync(2, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, QuestionCounts> { [2] = new(7, 3) });
+
+        var result = await _sut.GetByIdAsync(2);
+
+        Assert.Equal((7, 3), (result.Value.QuestionCount, result.Value.AiQuestionCount));
+    }
+
+    [Fact]
     public async Task GenerateAiQuestionsAsync_RejectsTooManyQuestionsBeforePayingForAnyCall()
     {
         var result = await _sut.GenerateAiQuestionsAsync(1, new GenerateAiQuestionsRequest { Count = QuestionGenerationOptions.MaxCount + 1 });

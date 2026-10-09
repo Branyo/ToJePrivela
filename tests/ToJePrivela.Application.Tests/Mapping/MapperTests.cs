@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Games.Mapping;
 using ToJePrivela.Application.Players.Dtos;
 using ToJePrivela.Application.Players.Mapping;
@@ -82,8 +83,19 @@ public class MapperTests
     public void QuestionCategoryMapper_GivesTheNameInTheLanguageAndBothNames(Language language, string name)
     {
         Assert.Equal(
-            new QuestionCategoryDto(1, name, "Šport", "Sport"),
-            QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Šport", "Sport"), language));
+            new QuestionCategoryDto(1, name, "Šport", "Sport", 5, 2),
+            QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Šport", "Sport"), new QuestionCounts(5, 2), language));
+    }
+
+    [Fact]
+    public void QuestionCategoryMapper_ToDtos_CountsNoQuestionsForACategoryWithoutAny()
+    {
+        var dtos = QuestionCategoryMapper.ToDtos(
+            [TestEntities.Category(1, "Šport", "Sport"), TestEntities.Category(2, "Hudba", "Music")],
+            new Dictionary<int, QuestionCounts> { [1] = new(4, 1) },
+            Language.Sk);
+
+        Assert.Equal([(4, 1), (0, 0)], dtos.Select(dto => (dto.QuestionCount, dto.AiQuestionCount)));
     }
 
     [Fact]

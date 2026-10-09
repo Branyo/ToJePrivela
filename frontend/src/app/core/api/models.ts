@@ -66,6 +66,10 @@ export interface QuestionCategory {
   name: string;
   nameSk: string;
   nameEn: string;
+  /** Every question in the category. */
+  questionCount: number;
+  /** Those of them the AI wrote; an edited one counts as manual. */
+  aiQuestionCount: number;
 }
 
 export interface QuestionGenerationSummary {
@@ -74,7 +78,7 @@ export interface QuestionGenerationSummary {
   discarded: number;
 }
 
-export interface CreatedQuestionCategory extends QuestionCategory {
+export interface CreatedQuestionCategory extends Omit<QuestionCategory, 'questionCount' | 'aiQuestionCount'> {
   questionGeneration: QuestionGenerationSummary;
 }
 

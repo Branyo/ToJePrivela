@@ -37,10 +37,16 @@ export class QuestionForm {
     return limit ? Array.from({ length: limit.max - limit.min + 1 }, (_, index) => limit.min + index) : [];
   });
 
-  protected readonly textSk = linkedSignal(() => this.question()?.textSk ?? '');
-  protected readonly textEn = linkedSignal(() => this.question()?.textEn ?? '');
-  protected readonly answer = linkedSignal(() => this.question()?.answer ?? '');
-  protected readonly badPoints = linkedSignal<number | null>(() => this.question()?.badPoints ?? null);
+  /**
+   * The question the fields start from. A reload hands over a new object for the same question, which must not
+   * throw away what was typed, so only another id counts as a change.
+   */
+  private readonly original = computed(() => this.question(), { equal: (a, b) => a?.id === b?.id });
+
+  protected readonly textSk = linkedSignal(() => this.original()?.textSk ?? '');
+  protected readonly textEn = linkedSignal(() => this.original()?.textEn ?? '');
+  protected readonly answer = linkedSignal(() => this.original()?.answer ?? '');
+  protected readonly badPoints = linkedSignal<number | null>(() => this.original()?.badPoints ?? null);
 
   private readonly invalid = signal<Message | null>(null);
   protected readonly error = computed(() => this.invalid() ?? this.problem());

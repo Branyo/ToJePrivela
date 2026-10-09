@@ -12,6 +12,10 @@ export class QuestionsApi {
     return this.http.get<Question[]>('/api/questions');
   }
 
+  getByCategory(categoryId: number): Observable<Question[]> {
+    return this.http.get<Question[]>('/api/questions', { params: { categoryId } });
+  }
+
   /** Reading a question does not count a view. */
   get(id: number): Observable<Question> {
     return this.http.get<Question>(`/api/questions/${id}`);

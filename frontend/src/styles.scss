@@ -236,6 +236,18 @@ input {
 
 .chip--on .chip__count { background: rgb(255 255 255 / 0.25); }
 
+/* Marks a text's language (SK / EN) in front of it. */
+.lang {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 6px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
 /* ---------- Flying bad card (created by fly-card.ts) ---------- */
 .flying-card {
   position: fixed;

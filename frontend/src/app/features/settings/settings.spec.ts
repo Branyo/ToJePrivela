@@ -36,9 +36,8 @@ describe('Settings', () => {
 
   const tabs = (page: HTMLElement) => [...page.querySelectorAll('.tab')].map((tab) => tab.getAttribute('href'));
 
-  function flushCategoriesAndQuestions() {
+  function flushCategories() {
     http.expectOne('/api/question-categories').flush([]);
-    http.expectOne('/api/questions').flush([]);
   }
 
   it("opens on the login's players, without tabs for a login that is not an admin", async () => {
@@ -61,7 +60,7 @@ describe('Settings', () => {
 
   it('gives an admin tabs for players, categories and questions, marking the open one', async () => {
     const { harness, page } = await open('/settings/categories', true);
-    flushCategoriesAndQuestions();
+    flushCategories();
     await harness.fixture.whenStable();
 
     expect(tabs(page)).toEqual(['/settings/players', '/settings/categories', '/settings/questions']);
@@ -79,7 +78,7 @@ describe('Settings', () => {
 
     page.querySelector<HTMLAnchorElement>('.tab[href="/settings/questions"]')!.click();
     await harness.fixture.whenStable();
-    flushCategoriesAndQuestions();
+    flushCategories();
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/settings/questions');

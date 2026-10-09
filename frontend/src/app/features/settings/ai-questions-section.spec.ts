@@ -3,31 +3,16 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
-import { Question, QuestionCategory } from '../../core/api/models';
+import { QuestionCategory } from '../../core/api/models';
 import { LanguageService } from '../../core/i18n/language';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { TEST_RULES } from '../../core/rules/testing';
 import { AiQuestionsSection } from './ai-questions-section';
 
 const CATEGORIES: QuestionCategory[] = [
-  { id: 2, name: 'Šport', nameSk: 'Šport', nameEn: 'Sport' },
-  { id: 1, name: 'Autá', nameSk: 'Autá', nameEn: 'Cars' },
+  { id: 2, name: 'Šport', nameSk: 'Šport', nameEn: 'Sport', questionCount: 1, aiQuestionCount: 1 },
+  { id: 1, name: 'Autá', nameSk: 'Autá', nameEn: 'Cars', questionCount: 2, aiQuestionCount: 1 },
 ];
-
-const question = (id: number, categoryId: number, source: Question['source']): Question => ({
-  id,
-  text: `Otázka ${id}?`,
-  textSk: `Otázka ${id}?`,
-  textEn: `Question ${id}?`,
-  answer: '1',
-  categoryId,
-  categoryName: '',
-  badPoints: 3,
-  source,
-  createdAt: '2026-10-01T10:00:00Z',
-  viewCount: 0,
-  lastViewedAt: null,
-});
 
 describe('AiQuestionsSection', () => {
   let http: HttpTestingController;
@@ -43,15 +28,14 @@ describe('AiQuestionsSection', () => {
 
   afterEach(() => http.verify());
 
-  function flushLoad(questions: Question[] = [question(1, 1, 'Ai'), question(2, 1, 'Manual'), question(3, 2, 'Ai')]) {
-    http.expectOne('/api/question-categories').flush(CATEGORIES);
-    http.expectOne('/api/questions').flush(questions);
+  function flushLoad(categories = CATEGORIES) {
+    http.expectOne('/api/question-categories').flush(categories);
   }
 
-  async function render(questions?: Question[]) {
+  async function render(categories?: QuestionCategory[]) {
     const fixture = TestBed.createComponent(AiQuestionsSection);
     fixture.detectChanges();
-    flushLoad(questions);
+    flushLoad(categories);
     await fixture.whenStable();
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
@@ -72,7 +56,6 @@ describe('AiQuestionsSection', () => {
     const reload = http.expectOne('/api/question-categories');
     expect(reload.request.method).toBe('GET');
     reload.flush(CATEGORIES);
-    http.expectOne('/api/questions').flush([]);
   });
 
   it('sends the new name in the language picked for it, for the AI to translate', async () => {
@@ -131,14 +114,14 @@ describe('AiQuestionsSection', () => {
 
     page.querySelector<HTMLButtonElement>('.row__confirm .btn--danger')!.click();
     http.expectOne({ method: 'DELETE', url: '/api/question-categories/1' }).flush(null);
-    flushLoad([]);
+    flushLoad([CATEGORIES[0]]);
     await fixture.whenStable();
 
     expect(page.querySelector('.row__confirm')).toBeNull();
   });
 
   it('offers to delete AI questions only where there are some', async () => {
-    const { page } = await render([question(1, 1, 'Ai'), question(2, 2, 'Manual')]);
+    const { page } = await render([CATEGORIES[1], { ...CATEGORIES[0], aiQuestionCount: 0 }]);
 
     const deleteAi = [...page.querySelectorAll<HTMLButtonElement>('.row__actions .btn--ghost:not(.danger)')];
     expect(deleteAi.map((button) => button.disabled)).toEqual([false, true]);

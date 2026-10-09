@@ -33,6 +33,23 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
         return await query.ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<int, QuestionCounts>> CountByCategoryAsync(
+        int? categoryId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = categoryId is int id ? Set.Where(q => q.CategoryId == id) : Set;
+
+        return await query
+            .GroupBy(q => q.CategoryId)
+            .Select(group => new
+            {
+                CategoryId = group.Key,
+                Total = group.Count(),
+                Ai = group.Count(q => q.Source == QuestionSource.Ai),
+            })
+            .ToDictionaryAsync(row => row.CategoryId, row => new QuestionCounts(row.Total, row.Ai), cancellationToken);
+    }
+
     public async Task<IReadOnlyList<string>> GetTextsAsync(int categoryId, CancellationToken cancellationToken = default) =>
         await Set.Where(q => q.CategoryId == categoryId)
             .OrderByDescending(q => q.Id)

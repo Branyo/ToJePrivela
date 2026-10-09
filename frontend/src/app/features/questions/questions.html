@@ -6,12 +6,20 @@
 
   @if (error(); as message) {
     <p class="error-banner" role="alert">{{ message | message }}</p>
+    @if (!loaded()) {
+      <button type="button" class="btn btn--sky" (click)="load()">{{ 'questionAdmin.retry' | translate }}</button>
+    }
   }
 
   @if (!loaded()) {
-    <p class="muted">{{ 'questionAdmin.loading' | translate }}</p>
+    @if (!error()) {
+      <p class="muted">{{ 'questionAdmin.loading' | translate }}</p>
+    }
   } @else if (sortedCategories().length === 0) {
-    <p class="muted">{{ 'questionAdmin.noCategories' | translate }}</p>
+    <p class="muted">
+      {{ 'questionAdmin.noCategories' | translate }}
+      <a routerLink="/settings/categories">{{ 'questionAdmin.createCategory' | translate }}</a>
+    </p>
   } @else {
     <nav class="categories" [attr.aria-label]="'admin.categories' | translate">
       @for (category of sortedCategories(); track category.id) {
@@ -23,7 +31,7 @@
           (click)="pick(category)"
         >
           {{ category.name }}
-          <span class="chip__count">{{ counts().get(category.id) ?? 0 }}</span>
+          <span class="chip__count">{{ category.questionCount }}</span>
         </button>
       }
     </nav>
@@ -33,7 +41,7 @@
         <div class="list-head">
           <h2 id="category-title" class="panel__title">{{ category.name }}</h2>
           @if (editing() !== 'new') {
-            <button type="button" class="btn btn--sky" [disabled]="working() !== null" (click)="edit('new')">
+            <button type="button" class="btn btn--sky" [disabled]="working() !== null || editing() !== null" (click)="edit('new')">
               {{ 'questionAdmin.add' | translate }}
             </button>
           }
@@ -55,7 +63,9 @@
           </div>
         }
 
-        @if (shown().length === 0) {
+        @if (!questionsLoaded()) {
+          <p class="muted">{{ 'questionAdmin.loading' | translate }}</p>
+        } @else if (shown().length === 0) {
           <p class="muted">{{ 'questionAdmin.empty' | translate }}</p>
         } @else {
           <ul class="list">
@@ -119,7 +129,7 @@
                       <button
                         type="button"
                         class="btn btn--ghost small"
-                        [disabled]="working() !== null"
+                        [disabled]="working() !== null || editing() !== null"
                         (click)="edit(question.id)"
                       >
                         {{ 'questionAdmin.edit' | translate }}
@@ -127,7 +137,7 @@
                       <button
                         type="button"
                         class="btn btn--ghost small danger"
-                        [disabled]="working() !== null"
+                        [disabled]="working() !== null || editing() !== null"
                         (click)="askToDelete(question.id)"
                       >
                         {{ 'questionAdmin.delete' | translate }}

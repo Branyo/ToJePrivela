@@ -4,13 +4,14 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Question, QuestionCategory } from '../../core/api/models';
+import { LanguageService } from '../../core/i18n/language';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { TEST_RULES } from '../../core/rules/testing';
 import { Questions } from './questions';
 
 const CATEGORIES: QuestionCategory[] = [
-  { id: 2, name: 'Šport', nameSk: 'Šport', nameEn: 'Sport' },
-  { id: 1, name: 'Autá', nameSk: 'Autá', nameEn: 'Cars' },
+  { id: 2, name: 'Šport', nameSk: 'Šport', nameEn: 'Sport', questionCount: 1, aiQuestionCount: 1 },
+  { id: 1, name: 'Autá', nameSk: 'Autá', nameEn: 'Cars', questionCount: 2, aiQuestionCount: 1 },
 ];
 
 const question = (id: number, categoryId: number, extra: Partial<Question> = {}): Question => ({
@@ -29,7 +30,8 @@ const question = (id: number, categoryId: number, extra: Partial<Question> = {})
   ...extra,
 });
 
-const QUESTIONS = [question(1, 1), question(2, 1, { source: 'Manual', textEn: null }), question(3, 2)];
+/** The questions of the category Autá. */
+const CARS = [question(1, 1), question(2, 1, { source: 'Manual', textEn: null })];
 
 describe('Questions', () => {
   let http: HttpTestingController;
@@ -45,9 +47,12 @@ describe('Questions', () => {
 
   afterEach(() => http.verify());
 
-  function flushLoad(questions: Question[] = QUESTIONS) {
-    http.expectOne('/api/question-categories').flush(CATEGORIES);
-    http.expectOne('/api/questions').flush(questions);
+  /** Answers the fetch of the categories and, when one is picked, of its questions. */
+  function flushLoad(category: number | undefined, questions: Question[] = CARS, categories = CATEGORIES) {
+    http.expectOne('/api/question-categories').flush(categories);
+    if (category !== undefined) {
+      http.expectOne(`/api/questions?categoryId=${category}`).flush(questions);
+    }
   }
 
   async function render(category?: number) {
@@ -56,7 +61,7 @@ describe('Questions', () => {
       fixture.componentRef.setInput('category', String(category));
     }
     fixture.detectChanges();
-    flushLoad();
+    flushLoad(category);
     await fixture.whenStable();
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
@@ -81,6 +86,65 @@ describe('Questions', () => {
     expect(page.textContent).toContain('questionAdmin.pickCategory');
   });
 
+  it("fetches only the picked category's questions, and another one's once it is picked", async () => {
+    const { fixture } = await render(1);
+
+    fixture.componentRef.setInput('category', '2');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    flushLoad(2, [question(3, 2)]);
+  });
+
+  it('links to the categories tab when there are no categories', async () => {
+    const fixture = TestBed.createComponent(Questions);
+    fixture.detectChanges();
+    flushLoad(undefined, [], []);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.textContent).toContain('questionAdmin.noCategories');
+    expect(page.querySelector('a')?.getAttribute('href')).toBe('/settings/categories');
+  });
+
+  it('offers to try again instead of loading forever when the first fetch fails', async () => {
+    const fixture = TestBed.createComponent(Questions);
+    fixture.detectChanges();
+    http.expectOne('/api/question-categories').flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('[role="alert"]')).not.toBeNull();
+    expect(page.textContent).not.toContain('questionAdmin.loading');
+
+    button(page, 'questionAdmin.retry').click();
+    await fixture.whenStable();
+    flushLoad(undefined);
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(texts(page, '.categories .chip')).toEqual(['Autá 2', 'Šport 1']);
+  });
+
+  it('shows only the newest fetch when fetches overlap', async () => {
+    const { fixture, page } = await render(1);
+
+    await TestBed.inject(LanguageService).use('en');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const stale = http.expectOne('/api/question-categories');
+    http.expectOne('/api/questions?categoryId=1');
+    fixture.componentRef.setInput('category', '2');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(stale.cancelled).toBe(true);
+    flushLoad(2, [question(3, 2)]);
+    await fixture.whenStable();
+
+    expect(texts(page, '.text[lang="sk"]')).toEqual(['SK Otázka číslo 3?']);
+  });
+
   it('puts the picked category into the URL', async () => {
     const { page } = await render();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -99,6 +163,19 @@ describe('Questions', () => {
     expect(english[1]).toBe('EN Question number 1?');
     expect(page.textContent).not.toContain('100');
     expect(page.querySelectorAll('.show-answer').length).toBe(2);
+  });
+
+  it('sorts by time, not by the text of the timestamps', async () => {
+    const fixture = TestBed.createComponent(Questions);
+    fixture.componentRef.setInput('category', '1');
+    fixture.detectChanges();
+    flushLoad(1, [
+      question(1, 1, { createdAt: '2026-10-01T10:00:00.5Z' }),
+      question(2, 1, { createdAt: '2026-10-01T10:00:00Z' }),
+    ]);
+    await fixture.whenStable();
+
+    expect(texts(fixture.nativeElement, '.text[lang="sk"]')).toEqual(['SK Otázka číslo 1?', 'SK Otázka číslo 2?']);
   });
 
   it('shows an answer only for the question asked, and hides it again', async () => {
@@ -140,7 +217,7 @@ describe('Questions', () => {
       categoryId: 1,
     });
     create.flush(question(4, 1, { source: 'Manual' }));
-    flushLoad();
+    flushLoad(1);
     await fixture.whenStable();
 
     expect(page.querySelector('app-question-form')).toBeNull();
@@ -223,11 +300,39 @@ describe('Questions', () => {
     await fixture.whenStable();
 
     http.expectOne('/api/questions/1').flush(null, { status: 204, statusText: 'No Content' });
-    flushLoad();
+    flushLoad(1);
     await fixture.whenStable();
 
     expect(page.querySelector('app-question-form')).toBeNull();
     expect(page.textContent).toContain('questionAdmin.updated');
+  });
+
+  it('keeps what was typed when the questions are fetched again during an edit', async () => {
+    const { fixture, page } = await render(1);
+
+    button(page, 'questionAdmin.edit').click();
+    await fixture.whenStable();
+    const form = page.querySelector('app-question-form')!;
+    await type(fixture, form.querySelector('input[name="answer"]')!, '7');
+
+    await TestBed.inject(LanguageService).use('en');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    flushLoad(1);
+    await fixture.whenStable();
+
+    expect(page.querySelector<HTMLInputElement>('app-question-form input[name="answer"]')!.value).toBe('7');
+  });
+
+  it('offers no other edit or deletion while a question is being written', async () => {
+    const { fixture, page } = await render(1);
+
+    button(page, 'questionAdmin.add').click();
+    await fixture.whenStable();
+
+    const actions = [...page.querySelectorAll<HTMLButtonElement>('.actions button')];
+    expect(actions.length).toBe(4);
+    expect(actions.every((action) => action.disabled)).toBe(true);
   });
 
   it('deletes a question only after a second tap', async () => {
@@ -243,7 +348,7 @@ describe('Questions', () => {
     const deletion = http.expectOne('/api/questions/2');
     expect(deletion.request.method).toBe('DELETE');
     deletion.flush(null, { status: 204, statusText: 'No Content' });
-    flushLoad([question(1, 1), question(3, 2)]);
+    flushLoad(1, [question(1, 1)]);
     await fixture.whenStable();
 
     expect(page.querySelectorAll('.list .item').length).toBe(1);

@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
+import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
-import { QuestionsApi } from '../../core/api/questions-api';
 import { LanguageCode, LanguageService, Message, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
@@ -16,12 +16,6 @@ const GENERATOR_MIN_QUESTIONS = 1;
 const NEW_CATEGORY_COUNT = 100;
 /** How many more AI questions an existing category asks for, unless the admin changes it. */
 const MORE_COUNT = 20;
-
-interface CategoryRow {
-  category: QuestionCategory;
-  total: number;
-  ai: number;
-}
 
 /** What waits for a second tap before it runs. */
 type PendingDelete = { id: number; what: 'ai' | 'category' };
@@ -40,7 +34,6 @@ type PendingDelete = { id: number; what: 'ai' | 'category' };
 })
 export class AiQuestionsSection {
   private readonly categoriesApi = inject(CategoriesApi);
-  private readonly questionsApi = inject(QuestionsApi);
   protected readonly i18n = inject(LanguageService);
   private readonly rulesStore = inject(GameRulesStore);
 
@@ -49,7 +42,8 @@ export class AiQuestionsSection {
   protected readonly countLimit = computed(() => countLimitOf(this.rulesStore.rules()));
 
   private readonly categories = signal<QuestionCategory[] | null>(null);
-  private readonly counts = signal<ReadonlyMap<number, { total: number; ai: number }>>(new Map());
+  /** Each value fetches the categories again, dropping a fetch still running. */
+  private readonly reloads = new Subject<void>();
 
   protected readonly newName = signal('');
   /** The language the new name is typed in; the AI translates it to the other one. */
@@ -66,16 +60,26 @@ export class AiQuestionsSection {
 
   protected readonly loaded = computed(() => this.categories() !== null);
 
-  protected readonly rows = computed<CategoryRow[]>(() => {
+  protected readonly sortedCategories = computed(() => {
     const locale = this.i18n.locale();
-    const counts = this.counts();
-    return [...(this.categories() ?? [])]
-      .sort((a, b) => compareNames(a.name, b.name, locale))
-      .map((category) => ({ category, total: counts.get(category.id)?.total ?? 0, ai: counts.get(category.id)?.ai ?? 0 }));
+    return [...(this.categories() ?? [])].sort((a, b) => compareNames(a.name, b.name, locale));
   });
 
   constructor() {
     void this.rulesStore.ensureLoaded();
+    this.reloads
+      .pipe(
+        switchMap(() =>
+          this.categoriesApi.getAll().pipe(
+            catchError((error: unknown) => {
+              this.error.set(toProblem(error).message);
+              return EMPTY;
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((categories) => this.categories.set(categories));
     // Names arrive in the shown language, so they are fetched again after a switch.
     effect(() => {
       this.i18n.language();
@@ -117,20 +121,20 @@ export class AiQuestionsSection {
     });
   }
 
-  protected async generateMore(row: CategoryRow): Promise<void> {
+  protected async generateMore(category: QuestionCategory): Promise<void> {
     const rules = this.rulesStore.rules() ?? (await this.reloadRules());
     if (!rules) {
       return;
     }
-    const count = this.moreCountFor(row.category.id);
+    const count = this.moreCountFor(category.id);
     if (!this.isValidCount(count, rules)) {
       return;
     }
 
-    this.start(row.category.id);
-    this.categoriesApi.generateAiQuestions(row.category.id, count).subscribe({
+    this.start(category.id);
+    this.categoriesApi.generateAiQuestions(category.id, count).subscribe({
       next: (result) =>
-        this.done({ key: 'admin.added', params: { name: row.category.name, count: result.summary.created } }),
+        this.done({ key: 'admin.added', params: { name: category.name, count: result.summary.created } }),
       error: (error) => this.fail(error),
     });
   }
@@ -149,21 +153,21 @@ export class AiQuestionsSection {
     this.pending.set(null);
   }
 
-  protected confirmDelete(row: CategoryRow): void {
+  protected confirmDelete(category: QuestionCategory): void {
     const pending = this.pending();
-    if (!pending || pending.id !== row.category.id) {
+    if (!pending || pending.id !== category.id) {
       return;
     }
 
-    this.start(row.category.id);
+    this.start(category.id);
     if (pending.what === 'ai') {
-      this.categoriesApi.deleteAiQuestions(row.category.id).subscribe({
-        next: (result) => this.done({ key: 'admin.aiDeleted', params: { name: row.category.name, count: result.deleted } }),
+      this.categoriesApi.deleteAiQuestions(category.id).subscribe({
+        next: (result) => this.done({ key: 'admin.aiDeleted', params: { name: category.name, count: result.deleted } }),
         error: (error) => this.fail(error),
       });
     } else {
-      this.categoriesApi.delete(row.category.id).subscribe({
-        next: () => this.done({ key: 'admin.categoryDeleted', params: { name: row.category.name } }),
+      this.categoriesApi.delete(category.id).subscribe({
+        next: () => this.done({ key: 'admin.categoryDeleted', params: { name: category.name } }),
         error: (error) => this.fail(error),
       });
     }
@@ -224,21 +228,7 @@ export class AiQuestionsSection {
   }
 
   private load(): void {
-    forkJoin([this.categoriesApi.getAll(), this.questionsApi.getAll()]).subscribe({
-      next: ([categories, questions]) => {
-        const counts = new Map<number, { total: number; ai: number }>();
-        for (const question of questions) {
-          const count = counts.get(question.categoryId) ?? { total: 0, ai: 0 };
-          counts.set(question.categoryId, {
-            total: count.total + 1,
-            ai: count.ai + (question.source === 'Ai' ? 1 : 0),
-          });
-        }
-        this.categories.set(categories);
-        this.counts.set(counts);
-      },
-      error: (error) => this.error.set(toProblem(error).message),
-    });
+    this.reloads.next();
   }
 }
 

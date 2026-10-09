@@ -44,6 +44,31 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task CountByCategoryAsync_CountsEveryCategoryWithQuestions()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+
+        var counts = await sut.CountByCategoryAsync(null);
+
+        Assert.Equal(2, counts.Count);
+        Assert.Equal(new QuestionCounts(2, 1), counts[HistoryId]);
+        Assert.Equal(new QuestionCounts(1, 1), counts[SportId]);
+        Assert.False(counts.ContainsKey(CarsId));
+    }
+
+    [Fact]
+    public async Task CountByCategoryAsync_CountsOnlyTheGivenCategory()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+
+        var counts = await sut.CountByCategoryAsync(SportId);
+
+        Assert.Equal(new Dictionary<int, QuestionCounts> { [SportId] = new(1, 1) }, counts);
+    }
+
+    [Fact]
     public async Task FindAsync_FiltersByCategory()
     {
         await using var context = _database.CreateContext();
