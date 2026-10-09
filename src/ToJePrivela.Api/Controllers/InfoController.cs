@@ -1,26 +1,27 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ToJePrivela.Api.Common;
-using ToJePrivela.Application.Info;
-using ToJePrivela.Application.Info.Dtos;
 
 namespace ToJePrivela.Api.Controllers;
 
-/// <summary>Name and version of the running API, for clients; readable before signing in. Probes use <c>/api/health</c>.</summary>
+/// <summary>
+/// Name of the running API, readable before signing in; signed-in clients also get its version. Probes use
+/// <c>/api/health</c>.
+/// </summary>
 [ApiController]
 [AllowAnonymous]
 [Route("api/info")]
 [Produces("application/json")]
 public sealed class InfoController : ControllerBase
 {
-    private readonly IApiInfoService _info;
+    private readonly ApiInfo _info;
 
-    public InfoController(IApiInfoService info)
+    public InfoController(ApiInfo info)
     {
         _info = info;
     }
 
     [HttpGet]
-    [ProducesResponseType<ApiInfoDto>(StatusCodes.Status200OK)]
-    public ActionResult<ApiInfoDto> GetInfo() => _info.Get().ToActionResult();
+    [ProducesResponseType<ApiInfo>(StatusCodes.Status200OK)]
+    public ActionResult<ApiInfo> GetInfo() => _info.For(User);
 }

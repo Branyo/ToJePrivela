@@ -1,17 +1,15 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using Serilog;
-using Serilog.Events;
 using ToJePrivela.Ai;
 using ToJePrivela.Api.Common;
 using ToJePrivela.Api.Middleware;
 using ToJePrivela.Application;
 using ToJePrivela.Application.Abstractions.Localization;
-using ToJePrivela.Application.Info;
 using ToJePrivela.Identity;
 using ToJePrivela.Infrastructure;
 
@@ -25,7 +23,7 @@ builder.Host.UseSerilog((context, configuration) =>
 
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddApiInfo(typeof(Program).Assembly);
+builder.Services.AddSingleton(ApiInfo.FromAssembly(typeof(Program).Assembly));
 builder.Services.AddAiQuestionGeneration(builder.Configuration);
 builder.Services.AddPasswordLogins(builder.Configuration);
 builder.Services.AddAccessTokenAuthentication();
@@ -39,6 +37,9 @@ builder.Services.AddControllers()
     // A body ASP.NET cannot read or validate is answered like a use case's Request.Invalid, code included.
     .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = InvalidModelStateResponse.Create);
 builder.Services.AddProblemDetails();
+// /api/health is anonymous and runs a database query, so its healthy answer is reused briefly: a flood of probes
+// cannot compete with game writes for the SQLite file.
+builder.Services.AddOutputCache();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<ConcurrencyConflictExceptionHandler>();
 
@@ -47,7 +48,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = ApiInfoService.ApiTitle,
+        Title = ApiInfo.ApiTitle,
         Version = "v1",
         Description = "Backend for the Slovak trivia game."
     });
@@ -137,19 +138,15 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Probes poll /api/health every few seconds; keep the successful ones out of the Information log, but a failing
-// check (503) or an error must stay visible.
-app.UseSerilogRequestLogging(options => options.GetLevel = (context, _, exception) =>
-    exception is null && context.Response.StatusCode < 400 && IsHealthProbe(context)
-        ? LogEventLevel.Verbose
-        : LogEventLevel.Information);
+app.UseSerilogRequestLogging(options =>
+    options.GetLevel = (context, _, exception) => RequestLogLevel.For(context, exception));
 
 // Not in Development: the Angular dev server proxies /api over plain HTTP, and a redirect to the HTTPS port is a
 // cross-origin redirect for the browser, which then drops the Authorization header, so every call would answer 401.
-// Health probes are exempt: they poll over plain HTTP and would read a 307 as a failure.
+// Probe endpoints are exempt: they poll over plain HTTP and would read a 307 as a failure.
 if (!isTesting && !app.Environment.IsDevelopment())
 {
-    app.UseWhen(context => !IsHealthProbe(context), branch => branch.UseHttpsRedirection());
+    app.UseWhen(context => !context.IsProbe(), branch => branch.UseHttpsRedirection());
 }
 
 app.UseCors(CorsOptions.PolicyName);
@@ -167,14 +164,17 @@ app.UseAuthentication();
 app.UseSignInLimits();
 app.UseRateLimiter();
 app.UseAuthorization();
+app.UseOutputCache();
 app.MapControllers();
-app.MapHealthChecks("/api/health").AllowAnonymous();
+// Only healthy answers are cached (the default policy stores 200s), so a failing check is reported on the next probe.
+app.MapHealthChecks("/api/health")
+    .AllowAnonymous()
+    .AsProbe()
+    .CacheOutput(policy => policy.Expire(TimeSpan.FromSeconds(5)));
 
 DeploymentSafety.StopDevelopmentReachableFromNetwork(app);
 
 await app.RunAsync();
-
-static bool IsHealthProbe(HttpContext context) => context.Request.Path.StartsWithSegments("/api/health");
 
 /// <summary>Exposed so the integration tests can host the API.</summary>
 public partial class Program;

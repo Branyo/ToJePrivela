@@ -1,10 +1,11 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using ToJePrivela.Application.Info;
-using ToJePrivela.Application.Info.Dtos;
+using ToJePrivela.Api.Common;
 
 namespace ToJePrivela.Api.Tests.Integration;
 
@@ -29,24 +30,38 @@ public class InfoEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Info_ServesTitleAndVersionWithoutSigningIn()
+    public void Health_IsAProbeEndpointWithItsHealthyAnswerCached()
+    {
+        var health = _factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Single(endpoint => endpoint.RoutePattern.RawText == "/api/health");
+
+        Assert.NotNull(health.Metadata.GetMetadata<ProbeEndpointMetadata>());
+        Assert.NotNull(health.Metadata.GetMetadata<IOutputCachePolicy>());
+    }
+
+    [Fact]
+    public async Task Info_ServesTheTitleButNotTheVersionWithoutSigningIn()
     {
         var response = await _anonymous.GetAsync("/api/info");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var info = (await response.Content.ReadFromJsonAsync<ApiInfoDto>())!;
-        Assert.Equal(ApiInfoService.ApiTitle, info.Title);
-        Assert.NotEqual(ApiInfoService.UnknownVersion, info.Version);
-        Assert.Matches(@"^\d+\.\d+\.\d+", info.Version);
-        Assert.DoesNotContain('+', info.Version);
+        var info = (await response.Content.ReadFromJsonAsync<ApiInfo>())!;
+        Assert.Equal(ApiInfo.ApiTitle, info.Title);
+        Assert.Null(info.Version);
     }
 
     [Fact]
-    public async Task Info_IsAlsoServedToSignedInClients()
+    public async Task Info_ServesTheRunningApiVersionToSignedInClients()
     {
         var response = await _factory.CreateClient().GetAsync("/api/info");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var info = (await response.Content.ReadFromJsonAsync<ApiInfo>())!;
+        Assert.Equal(ApiInfo.FromAssembly(typeof(Program).Assembly).Version, info.Version);
+        // The SDK stamps "1.0.0" on any build not given a version; the API project must not let that through.
+        Assert.NotEqual("1.0.0", info.Version);
+        Assert.DoesNotContain('+', info.Version!);
     }
 
     [Fact]

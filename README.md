@@ -50,6 +50,9 @@ dotnet test ToJePrivela.slnx
 
 The database file is created and migrated on startup, so a fresh clone needs no manual EF step.
 
+`GET /api/info` reports the version the build was given (`dotnet publish src/ToJePrivela.Api -p:Version=1.4.0`); a build
+without one reports `"unknown"` rather than the SDK's default `1.0.0`.
+
 The Development settings carry a public signing key, so the API refuses to run where that is unsafe
 (`DeploymentSafety`): any other environment does not start with that key (surrounding whitespace ignored), and
 Development does not start when it is configured to listen on an address other machines can reach (`0.0.0.0`, `*`, a
@@ -137,6 +140,8 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/auth/accounts` | Anonymous; body `{ name, password }`; creates a login (never an admin) and signs it in; 409 `Auth.NameTaken` |
 | GET | `/api/auth/me` | The signed-in login `{ id, name, isAdmin }` |
 | GET | `/api/rules` | Anonymous; includes `loginName` and `password` length limits |
+| GET | `/api/info` | Anonymous; `{ title, version }` — `version` only for signed-in clients (`null` otherwise), `"unknown"` for an unversioned build |
+| GET | `/api/health` | Anonymous, plain HTTP allowed; `Healthy` (200) when the database answers a real query within 2 s, else 503; healthy answers are cached for 5 s |
 | GET | `/api/players` | |
 | GET/PUT/DELETE | `/api/players/{id}` | |
 | POST | `/api/players` | 409 `Player.NameTaken` when the login already has the name (case-insensitive); 409 `Player.LimitReached` at 100 players per login |
