@@ -96,6 +96,14 @@ export interface Question {
   lastViewedAt: string | null;
 }
 
+/** What an admin writes for a manual question, when adding one or editing any. */
+export interface QuestionDraft {
+  textSk: string;
+  textEn: string;
+  answer: string;
+  badPoints: number;
+}
+
 /** Inclusive bounds of a number or of a text's length. */
 export interface Limit {
   min: number;
@@ -119,6 +127,8 @@ export interface GameRules {
   loginName: Limit;
   /** Length of a new login's password. */
   password: Limit;
+  /** Length of a question's text, in either language. */
+  questionText: Limit;
 }
 
 /** A login: a name and a password. Players and games belong to it. */

@@ -13,4 +13,5 @@ export const TEST_RULES: GameRules = {
   avatars: ['🦊', '🐸', '🐼'],
   loginName: { min: 3, max: 30 },
   password: { min: 6, max: 128 },
+  questionText: { min: 8, max: 512 },
 };

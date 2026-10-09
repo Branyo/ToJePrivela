@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Question, QuestionCategory } from '../../core/api/models';
 import { LanguageService } from '../../core/i18n/language';
@@ -34,7 +35,7 @@ describe('AiQuestionsSection', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [AiQuestionsSection],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideTranslateService()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideTranslateService()],
     });
     http = TestBed.inject(HttpTestingController);
     TestBed.inject(GameRulesStore).rules.set(TEST_RULES);

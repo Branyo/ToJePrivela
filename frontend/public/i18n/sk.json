@@ -16,7 +16,10 @@
     "play": "Hra",
     "summary": "Výsledky",
     "signIn": "Prihlásenie",
-    "settings": "Nastavenia"
+    "settings": "Nastavenia",
+    "questions": "Otázky",
+    "players": "Hráči",
+    "categories": "Kategórie"
   },
   "common": {
     "dateTime": "d. M. HH:mm",
@@ -249,10 +252,16 @@
   "settings": {
     "title": "⚙️ Nastavenia",
     "signedInAs": "Prihlásený ako {{name}}",
-    "admin": "správca"
+    "admin": "správca",
+    "tabs": {
+      "label": "Časti nastavení",
+      "players": "👥 Hráči",
+      "categories": "🗂️ Kategórie",
+      "questions": "📚 Otázky"
+    }
   },
   "admin": {
-    "title": "🛠️ Otázky",
+    "title": "🗂️ Kategórie a AI otázky",
     "text": "S týmito otázkami hrajú všetci. Meniť ich môžu len správcovia.",
     "categories": "Kategórie",
     "loading": "Načítavam kategórie…",
@@ -268,7 +277,53 @@
     "created": "Kategória „{{name}}“ je pripravená, nových otázok: {{count}}! ✨",
     "added": "Do kategórie „{{name}}“ pribudlo nových otázok: {{count}}. ✨",
     "aiDeleted": "Z kategórie „{{name}}“ ubudlo AI otázok: {{count}}.",
-    "categoryDeleted": "Kategória „{{name}}“ bola vymazaná."
+    "categoryDeleted": "Kategória „{{name}}“ bola vymazaná.",
+    "browseCategory": "Otázky kategórie „{{name}}“"
+  },
+  "questionAdmin": {
+    "title": "📚 Otázky",
+    "text": "Vyber kategóriu a prejdi si jej otázky. Odpovede ostanú skryté, kým ich neukážeš.",
+    "loading": "Načítavam otázky…",
+    "noCategories": "Zatiaľ tu nie sú kategórie. Vytvor ich v nastaveniach.",
+    "pickCategory": "Vyber kategóriu vyššie.",
+    "empty": "V tejto kategórii zatiaľ nie sú otázky.",
+    "add": "➕ Nová otázka",
+    "noEnglish": "Zatiaľ bez anglického textu.",
+    "showAnswer": "👁️ Ukázať odpoveď",
+    "hideAnswer": "Skryť odpoveď",
+    "answer": "Odpoveď",
+    "edit": "✏️ Upraviť",
+    "delete": "Vymazať",
+    "keep": "Ponechať",
+    "confirmDelete": "Natrvalo vymazať túto otázku?",
+    "source": {
+      "Ai": "🤖 AI",
+      "Manual": "✍️ Ručná"
+    },
+    "created": "Otázka bola pridaná. ✨",
+    "updated": "Otázka bola uložená.",
+    "deleted": "Otázka bola vymazaná.",
+    "form": {
+      "newTitle": "Nová otázka v kategórii „{{category}}“",
+      "editTitle": "Úprava otázky",
+      "textSk": "Slovenský text",
+      "textEn": "Anglický text",
+      "answer": "Odpoveď",
+      "answerHint": "Číslo, napríklad 42 alebo -3.5, bez oddeľovačov.",
+      "badPoints": "Počet somárov na karte",
+      "roll": "🎲 Náhodne",
+      "rollTitle": "Vybrať náhodný počet somárov",
+      "aiNote": "Po uložení sa z AI otázky stane ručná.",
+      "save": "💾 Uložiť",
+      "saving": "Ukladám…",
+      "cancel": "Zrušiť",
+      "errors": {
+        "textSk": "Slovenský text musí mať {{min}} až {{max}} znakov.",
+        "textEn": "Anglický text musí mať {{min}} až {{max}} znakov.",
+        "answer": "Zadaj odpoveď.",
+        "badPoints": "Vyber {{min}} až {{max}} somárov alebo hoď kockou."
+      }
+    }
   },
   "errors": {
     "generic": "Niečo sa pokazilo. Skúste to znova.",

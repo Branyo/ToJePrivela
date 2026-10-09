@@ -153,7 +153,7 @@
         @if (startBlocker(); as blocker) {
           <p class="muted">{{ blocker | message }}</p>
           @if (isAdmin() && availableQuestions() === 0) {
-            <a routerLink="/settings" class="btn btn--sky">⚙️ {{ 'app.settings' | translate }}</a>
+            <a routerLink="/settings/categories" class="btn btn--sky">⚙️ {{ 'app.settings' | translate }}</a>
           }
         }
       </div>

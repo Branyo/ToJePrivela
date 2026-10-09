@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
-import { signedInGuard, signedOutGuard } from './auth-guards';
+import { adminGuard, signedInGuard, signedOutGuard } from './auth-guards';
 import { AuthStore } from './auth-store';
 import { signedInAs } from './testing';
 
@@ -34,5 +34,17 @@ describe('auth guards', () => {
 
     expect(run(signedInGuard)).toBe(true);
     expect(serialize(run(signedOutGuard))).toBe('/');
+  });
+
+  it('sends a signed-in account that is not an admin back to the settings', async () => {
+    await signedInAs(TestBed.inject(AuthStore), http);
+
+    expect(serialize(run(adminGuard))).toBe('/settings');
+  });
+
+  it('lets an admin through to the admin screens', async () => {
+    await signedInAs(TestBed.inject(AuthStore), http, { isAdmin: true });
+
+    expect(run(adminGuard)).toBe(true);
   });
 });

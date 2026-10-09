@@ -1,0 +1,76 @@
+.question-form {
+  display: grid;
+  gap: 14px;
+}
+
+.question-form__title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field__label {
+  font-weight: 700;
+}
+
+.lang {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 6px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+textarea.text-input {
+  width: 100%;
+  border-radius: var(--radius);
+  font: inherit;
+  resize: vertical;
+}
+
+.question-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+}
+
+.field--answer {
+  flex: 1 1 200px;
+}
+
+.bad-points {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.bad-points .chip {
+  justify-content: center;
+  min-width: 44px;
+}
+
+.roll {
+  padding: 8px 14px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.question-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.question-form__actions .btn {
+  padding: 8px 18px;
+}

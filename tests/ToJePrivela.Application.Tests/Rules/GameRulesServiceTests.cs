@@ -23,6 +23,7 @@ public class GameRulesServiceTests
         Assert.Equal(QuestionGenerationOptions.MaxCount, _rules.MaxAiQuestionCount);
         Assert.Equal(new LimitDto(Account.NameMinLength, Account.NameMaxLength), _rules.LoginName);
         Assert.Equal(new LimitDto(PasswordRules.MinLength, PasswordRules.MaxLength), _rules.Password);
+        Assert.Equal(new LimitDto(Question.TextMinLength, Question.TextMaxLength), _rules.QuestionText);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
@@ -26,12 +27,13 @@ interface CategoryRow {
 type PendingDelete = { id: number; what: 'ai' | 'category' };
 
 /**
- * Admins manage the questions every login plays with: categories and their AI questions. Shown to admins only; the API
+ * Admins manage the questions every login plays with: categories and their AI questions; each category's questions
+ * open in the questions tab. Shown to admins only; the API
  * refuses everyone else anyway.
  */
 @Component({
   selector: 'app-ai-questions-section',
-  imports: [TranslatePipe, MessagePipe],
+  imports: [RouterLink, TranslatePipe, MessagePipe],
   templateUrl: './ai-questions-section.html',
   styleUrl: './ai-questions-section.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

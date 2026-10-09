@@ -1,0 +1,102 @@
+<form class="question-form" (submit)="$event.preventDefault(); submit()">
+  <h3 class="question-form__title">
+    @if (question()) {
+      {{ 'questionAdmin.form.editTitle' | translate }}
+    } @else {
+      {{ 'questionAdmin.form.newTitle' | translate: { category: categoryName() } }}
+    }
+  </h3>
+
+  <label class="field">
+    <span class="field__label"><span class="lang">SK</span> {{ 'questionAdmin.form.textSk' | translate }}</span>
+    <textarea
+      class="text-input"
+      name="textSk"
+      rows="3"
+      lang="sk"
+      [attr.maxlength]="textLimit()?.max ?? null"
+      [value]="textSk()"
+      (input)="onInput('textSk', $event)"
+      [disabled]="busy()"
+    ></textarea>
+  </label>
+
+  <label class="field">
+    <span class="field__label"><span class="lang">EN</span> {{ 'questionAdmin.form.textEn' | translate }}</span>
+    <textarea
+      class="text-input"
+      name="textEn"
+      rows="3"
+      lang="en"
+      [attr.maxlength]="textLimit()?.max ?? null"
+      [value]="textEn()"
+      (input)="onInput('textEn', $event)"
+      [disabled]="busy()"
+    ></textarea>
+  </label>
+
+  <div class="question-form__row">
+    <label class="field field--answer">
+      <span class="field__label">{{ 'questionAdmin.form.answer' | translate }}</span>
+      <input
+        class="text-input"
+        name="answer"
+        inputmode="decimal"
+        autocomplete="off"
+        [value]="answer()"
+        (input)="onInput('answer', $event)"
+        [disabled]="busy()"
+      />
+      <span class="muted hint">{{ 'questionAdmin.form.answerHint' | translate }}</span>
+    </label>
+
+    <div class="field">
+      <span class="field__label" [id]="'bad-points-' + (question()?.id ?? 'new')">
+        {{ 'questionAdmin.form.badPoints' | translate }}
+      </span>
+      <div class="bad-points" role="group" [attr.aria-labelledby]="'bad-points-' + (question()?.id ?? 'new')">
+        @for (points of badPointOptions(); track points) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--on]="badPoints() === points"
+            [attr.aria-pressed]="badPoints() === points"
+            [disabled]="busy()"
+            (click)="badPoints.set(points)"
+          >
+            {{ points }}
+          </button>
+        }
+        <button
+          type="button"
+          class="btn btn--ghost roll"
+          [title]="'questionAdmin.form.rollTitle' | translate"
+          [disabled]="busy()"
+          (click)="roll()"
+        >
+          {{ 'questionAdmin.form.roll' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (question()?.source === 'Ai') {
+    <p class="muted hint">{{ 'questionAdmin.form.aiNote' | translate }}</p>
+  }
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  <div class="question-form__actions">
+    <button type="submit" class="btn btn--primary" [disabled]="busy()">
+      @if (busy()) {
+        {{ 'questionAdmin.form.saving' | translate }}
+      } @else {
+        {{ 'questionAdmin.form.save' | translate }}
+      }
+    </button>
+    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="cancelled.emit()">
+      {{ 'questionAdmin.form.cancel' | translate }}
+    </button>
+  </div>
+</form>

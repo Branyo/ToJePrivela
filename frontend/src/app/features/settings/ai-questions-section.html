@@ -72,7 +72,13 @@
             <div class="row__head">
               <strong class="row__name">{{ row.category.name }}</strong>
               <span class="muted row__other" [attr.lang]="i18n.language() === 'sk' ? 'en' : 'sk'">{{ otherName(row.category) }}</span>
-              <span class="muted">{{ 'admin.counts' | translate: { total: row.total, ai: row.ai } }}</span>
+              <a
+                class="row__questions"
+                routerLink="/settings/questions"
+                [queryParams]="{ category: row.category.id }"
+                [title]="'admin.browseCategory' | translate: { name: row.category.name }"
+                >{{ 'admin.counts' | translate: { total: row.total, ai: row.ai } }}</a
+              >
             </div>
 
             @if (isPending(row.category.id, 'ai') || isPending(row.category.id, 'category')) {

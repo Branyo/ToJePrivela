@@ -1,0 +1,147 @@
+<section class="questions" aria-labelledby="questions-title">
+  <header>
+    <h2 id="questions-title">{{ 'questionAdmin.title' | translate }}</h2>
+    <p class="muted">{{ 'questionAdmin.text' | translate }}</p>
+  </header>
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  @if (!loaded()) {
+    <p class="muted">{{ 'questionAdmin.loading' | translate }}</p>
+  } @else if (sortedCategories().length === 0) {
+    <p class="muted">{{ 'questionAdmin.noCategories' | translate }}</p>
+  } @else {
+    <nav class="categories" [attr.aria-label]="'admin.categories' | translate">
+      @for (category of sortedCategories(); track category.id) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip--on]="selected()?.id === category.id"
+          [attr.aria-pressed]="selected()?.id === category.id"
+          (click)="pick(category)"
+        >
+          {{ category.name }}
+          <span class="chip__count">{{ counts().get(category.id) ?? 0 }}</span>
+        </button>
+      }
+    </nav>
+
+    @if (selected(); as category) {
+      <section class="panel" aria-labelledby="category-title">
+        <div class="list-head">
+          <h2 id="category-title" class="panel__title">{{ category.name }}</h2>
+          @if (editing() !== 'new') {
+            <button type="button" class="btn btn--sky" [disabled]="working() !== null" (click)="edit('new')">
+              {{ 'questionAdmin.add' | translate }}
+            </button>
+          }
+        </div>
+
+        @if (notice(); as message) {
+          <p class="notice" role="status">{{ message | message }}</p>
+        }
+
+        @if (editing() === 'new') {
+          <div class="item item--form">
+            <app-question-form
+              [categoryName]="category.name"
+              [busy]="working() === 'new'"
+              [problem]="formProblem()"
+              (saved)="save($event, null)"
+              (cancelled)="cancelEdit()"
+            />
+          </div>
+        }
+
+        @if (shown().length === 0) {
+          <p class="muted">{{ 'questionAdmin.empty' | translate }}</p>
+        } @else {
+          <ul class="list">
+            @for (question of shown(); track question.id) {
+              <li class="item" [class.item--busy]="working() === question.id">
+                @if (editing() === question.id) {
+                  <app-question-form
+                    [question]="question"
+                    [busy]="working() === question.id"
+                    [problem]="formProblem()"
+                    (saved)="save($event, question)"
+                    (cancelled)="cancelEdit()"
+                  />
+                } @else {
+                  <p class="text" lang="sk"><span class="lang">SK</span> {{ question.textSk }}</p>
+                  <p class="text" lang="en">
+                    <span class="lang">EN</span>
+                    @if (question.textEn) {
+                      {{ question.textEn }}
+                    } @else {
+                      <span class="muted">{{ 'questionAdmin.noEnglish' | translate }}</span>
+                    }
+                  </p>
+
+                  <div class="meta">
+                    <span class="tag">🫏 {{ question.badPoints }}</span>
+                    <span class="tag" [class.tag--ai]="question.source === 'Ai'">
+                      {{ 'questionAdmin.source.' + question.source | translate }}
+                    </span>
+                    @if (isRevealed(question.id)) {
+                      <span class="answer">
+                        {{ 'questionAdmin.answer' | translate }}: <strong>{{ question.answer }}</strong>
+                      </span>
+                      <button type="button" class="btn btn--ghost small" (click)="toggleAnswer(question.id)">
+                        {{ 'questionAdmin.hideAnswer' | translate }}
+                      </button>
+                    } @else {
+                      <button type="button" class="btn btn--ghost small show-answer" (click)="toggleAnswer(question.id)">
+                        {{ 'questionAdmin.showAnswer' | translate }}
+                      </button>
+                    }
+                  </div>
+
+                  @if (pendingDelete() === question.id) {
+                    <div class="confirm">
+                      <span>{{ 'questionAdmin.confirmDelete' | translate }}</span>
+                      <button
+                        type="button"
+                        class="btn btn--danger small"
+                        [disabled]="working() !== null"
+                        (click)="confirmDelete(question.id)"
+                      >
+                        {{ 'questionAdmin.delete' | translate }}
+                      </button>
+                      <button type="button" class="btn btn--ghost small" (click)="pendingDelete.set(null)">
+                        {{ 'questionAdmin.keep' | translate }}
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="actions">
+                      <button
+                        type="button"
+                        class="btn btn--ghost small"
+                        [disabled]="working() !== null"
+                        (click)="edit(question.id)"
+                      >
+                        {{ 'questionAdmin.edit' | translate }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--ghost small danger"
+                        [disabled]="working() !== null"
+                        (click)="askToDelete(question.id)"
+                      >
+                        {{ 'questionAdmin.delete' | translate }}
+                      </button>
+                    </div>
+                  }
+                }
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    } @else {
+      <p class="muted">{{ 'questionAdmin.pickCategory' | translate }}</p>
+    }
+  }
+</section>
