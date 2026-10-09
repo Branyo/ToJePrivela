@@ -7,6 +7,12 @@
     <UserSecretsId>391adb21-5777-402c-8591-bc3b5882b1f5</UserSecretsId>
   </PropertyGroup>
 
+  <!-- GET /api/info reports the informational version. Without an explicit version (dotnet publish -p:Version=1.4.0)
+       the SDK would stamp "1.0.0" on every build, so unversioned builds carry none and report "unknown" instead. -->
+  <PropertyGroup Condition="'$(Version)' == '' and '$(VersionPrefix)' == ''">
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />

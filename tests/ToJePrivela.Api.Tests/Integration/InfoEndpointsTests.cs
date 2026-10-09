@@ -1,0 +1,155 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using ToJePrivela.Api.Common;
+using ToJePrivela.Infrastructure.Persistence;
+
+namespace ToJePrivela.Api.Tests.Integration;
+
+public class InfoEndpointsTests : IClassFixture<ApiFactory>
+{
+    private readonly ApiFactory _factory;
+    private readonly HttpClient _anonymous;
+
+    public InfoEndpointsTests(ApiFactory factory)
+    {
+        _factory = factory;
+        _anonymous = factory.CreateAnonymousClient();
+    }
+
+    [Fact]
+    public async Task Health_ReportsHealthyWithoutSigningIn_WhenTheDatabaseAnswers()
+    {
+        var response = await _anonymous.GetAsync("/api/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public void Health_IsAProbeEndpointWithItsHealthyAnswerCached()
+    {
+        var health = _factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Single(endpoint => endpoint.RoutePattern.RawText == "/api/health");
+
+        Assert.NotNull(health.Metadata.GetMetadata<ProbeEndpointMetadata>());
+        Assert.NotNull(health.Metadata.GetMetadata<IOutputCachePolicy>());
+    }
+
+    [Fact]
+    public async Task Health_ReportsHealthy_WhenTheDatabaseHasNoPlayers()
+    {
+        using var empty = new ApiFactory();
+        using (var scope = empty.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ToJePrivelaDbContext>().Database.ExecuteSqlRaw("""
+                DELETE FROM "GamePlayers";
+                DELETE FROM "Games";
+                DELETE FROM "Players";
+                """);
+        }
+
+        var response = await empty.CreateAnonymousClient().GetAsync("/api/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Health_ServesEveryProbeFromOneCachedAnswer_WhateverItsQueryOrHost()
+    {
+        using var counting = new CountingHealthFactory();
+        var client = counting.CreateAnonymousClient();
+
+        await client.GetAsync("/api/health");
+        await client.GetAsync("/api/health?bust=1");
+        await client.GetAsync("/api/health?bust=2");
+        using var otherHost = new HttpRequestMessage(HttpMethod.Get, "/api/health") { Headers = { Host = "other.example" } };
+        var response = await client.SendAsync(otherHost);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, counting.Check.Runs);
+    }
+
+    [Fact]
+    public async Task Info_ServesTheTitleAndTheRunningApiVersionWithoutSigningIn()
+    {
+        var response = await _anonymous.GetAsync("/api/info");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var info = (await response.Content.ReadFromJsonAsync<ApiInfo>())!;
+        Assert.Equal(ApiInfo.ApiTitle, info.Title);
+        Assert.Equal(ApiInfo.FromAssembly(typeof(Program).Assembly).Version, info.Version);
+        // The SDK stamps "1.0.0" on any build not given a version; the API project must not let that through.
+        Assert.NotEqual("1.0.0", info.Version);
+        Assert.DoesNotContain('+', info.Version);
+    }
+
+    [Fact]
+    public async Task OtherEndpoints_StillRequireSigningIn()
+    {
+        var response = await _anonymous.GetAsync("/api/players");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Health_AnswersServiceUnavailable_WhenACheckFails()
+    {
+        using var failing = new FailingHealthFactory();
+
+        var response = await failing.CreateAnonymousClient().GetAsync("/api/health");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    }
+
+    /// <summary>A host with its own database whose health checks include one that fails, like an unreachable database.</summary>
+    private sealed class FailingHealthFactory : ApiFactory
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services => services.Configure<HealthCheckServiceOptions>(options =>
+                options.Registrations.Add(new HealthCheckRegistration(
+                    "failing", _ => new FailingCheck(), failureStatus: null, tags: null))));
+        }
+    }
+
+    private sealed class FailingCheck : IHealthCheck
+    {
+        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
+            Task.FromResult(HealthCheckResult.Unhealthy("database unreachable"));
+    }
+
+    /// <summary>A host with its own database whose health checks include one that counts how often the probe ran them.</summary>
+    private sealed class CountingHealthFactory : ApiFactory
+    {
+        public CountingCheck Check { get; } = new();
+
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services => services.Configure<HealthCheckServiceOptions>(options =>
+                options.Registrations.Add(new HealthCheckRegistration(
+                    "counting", _ => Check, failureStatus: null, tags: null))));
+        }
+    }
+
+    private sealed class CountingCheck : IHealthCheck
+    {
+        private int _runs;
+
+        public int Runs => _runs;
+
+        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _runs);
+            return Task.FromResult(HealthCheckResult.Healthy());
+        }
+    }
+}
