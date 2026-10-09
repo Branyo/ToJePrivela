@@ -140,7 +140,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/auth/accounts` | Anonymous; body `{ name, password }`; creates a login (never an admin) and signs it in; 409 `Auth.NameTaken` |
 | GET | `/api/auth/me` | The signed-in login `{ id, name, isAdmin }` |
 | GET | `/api/rules` | Anonymous; includes `loginName` and `password` length limits |
-| GET | `/api/info` | Anonymous; `{ title, version }` — `version` only for signed-in clients (`null` otherwise), `"unknown"` for an unversioned build |
+| GET | `/api/info` | Anonymous; `{ title, version }` — `version` is `"unknown"` for an unversioned build |
 | GET | `/api/health` | Anonymous, plain HTTP allowed; `Healthy` (200) when the database answers a real query within 2 s, else 503; healthy answers are cached for 5 s |
 | GET | `/api/players` | |
 | GET/PUT/DELETE | `/api/players/{id}` | |

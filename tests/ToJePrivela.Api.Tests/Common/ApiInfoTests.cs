@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Security.Claims;
 using ToJePrivela.Api.Common;
 
 namespace ToJePrivela.Api.Tests.Common;
@@ -38,23 +37,6 @@ public class ApiInfoTests
     [InlineData("+abc123")]
     public void StripBuildMetadata_ReportsUnknown_WhenThereIsNoVersion(string? informational) =>
         Assert.Equal(ApiInfo.UnknownVersion, ApiInfo.StripBuildMetadata(informational));
-
-    [Fact]
-    public void For_HidesTheVersionFromAnonymousCallers()
-    {
-        var info = new ApiInfo(ApiInfo.ApiTitle, "2.5.1").For(new ClaimsPrincipal(new ClaimsIdentity()));
-
-        Assert.Equal(ApiInfo.ApiTitle, info.Title);
-        Assert.Null(info.Version);
-    }
-
-    [Fact]
-    public void For_ShowsTheVersionToSignedInCallers()
-    {
-        var signedIn = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "admin")], "Bearer"));
-
-        Assert.Equal("2.5.1", new ApiInfo(ApiInfo.ApiTitle, "2.5.1").For(signedIn).Version);
-    }
 
     private static Assembly AssemblyWithInformationalVersion(string? informationalVersion)
     {

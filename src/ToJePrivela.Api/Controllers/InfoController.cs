@@ -5,8 +5,7 @@ using ToJePrivela.Api.Common;
 namespace ToJePrivela.Api.Controllers;
 
 /// <summary>
-/// Name of the running API, readable before signing in; signed-in clients also get its version. Probes use
-/// <c>/api/health</c>.
+/// Name and version of the running API, readable before signing in. Probes use <c>/api/health</c>.
 /// </summary>
 [ApiController]
 [AllowAnonymous]
@@ -23,5 +22,5 @@ public sealed class InfoController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType<ApiInfo>(StatusCodes.Status200OK)]
-    public ActionResult<ApiInfo> GetInfo() => _info.For(User);
+    public ActionResult<ApiInfo> GetInfo() => _info;
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ToJePrivela.Application.Abstractions.Persistence;
@@ -19,13 +19,15 @@ public static class DependencyInjection
 
         // Readiness, reported by /api/health: the database must answer a real query, which also needs the migrated
         // schema (a bare connection test would pass for an empty or unmigrated SQLite file). A locked file must turn
-        // into a quick Unhealthy, not a probe left waiting for SQLite's default 30-second busy timeout.
+        // into a quick Unhealthy, not a probe left waiting for SQLite's default 30-second busy timeout. The check reads
+        // the query's result as the verdict, so the query answering at all is what counts — an empty table is healthy.
         services.AddHealthChecks().AddDbContextCheck<ToJePrivelaDbContext>(
             name: "database",
-            customTestQuery: (db, cancellationToken) =>
+            customTestQuery: async (db, cancellationToken) =>
             {
                 db.Database.SetCommandTimeout(HealthCheckQueryTimeout);
-                return db.Players.AnyAsync(cancellationToken);
+                await db.Players.AnyAsync(cancellationToken);
+                return true;
             });
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();

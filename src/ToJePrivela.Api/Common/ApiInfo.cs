@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Security.Claims;
 
 namespace ToJePrivela.Api.Common;
 
@@ -7,7 +6,7 @@ namespace ToJePrivela.Api.Common;
 /// Name and version of the running API, served by <c>GET /api/info</c>. Both are host facts, so they are read once at
 /// startup from the API assembly rather than going through an Application use case.
 /// </summary>
-public sealed record ApiInfo(string Title, string? Version)
+public sealed record ApiInfo(string Title, string Version)
 {
     public const string ApiTitle = "ToJePrivela API";
     public const string UnknownVersion = "unknown";
@@ -28,11 +27,4 @@ public sealed record ApiInfo(string Title, string? Version)
 
         return string.IsNullOrEmpty(core) ? UnknownVersion : core;
     }
-
-    /// <summary>
-    /// The title is public; the exact build version is shown only to signed-in clients, so anonymous scanners cannot
-    /// match the deployment against known vulnerabilities.
-    /// </summary>
-    public ApiInfo For(ClaimsPrincipal user) =>
-        user.Identity?.IsAuthenticated == true ? this : this with { Version = null };
 }

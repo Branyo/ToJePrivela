@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
@@ -167,10 +167,15 @@ app.UseAuthorization();
 app.UseOutputCache();
 app.MapControllers();
 // Only healthy answers are cached (the default policy stores 200s), so a failing check is reported on the next probe.
+// One cache entry serves every probe: the default key varies by query string and host, which a flood would vary to
+// reach the database on every request.
 app.MapHealthChecks("/api/health")
     .AllowAnonymous()
     .AsProbe()
-    .CacheOutput(policy => policy.Expire(TimeSpan.FromSeconds(5)));
+    .CacheOutput(policy => policy
+        .Expire(TimeSpan.FromSeconds(5))
+        .SetVaryByQuery([])
+        .SetVaryByHost(false));
 
 DeploymentSafety.StopDevelopmentReachableFromNetwork(app);
 
