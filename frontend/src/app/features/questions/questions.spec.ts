@@ -97,6 +97,17 @@ describe('Questions', () => {
     http.expectOne('/api/questions?categoryId=2').flush([question(3, 2)]);
   });
 
+  it('fetches nothing for a category the fetched categories do not know', async () => {
+    const { fixture, page } = await render(1);
+
+    fixture.componentRef.setInput('category', '99');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // No fetch of `/api/questions?categoryId=99` (`http.verify()`).
+    expect(page.textContent).toContain('questionAdmin.pickCategory');
+  });
+
   it('ignores an id in the URL that the API could not take, and still lists the categories', async () => {
     const fixture = TestBed.createComponent(Questions);
     fixture.componentRef.setInput('category', '3000000000');

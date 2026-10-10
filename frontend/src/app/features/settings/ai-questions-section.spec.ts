@@ -4,6 +4,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { QuestionCategory } from '../../core/api/models';
+import { AuthStore } from '../../core/auth/auth-store';
+import { signedInAs } from '../../core/auth/testing';
 import { LanguageService } from '../../core/i18n/language';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { TEST_RULES } from '../../core/rules/testing';
@@ -120,6 +122,58 @@ describe('AiQuestionsSection', () => {
 
     expect(again.page.querySelector('.row--busy')).toBeNull();
     expect(again.page.querySelector('.notice')).not.toBeNull();
+  });
+
+  it("forgets a failed load and a refused input once the tab is left, and a load that worked clears the error", async () => {
+    const fixture = TestBed.createComponent(AiQuestionsSection);
+    fixture.detectChanges();
+    http.expectOne('/api/question-categories').flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+    fixture.destroy();
+
+    const again = await render();
+    expect(again.page.querySelector('[role="alert"]')).toBeNull();
+
+    const name = again.page.querySelector<HTMLInputElement>('form .text-input:not(.count)')!;
+    name.value = 'X'; // too short
+    name.dispatchEvent(new Event('input'));
+    await again.fixture.whenStable();
+    again.page.querySelector<HTMLButtonElement>('form button[type="submit"]')!.click();
+    await again.fixture.whenStable();
+    expect(again.page.querySelector('[role="alert"]')).not.toBeNull();
+    again.fixture.destroy();
+
+    const third = await render();
+    expect(third.page.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('keeps the result of a change for the account that made it, not for the next sign-in', async () => {
+    localStorage.clear();
+    const auth = TestBed.inject(AuthStore);
+    await signedInAs(auth, http, { id: 1, isAdmin: true });
+    const { fixture, page } = await render();
+    page.querySelector<HTMLButtonElement>('.row__actions .btn--sky')!.click();
+    http.expectOne({ method: 'POST', url: '/api/question-categories/1/ai-questions' }).flush({
+      summary: { requested: 20, created: 18, discarded: 2 },
+      questions: [],
+    });
+    flushLoad();
+    await fixture.whenStable();
+    expect(page.querySelector('.notice')).not.toBeNull();
+    fixture.destroy();
+
+    // The same account confirmed again keeps it.
+    await signedInAs(auth, http, { id: 1, isAdmin: true });
+    const same = await render();
+    expect(same.page.querySelector('.notice')).not.toBeNull();
+    same.fixture.destroy();
+
+    auth.signOut();
+    await signedInAs(auth, http, { id: 2, isAdmin: true });
+    const other = await render();
+    expect(other.page.querySelector('.notice')).toBeNull();
+    localStorage.clear();
   });
 
   it('deletes a category only after a second tap', async () => {

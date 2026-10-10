@@ -71,6 +71,18 @@ describe('Settings', () => {
     expect(TestBed.inject(Router).url).toBe('/settings/players');
   });
 
+  it('lets signing out on an admin tab go to the sign-in screen', async () => {
+    const { harness } = await open('/settings/questions', true);
+    flushCategories();
+    await harness.fixture.whenStable();
+
+    TestBed.inject(AuthStore).signOut();
+    await harness.navigateByUrl('/sign-in');
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/sign-in');
+  });
+
   it('gives an admin tabs for players, categories and questions, marking the open one', async () => {
     const { harness, page } = await open('/settings/categories', true);
     flushCategories();

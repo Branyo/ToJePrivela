@@ -19,9 +19,9 @@ const MAX_ID = 2_147_483_647;
 type Timed = { question: Question; time: number };
 
 /**
- * The settings' questions tab: admins go through the categories and their questions: both texts are shown, the answer only on request. They add
- * manual questions, edit any (an AI question becomes a manual one) and delete any. The picked category lives in the
- * URL (`?category=`), so a reload or the back button keeps it.
+ * The settings' questions tab: admins go through the categories and their questions: both texts are shown, the answer
+ * only on request. They add manual questions, edit any (an AI question becomes a manual one) and delete any. The
+ * picked category lives in the URL (`?category=`), so a reload or the back button keeps it.
  */
 @Component({
   selector: 'app-questions',
@@ -101,7 +101,10 @@ export class Questions {
       .pipe(
         switchMap(() => {
           const id = untracked(() => this.requestedId());
-          const list = id === null ? of([]) : this.questionsApi.getByCategory(id).pipe(map(newestFirst));
+          // An id the categories already fetched do not know (say, one deleted meanwhile) has nothing to fetch.
+          const known = untracked(() => this.categories());
+          const exists = id !== null && (known === null || known.some((category) => category.id === id));
+          const list = exists ? this.questionsApi.getByCategory(id).pipe(map(newestFirst)) : of([]);
           return list.pipe(
             map((questions) => ({ categoryId: id, list: questions })),
             catchError((error: unknown) => this.fail(error)),

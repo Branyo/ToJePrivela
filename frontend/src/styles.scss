@@ -122,6 +122,17 @@ input {
   animation: wiggle 0.5s ease;
 }
 
+/* Says that a change went through. */
+.notice {
+  margin: 0;
+  padding: 12px 16px;
+  border: var(--border);
+  border-color: var(--mint);
+  border-radius: var(--radius);
+  background: #e3fbef;
+  font-weight: 500;
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   --btn-bg: var(--paper);

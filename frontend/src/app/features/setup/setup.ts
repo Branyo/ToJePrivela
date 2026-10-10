@@ -230,9 +230,7 @@ export class Setup {
 
   private loadCategories(): void {
     this.categoriesApi.getAll().subscribe({
-      next: (categories) => {
-        this.categories.set(categories);
-      },
+      next: (categories) => this.categories.set(categories),
       error: (error) => this.error.set(toProblem(error).message),
     });
   }

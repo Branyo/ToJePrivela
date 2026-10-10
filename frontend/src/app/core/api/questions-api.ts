@@ -8,10 +8,6 @@ import { Question, QuestionDraft } from './models';
 export class QuestionsApi {
   private readonly http = inject(HttpClient);
 
-  getAll(): Observable<Question[]> {
-    return this.http.get<Question[]>('/api/questions');
-  }
-
   getByCategory(categoryId: number): Observable<Question[]> {
     return this.http.get<Question[]>('/api/questions', { params: { categoryId } });
   }

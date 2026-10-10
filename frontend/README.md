@@ -23,17 +23,21 @@ editable), a password and its repetition, checked against the limits `/api/rules
 until it expires) and sent with every `/api` request by `authInterceptor`. A 401 drops the session and
 returns to sign-in with a `returnUrl`.
 
-`/settings` is the login's settings page: its own players (add, delete; at most `maxPlayersPerAccount`,
-100) for everyone, plus, for admins only (`account.isAdmin`), the shared questions: create categories, add
-or delete AI questions, delete categories. The API enforces the same rule; hiding the section only spares
-everyone else a screen that would fail. Admin logins come from the API's `Authentication:Admins`
+`/settings` is the login's settings page, one tab per child route so a reload or the back button keeps the
+tab: **Players** (`/settings/players`, the default) lets every login add and delete its own players (at most
+`maxPlayersPerAccount`, 100). Admins only (`account.isAdmin`) also get **Categories**
+(`/settings/categories`: create categories, add or delete AI questions, delete categories; generation keeps
+running in `AiQuestionsStore` while another tab is open) and **Questions** (`/settings/questions?category=`:
+a category's questions with both texts, answers hidden until shown; add manual questions, edit or delete any).
+A login with only one tab gets no tab bar, and `adminGuard` sends everyone else from an admin tab to Players.
+The API enforces the same rule; hiding the tabs only spares everyone else screens that would fail. Admin logins come from the API's `Authentication:Admins`
 configuration — see the backend README.
 
 ## How a game runs
 
 1. **Setup** (`/new`): add 2–12 players (new names or regulars), pick how many bad cards end the game
    (1–10, default 3), and optionally pick question categories (none = all). A fresh database ships
-   without questions; an admin creates categories with AI questions on `/settings`.
+   without questions; an admin creates categories with AI questions on `/settings/categories`.
 2. **Play** (`/games/:id?categories=1,2`): a question is drawn from the least viewed ones and counted as
    shown. Players estimate out loud; whoever says "to je priveľa!" taps the button to reveal the answer
    and then taps the player who takes the donkey card, which flies over to that seat. **Skip** (before or
@@ -54,7 +58,8 @@ src/app/
     sign-in/       name + password sign-in, create-login dialogs
     home/          landing page, running games, rules
     setup/         players, card limit, categories
-    settings/      the login's players (add, delete) and, for admins, AI question generation
+    settings/      tabbed settings: the login's players and, for admins, categories with AI generation
+    questions/     admin questions tab: browse a category, show answers, add, edit, delete
     play/          PlayStore (round state machine) + game screen
     summary/       loser spotlight and scoreboard
 ```

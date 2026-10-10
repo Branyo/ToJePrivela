@@ -1,11 +1,13 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { toProblem } from '../../core/api/problem';
+import { AuthStore } from '../../core/auth/auth-store';
 import { Message } from '../../core/i18n/language';
 
 /**
  * What the categories tab is busy with, kept outside the tab: generating AI questions takes long, and an admin who
  * opens another tab meanwhile still finds the work running, its buttons disabled and its result, on the way back.
+ * Signing out or in clears the result.
  */
 @Injectable({ providedIn: 'root' })
 export class AiQuestionsStore {
@@ -15,6 +17,24 @@ export class AiQuestionsStore {
   readonly error = signal<Message | null>(null);
   /** Emits after every change that went through, so the tab shown then fetches the categories again. */
   readonly finished = new Subject<void>();
+
+  constructor() {
+    // The outcome belongs to the account that started the work; another sign-in starts without it.
+    const auth = inject(AuthStore);
+    const accountId = computed(() => auth.account()?.id ?? null);
+    let shownFor = untracked(accountId);
+    effect(() => {
+      const id = accountId();
+      if (id === shownFor) {
+        return;
+      }
+      shownFor = id;
+      untracked(() => {
+        this.notice.set(null);
+        this.error.set(null);
+      });
+    });
+  }
 
   /**
    * Runs one change to completion whether or not the tab still shows; `onSuccess` lets the tab that started it

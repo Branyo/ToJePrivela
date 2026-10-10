@@ -44,14 +44,13 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
             })
             .ToDictionaryAsync(row => row.CategoryId, row => new QuestionCounts(row.Total, row.Ai), cancellationToken);
 
-    public async Task<QuestionCounts> CountAsync(int categoryId, CancellationToken cancellationToken = default)
-    {
-        var query = Set.Where(q => q.CategoryId == categoryId);
-        var total = await query.CountAsync(cancellationToken);
-        return total == 0
-            ? QuestionCounts.None
-            : new QuestionCounts(total, await query.CountAsync(q => q.Source == QuestionSource.Ai, cancellationToken));
-    }
+    public async Task<QuestionCounts> CountAsync(int categoryId, CancellationToken cancellationToken = default) =>
+        await Set
+            .Where(q => q.CategoryId == categoryId)
+            .GroupBy(q => q.CategoryId)
+            .Select(group => new QuestionCounts(group.Count(), group.Count(q => q.Source == QuestionSource.Ai)))
+            .FirstOrDefaultAsync(cancellationToken)
+        ?? QuestionCounts.None;
 
     public async Task<IReadOnlyList<string>> GetTextsAsync(int categoryId, CancellationToken cancellationToken = default) =>
         await Set.Where(q => q.CategoryId == categoryId)

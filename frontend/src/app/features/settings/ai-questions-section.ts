@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
+import { EMPTY, Subject, catchError, switchMap, tap } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
-import { LanguageCode, LanguageService, compareNames } from '../../core/i18n/language';
+import { LanguageCode, LanguageService, Message, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { AiQuestionsStore } from './ai-questions-store';
@@ -23,8 +23,7 @@ type PendingDelete = { id: number; what: 'ai' | 'category' };
 
 /**
  * Admins manage the questions every login plays with: categories and their AI questions; each category's questions
- * open in the questions tab. Shown to admins only; the API
- * refuses everyone else anyway.
+ * open in the questions tab. Shown to admins only; the API refuses everyone else anyway.
  */
 @Component({
   selector: 'app-ai-questions-section',
@@ -58,7 +57,10 @@ export class AiQuestionsSection {
   protected readonly working = this.store.working;
   protected readonly pending = signal<PendingDelete | null>(null);
   protected readonly notice = this.store.notice;
-  protected readonly error = this.store.error;
+  /** What this visit of the tab found wrong (loading, checking the inputs); it goes with the tab. */
+  private readonly localError = signal<Message | null>(null);
+  /** The tab's own problem first, else why the last change in the store failed. */
+  protected readonly error = computed(() => this.localError() ?? this.store.error());
 
   protected readonly loaded = computed(() => this.categories() !== null);
 
@@ -73,8 +75,9 @@ export class AiQuestionsSection {
       .pipe(
         switchMap(() =>
           this.categoriesApi.getAll().pipe(
+            tap(() => this.localError.set(null)),
             catchError((error: unknown) => {
-              this.error.set(toProblem(error).message);
+              this.localError.set(toProblem(error).message);
               return EMPTY;
             }),
           ),
@@ -104,7 +107,7 @@ export class AiQuestionsSection {
     const name = this.newName().trim();
     const nameLimit = rules.categoryName;
     if (name.length < nameLimit.min || name.length > nameLimit.max) {
-      this.error.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
+      this.localError.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
       return;
     }
     const count = this.newCount();
@@ -112,6 +115,7 @@ export class AiQuestionsSection {
       return;
     }
 
+    this.localError.set(null);
     this.store.run(
       'new',
       this.categoriesApi.create(name, this.newNameLanguage(), count),
@@ -130,6 +134,7 @@ export class AiQuestionsSection {
       return;
     }
 
+    this.localError.set(null);
     this.store.run(
       category.id,
       this.categoriesApi.generateAiQuestions(category.id, count),
@@ -138,7 +143,8 @@ export class AiQuestionsSection {
   }
 
   protected askToDelete(id: number, what: PendingDelete['what']): void {
-    this.error.set(null);
+    this.localError.set(null);
+    this.store.error.set(null);
     this.pending.set({ id, what });
   }
 
@@ -158,6 +164,7 @@ export class AiQuestionsSection {
     }
 
     const clearPending = () => this.pending.set(null);
+    this.localError.set(null);
     if (pending.what === 'ai') {
       this.store.run(
         category.id,
@@ -196,7 +203,7 @@ export class AiQuestionsSection {
   private async reloadRules(): Promise<GameRules | null> {
     const rules = await this.rulesStore.ensureLoaded();
     if (!rules) {
-      this.error.set({ key: 'errors.rulesUnavailable' });
+      this.localError.set({ key: 'errors.rulesUnavailable' });
     }
     return rules;
   }
@@ -207,7 +214,7 @@ export class AiQuestionsSection {
     if (Number.isInteger(count) && count >= min && count <= max) {
       return true;
     }
-    this.error.set({ key: 'setup.errors.questionCount', params: { min, max } });
+    this.localError.set({ key: 'setup.errors.questionCount', params: { min, max } });
     return false;
   }
 

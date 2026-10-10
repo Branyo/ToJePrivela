@@ -35,7 +35,8 @@ export class Settings {
     const router = inject(Router);
     const route = inject(ActivatedRoute);
     effect(() => {
-      if (this.auth.isAdmin()) {
+      // Signing out navigates to the sign-in screen on its own; redirecting here would override it.
+      if (!this.auth.isSignedIn() || this.auth.isAdmin()) {
         return;
       }
       untracked(() => {
