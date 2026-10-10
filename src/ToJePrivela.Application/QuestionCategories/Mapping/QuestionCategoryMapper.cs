@@ -27,5 +27,7 @@ public static class QuestionCategoryMapper
         category.NameIn(language),
         category.NameSk,
         category.NameEn,
+        generation.Questions.Count,
+        generation.Questions.Count,
         QuestionGenerationMapper.ToSummaryDto(generation));
 }

@@ -58,6 +58,19 @@ describe('Settings', () => {
     expect(TestBed.inject(Router).url).toBe('/settings/players');
   });
 
+  it('leaves an admin tab once the session check finds the login is no admin any more', async () => {
+    const { harness } = await open('/settings/questions', true);
+    flushCategories();
+    await harness.fixture.whenStable();
+
+    await signedInAs(TestBed.inject(AuthStore), http, { name: 'Brano', isAdmin: false });
+    await harness.fixture.whenStable();
+    http.expectOne('/api/players').flush([]);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/settings/players');
+  });
+
   it('gives an admin tabs for players, categories and questions, marking the open one', async () => {
     const { harness, page } = await open('/settings/categories', true);
     flushCategories();

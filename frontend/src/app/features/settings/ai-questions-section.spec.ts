@@ -105,6 +105,23 @@ describe('AiQuestionsSection', () => {
     expect(page.querySelector('.notice')).not.toBeNull();
   });
 
+  it('still shows AI questions being generated after the tab was left and opened again, and their result', async () => {
+    const { fixture, page } = await render();
+    page.querySelector<HTMLButtonElement>('.row__actions .btn--sky')!.click();
+    const request = http.expectOne({ method: 'POST', url: '/api/question-categories/1/ai-questions' });
+    fixture.destroy();
+
+    const again = await render();
+    expect(again.page.querySelector('.row--busy .row__name')?.textContent?.trim()).toBe('Autá');
+
+    request.flush({ summary: { requested: 20, created: 18, discarded: 2 }, questions: [] });
+    flushLoad();
+    await again.fixture.whenStable();
+
+    expect(again.page.querySelector('.row--busy')).toBeNull();
+    expect(again.page.querySelector('.notice')).not.toBeNull();
+  });
+
   it('deletes a category only after a second tap', async () => {
     const { fixture, page } = await render();
 

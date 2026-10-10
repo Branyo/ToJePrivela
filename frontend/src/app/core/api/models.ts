@@ -78,7 +78,7 @@ export interface QuestionGenerationSummary {
   discarded: number;
 }
 
-export interface CreatedQuestionCategory extends Omit<QuestionCategory, 'questionCount' | 'aiQuestionCount'> {
+export interface CreatedQuestionCategory extends QuestionCategory {
   questionGeneration: QuestionGenerationSummary;
 }
 

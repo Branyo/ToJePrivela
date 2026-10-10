@@ -6,9 +6,10 @@ import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
-import { LanguageCode, LanguageService, Message, compareNames } from '../../core/i18n/language';
+import { LanguageCode, LanguageService, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { AiQuestionsStore } from './ai-questions-store';
 
 /** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
 const GENERATOR_MIN_QUESTIONS = 1;
@@ -36,6 +37,7 @@ export class AiQuestionsSection {
   private readonly categoriesApi = inject(CategoriesApi);
   protected readonly i18n = inject(LanguageService);
   private readonly rulesStore = inject(GameRulesStore);
+  private readonly store = inject(AiQuestionsStore);
 
   /** `null` while the backend's rules are missing; the inputs then take anything and the actions say so. */
   protected readonly nameLimit = computed(() => this.rulesStore.rules()?.categoryName ?? null);
@@ -52,11 +54,11 @@ export class AiQuestionsSection {
   /** Per category: how many AI questions to add. */
   protected readonly moreCounts = signal<ReadonlyMap<number, number>>(new Map());
 
-  /** `'new'` while a new category is generated, else the id of the category being worked on. */
-  protected readonly working = signal<number | 'new' | null>(null);
+  /** Kept in the store, so work still running shows again when the admin comes back to this tab. */
+  protected readonly working = this.store.working;
   protected readonly pending = signal<PendingDelete | null>(null);
-  protected readonly notice = signal<Message | null>(null);
-  protected readonly error = signal<Message | null>(null);
+  protected readonly notice = this.store.notice;
+  protected readonly error = this.store.error;
 
   protected readonly loaded = computed(() => this.categories() !== null);
 
@@ -80,6 +82,8 @@ export class AiQuestionsSection {
         takeUntilDestroyed(),
       )
       .subscribe((categories) => this.categories.set(categories));
+    // Counts change with every generation or deletion, even one started before this tab was opened again.
+    this.store.finished.pipe(takeUntilDestroyed()).subscribe(() => this.load());
     // Names arrive in the shown language, so they are fetched again after a switch.
     effect(() => {
       this.i18n.language();
@@ -108,17 +112,12 @@ export class AiQuestionsSection {
       return;
     }
 
-    this.start('new');
-    this.categoriesApi.create(name, this.newNameLanguage(), count).subscribe({
-      next: (category) => {
-        this.newName.set('');
-        this.done({
-          key: 'admin.created',
-          params: { name: category.name, count: category.questionGeneration.created },
-        });
-      },
-      error: (error) => this.fail(error),
-    });
+    this.store.run(
+      'new',
+      this.categoriesApi.create(name, this.newNameLanguage(), count),
+      (category) => ({ key: 'admin.created', params: { name: category.name, count: category.questionGeneration.created } }),
+      () => this.newName.set(''),
+    );
   }
 
   protected async generateMore(category: QuestionCategory): Promise<void> {
@@ -131,12 +130,11 @@ export class AiQuestionsSection {
       return;
     }
 
-    this.start(category.id);
-    this.categoriesApi.generateAiQuestions(category.id, count).subscribe({
-      next: (result) =>
-        this.done({ key: 'admin.added', params: { name: category.name, count: result.summary.created } }),
-      error: (error) => this.fail(error),
-    });
+    this.store.run(
+      category.id,
+      this.categoriesApi.generateAiQuestions(category.id, count),
+      (result) => ({ key: 'admin.added', params: { name: category.name, count: result.summary.created } }),
+    );
   }
 
   protected askToDelete(id: number, what: PendingDelete['what']): void {
@@ -159,17 +157,21 @@ export class AiQuestionsSection {
       return;
     }
 
-    this.start(category.id);
+    const clearPending = () => this.pending.set(null);
     if (pending.what === 'ai') {
-      this.categoriesApi.deleteAiQuestions(category.id).subscribe({
-        next: (result) => this.done({ key: 'admin.aiDeleted', params: { name: category.name, count: result.deleted } }),
-        error: (error) => this.fail(error),
-      });
+      this.store.run(
+        category.id,
+        this.categoriesApi.deleteAiQuestions(category.id),
+        (result) => ({ key: 'admin.aiDeleted', params: { name: category.name, count: result.deleted } }),
+        clearPending,
+      );
     } else {
-      this.categoriesApi.delete(category.id).subscribe({
-        next: () => this.done({ key: 'admin.categoryDeleted', params: { name: category.name } }),
-        error: (error) => this.fail(error),
-      });
+      this.store.run(
+        category.id,
+        this.categoriesApi.delete(category.id),
+        () => ({ key: 'admin.categoryDeleted', params: { name: category.name } }),
+        clearPending,
+      );
     }
   }
 
@@ -207,24 +209,6 @@ export class AiQuestionsSection {
     }
     this.error.set({ key: 'setup.errors.questionCount', params: { min, max } });
     return false;
-  }
-
-  private start(target: number | 'new'): void {
-    this.working.set(target);
-    this.error.set(null);
-    this.notice.set(null);
-  }
-
-  private done(notice: Message): void {
-    this.working.set(null);
-    this.pending.set(null);
-    this.notice.set(notice);
-    this.load();
-  }
-
-  private fail(error: unknown): void {
-    this.working.set(null);
-    this.error.set(toProblem(error).message);
   }
 
   private load(): void {

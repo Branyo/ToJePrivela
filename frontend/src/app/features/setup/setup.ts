@@ -46,7 +46,10 @@ export class Setup {
   protected readonly badPointsModes: readonly BadPointsMode[] = ['Question', 'Chooser'];
 
   protected readonly categories = signal<QuestionCategory[]>([]);
-  protected readonly questionCounts = signal<ReadonlyMap<number, number>>(new Map());
+  /** Per category id, from the categories themselves. */
+  protected readonly questionCounts = computed<ReadonlyMap<number, number>>(
+    () => new Map(this.categories().map((category) => [category.id, category.questionCount])),
+  );
   protected readonly selectedCategoryIds = signal<number[]>([]);
 
   protected readonly starting = signal(false);
@@ -229,7 +232,6 @@ export class Setup {
     this.categoriesApi.getAll().subscribe({
       next: (categories) => {
         this.categories.set(categories);
-        this.questionCounts.set(new Map(categories.map((category) => [category.id, category.questionCount])));
       },
       error: (error) => this.error.set(toProblem(error).message),
     });

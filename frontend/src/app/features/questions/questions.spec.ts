@@ -86,14 +86,40 @@ describe('Questions', () => {
     expect(page.textContent).toContain('questionAdmin.pickCategory');
   });
 
-  it("fetches only the picked category's questions, and another one's once it is picked", async () => {
+  it("fetches only the picked category's questions, and only another one's once it is picked", async () => {
     const { fixture } = await render(1);
 
     fixture.componentRef.setInput('category', '2');
     fixture.detectChanges();
     await fixture.whenStable();
 
-    flushLoad(2, [question(3, 2)]);
+    http.expectNone('/api/question-categories');
+    http.expectOne('/api/questions?categoryId=2').flush([question(3, 2)]);
+  });
+
+  it('ignores an id in the URL that the API could not take, and still lists the categories', async () => {
+    const fixture = TestBed.createComponent(Questions);
+    fixture.componentRef.setInput('category', '3000000000');
+    fixture.detectChanges();
+    flushLoad(undefined);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(texts(page, '.categories .chip')).toEqual(['Autá 2', 'Šport 1']);
+    expect(page.textContent).toContain('questionAdmin.pickCategory');
+  });
+
+  it("still lists the categories when the questions of the one in the URL cannot be fetched", async () => {
+    const fixture = TestBed.createComponent(Questions);
+    fixture.componentRef.setInput('category', '1');
+    fixture.detectChanges();
+    http.expectOne('/api/question-categories').flush(CATEGORIES);
+    http.expectOne('/api/questions?categoryId=1').flush(null, { status: 400, statusText: 'Bad Request' });
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('[role="alert"]')).not.toBeNull();
+    expect(texts(page, '.categories .chip')).toEqual(['Autá 2', 'Šport 1']);
   });
 
   it('links to the categories tab when there are no categories', async () => {
@@ -132,7 +158,6 @@ describe('Questions', () => {
     fixture.componentRef.setInput('category', '2');
     fixture.detectChanges();
     await fixture.whenStable();
-    http.expectOne('/api/question-categories').flush(CATEGORIES);
     http.expectOne('/api/questions?categoryId=2').flush(null, { status: 503, statusText: 'Service Unavailable' });
     await fixture.whenStable();
 
@@ -154,14 +179,15 @@ describe('Questions', () => {
     await TestBed.inject(LanguageService).use('en');
     fixture.detectChanges();
     await fixture.whenStable();
-    const stale = http.expectOne('/api/question-categories');
-    http.expectOne('/api/questions?categoryId=1');
+    const categories = http.expectOne('/api/question-categories');
+    const stale = http.expectOne('/api/questions?categoryId=1');
     fixture.componentRef.setInput('category', '2');
     fixture.detectChanges();
     await fixture.whenStable();
 
     expect(stale.cancelled).toBe(true);
-    flushLoad(2, [question(3, 2)]);
+    categories.flush(CATEGORIES);
+    http.expectOne('/api/questions?categoryId=2').flush([question(3, 2)]);
     await fixture.whenStable();
 
     expect(texts(page, '.text[lang="sk"]')).toEqual(['SK Otázka číslo 3?']);
@@ -386,7 +412,7 @@ describe('Questions', () => {
     fixture.componentRef.setInput('category', '2');
     fixture.detectChanges();
     await fixture.whenStable();
-    flushLoad(2, [question(3, 2)]);
+    http.expectOne('/api/questions?categoryId=2').flush([question(3, 2)]);
     await fixture.whenStable();
     save.flush(null, { status: 204, statusText: 'No Content' });
     await fixture.whenStable();

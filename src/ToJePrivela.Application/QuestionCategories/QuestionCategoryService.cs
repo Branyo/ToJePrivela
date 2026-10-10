@@ -40,7 +40,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
     public async Task<Result<IReadOnlyList<QuestionCategoryDto>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var categories = await _categories.GetAllAsync(cancellationToken);
-        var counts = await _questions.CountByCategoryAsync(null, cancellationToken);
+        var counts = await _questions.CountByCategoryAsync(cancellationToken);
         return Result.Success(QuestionCategoryMapper.ToDtos(categories, counts, _language.Language));
     }
 
@@ -52,8 +52,8 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
             return Result.Failure<QuestionCategoryDto>(QuestionCategoryErrors.NotFound(id));
         }
 
-        var counts = await _questions.CountByCategoryAsync(id, cancellationToken);
-        return Result.Success(QuestionCategoryMapper.ToDto(category, counts.GetValueOrDefault(id, QuestionCounts.None), _language.Language));
+        var counts = await _questions.CountAsync(id, cancellationToken);
+        return Result.Success(QuestionCategoryMapper.ToDto(category, counts, _language.Language));
     }
 
     public async Task<Result<CreatedQuestionCategoryDto>> CreateAsync(CreateQuestionCategoryRequest request, CancellationToken cancellationToken = default)

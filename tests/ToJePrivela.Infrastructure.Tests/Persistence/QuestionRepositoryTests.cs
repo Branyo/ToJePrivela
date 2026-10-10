@@ -49,7 +49,7 @@ public class QuestionRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
-        var counts = await sut.CountByCategoryAsync(null);
+        var counts = await sut.CountByCategoryAsync();
 
         Assert.Equal(2, counts.Count);
         Assert.Equal(new QuestionCounts(2, 1), counts[HistoryId]);
@@ -58,14 +58,13 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task CountByCategoryAsync_CountsOnlyTheGivenCategory()
+    public async Task CountAsync_CountsOnlyTheGivenCategory()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
-        var counts = await sut.CountByCategoryAsync(SportId);
-
-        Assert.Equal(new Dictionary<int, QuestionCounts> { [SportId] = new(1, 1) }, counts);
+        Assert.Equal(new QuestionCounts(2, 1), await sut.CountAsync(HistoryId));
+        Assert.Equal(QuestionCounts.None, await sut.CountAsync(CarsId));
     }
 
     [Fact]

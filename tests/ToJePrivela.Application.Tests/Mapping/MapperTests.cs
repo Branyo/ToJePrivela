@@ -105,6 +105,7 @@ public class MapperTests
 
         var dto = QuestionCategoryMapper.ToCreatedDto(category, new QuestionGenerationResult([], 10, 3), Language.En);
 
+        Assert.Equal((0, 0), (dto.QuestionCount, dto.AiQuestionCount));
         Assert.Equal(4, dto.Id);
         Assert.Equal("Music", dto.Name);
         Assert.Equal("Hudba", dto.NameSk);

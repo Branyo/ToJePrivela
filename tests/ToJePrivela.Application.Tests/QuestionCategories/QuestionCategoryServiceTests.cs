@@ -64,7 +64,7 @@ public class QuestionCategoryServiceTests
     {
         _categories.GetAllAsync(Arg.Any<CancellationToken>())
             .Returns([TestEntities.Category(1, "Šport", "Sport"), TestEntities.Category(2, "História", "History")]);
-        _questions.CountByCategoryAsync(null, Arg.Any<CancellationToken>())
+        _questions.CountByCategoryAsync(Arg.Any<CancellationToken>())
             .Returns(new Dictionary<int, QuestionCounts> { [2] = new(7, 3) });
 
         var result = await _sut.GetAllAsync();
@@ -76,8 +76,7 @@ public class QuestionCategoryServiceTests
     public async Task GetByIdAsync_IncludesTheCategorysQuestionCounts()
     {
         _categories.GetByIdAsync(2, Arg.Any<CancellationToken>()).Returns(TestEntities.Category(2, "História", "History"));
-        _questions.CountByCategoryAsync(2, Arg.Any<CancellationToken>())
-            .Returns(new Dictionary<int, QuestionCounts> { [2] = new(7, 3) });
+        _questions.CountAsync(2, Arg.Any<CancellationToken>()).Returns(new QuestionCounts(7, 3));
 
         var result = await _sut.GetByIdAsync(2);
 
