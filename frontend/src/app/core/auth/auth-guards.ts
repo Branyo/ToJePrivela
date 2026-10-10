@@ -8,6 +8,10 @@ export const signedInGuard: CanActivateFn = (_route, state) =>
     ? true
     : inject(Router).createUrlTree(['/sign-in'], { queryParams: { returnUrl: state.url } });
 
+/** Admin screens send everyone else back to the settings (their players); the API refuses them anyway. */
+export const adminGuard: CanActivateFn = () =>
+  inject(AuthStore).isAdmin() ? true : inject(Router).createUrlTree(['/settings']);
+
 /** Signing in again while signed in makes no sense, so the sign-in screen sends you home. */
 export const signedOutGuard: CanActivateFn = () =>
   inject(AuthStore).token() === null ? true : inject(Router).createUrlTree(['/']);

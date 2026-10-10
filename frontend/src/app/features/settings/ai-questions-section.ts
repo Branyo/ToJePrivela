@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
-import { toProblem } from '../../core/api/problem';
-import { QuestionsApi } from '../../core/api/questions-api';
-import { LanguageCode, LanguageService, Message, compareNames } from '../../core/i18n/language';
+import { LanguageCode, LanguageService, Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { CategoryList } from '../../shared/category-list';
+import { AiQuestionsStore } from './ai-questions-store';
 
 /** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
 const GENERATOR_MIN_QUESTIONS = 1;
@@ -16,38 +17,31 @@ const NEW_CATEGORY_COUNT = 100;
 /** How many more AI questions an existing category asks for, unless the admin changes it. */
 const MORE_COUNT = 20;
 
-interface CategoryRow {
-  category: QuestionCategory;
-  total: number;
-  ai: number;
-}
-
 /** What waits for a second tap before it runs. */
 type PendingDelete = { id: number; what: 'ai' | 'category' };
 
 /**
- * Admins manage the questions every login plays with: categories and their AI questions. Shown to admins only; the API
- * refuses everyone else anyway.
+ * Admins manage the questions every login plays with: categories and their AI questions; each category's questions
+ * open in the questions tab. Shown to admins only; the API refuses everyone else anyway.
  */
 @Component({
   selector: 'app-ai-questions-section',
-  imports: [TranslatePipe, MessagePipe],
+  imports: [RouterLink, TranslatePipe, MessagePipe],
   templateUrl: './ai-questions-section.html',
   styleUrl: './ai-questions-section.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AiQuestionsSection {
   private readonly categoriesApi = inject(CategoriesApi);
-  private readonly questionsApi = inject(QuestionsApi);
   protected readonly i18n = inject(LanguageService);
   private readonly rulesStore = inject(GameRulesStore);
+  private readonly store = inject(AiQuestionsStore);
 
   /** `null` while the backend's rules are missing; the inputs then take anything and the actions say so. */
   protected readonly nameLimit = computed(() => this.rulesStore.rules()?.categoryName ?? null);
   protected readonly countLimit = computed(() => countLimitOf(this.rulesStore.rules()));
 
-  private readonly categories = signal<QuestionCategory[] | null>(null);
-  private readonly counts = signal<ReadonlyMap<number, { total: number; ai: number }>>(new Map());
+  private readonly categories = new CategoryList();
 
   protected readonly newName = signal('');
   /** The language the new name is typed in; the AI translates it to the other one. */
@@ -56,24 +50,22 @@ export class AiQuestionsSection {
   /** Per category: how many AI questions to add. */
   protected readonly moreCounts = signal<ReadonlyMap<number, number>>(new Map());
 
-  /** `'new'` while a new category is generated, else the id of the category being worked on. */
-  protected readonly working = signal<number | 'new' | null>(null);
+  /** Kept in the store, so work still running shows again when the admin comes back to this tab. */
+  protected readonly working = this.store.working;
   protected readonly pending = signal<PendingDelete | null>(null);
-  protected readonly notice = signal<Message | null>(null);
-  protected readonly error = signal<Message | null>(null);
+  protected readonly notice = this.store.notice;
+  /** What this visit of the tab found wrong with the inputs; it goes with the tab. */
+  private readonly localError = signal<Message | null>(null);
+  /** The tab's own problems first (inputs, then loading), else why the last change in the store failed. */
+  protected readonly error = computed(() => this.localError() ?? this.categories.error() ?? this.store.error());
 
-  protected readonly loaded = computed(() => this.categories() !== null);
-
-  protected readonly rows = computed<CategoryRow[]>(() => {
-    const locale = this.i18n.locale();
-    const counts = this.counts();
-    return [...(this.categories() ?? [])]
-      .sort((a, b) => compareNames(a.name, b.name, locale))
-      .map((category) => ({ category, total: counts.get(category.id)?.total ?? 0, ai: counts.get(category.id)?.ai ?? 0 }));
-  });
+  protected readonly loaded = this.categories.loaded;
+  protected readonly sortedCategories = this.categories.sorted;
 
   constructor() {
     void this.rulesStore.ensureLoaded();
+    // Counts change with every generation or deletion, even one started before this tab was opened again.
+    this.store.finished.pipe(takeUntilDestroyed()).subscribe(() => this.load());
     // Names arrive in the shown language, so they are fetched again after a switch.
     effect(() => {
       this.i18n.language();
@@ -94,7 +86,7 @@ export class AiQuestionsSection {
     const name = this.newName().trim();
     const nameLimit = rules.categoryName;
     if (name.length < nameLimit.min || name.length > nameLimit.max) {
-      this.error.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
+      this.localError.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
       return;
     }
     const count = this.newCount();
@@ -102,39 +94,36 @@ export class AiQuestionsSection {
       return;
     }
 
-    this.start('new');
-    this.categoriesApi.create(name, this.newNameLanguage(), count).subscribe({
-      next: (category) => {
-        this.newName.set('');
-        this.done({
-          key: 'admin.created',
-          params: { name: category.name, count: category.questionGeneration.created },
-        });
-      },
-      error: (error) => this.fail(error),
-    });
+    this.localError.set(null);
+    this.store.run(
+      'new',
+      this.categoriesApi.create(name, this.newNameLanguage(), count),
+      (category) => ({ key: 'admin.created', params: { name: category.name, count: category.questionGeneration.created } }),
+      () => this.newName.set(''),
+    );
   }
 
-  protected async generateMore(row: CategoryRow): Promise<void> {
+  protected async generateMore(category: QuestionCategory): Promise<void> {
     const rules = this.rulesStore.rules() ?? (await this.reloadRules());
     if (!rules) {
       return;
     }
-    const count = this.moreCountFor(row.category.id);
+    const count = this.moreCountFor(category.id);
     if (!this.isValidCount(count, rules)) {
       return;
     }
 
-    this.start(row.category.id);
-    this.categoriesApi.generateAiQuestions(row.category.id, count).subscribe({
-      next: (result) =>
-        this.done({ key: 'admin.added', params: { name: row.category.name, count: result.summary.created } }),
-      error: (error) => this.fail(error),
-    });
+    this.localError.set(null);
+    this.store.run(
+      category.id,
+      this.categoriesApi.generateAiQuestions(category.id, count),
+      (result) => ({ key: 'admin.added', params: { name: category.name, count: result.summary.created } }),
+    );
   }
 
   protected askToDelete(id: number, what: PendingDelete['what']): void {
-    this.error.set(null);
+    this.localError.set(null);
+    this.store.error.set(null);
     this.pending.set({ id, what });
   }
 
@@ -147,23 +136,28 @@ export class AiQuestionsSection {
     this.pending.set(null);
   }
 
-  protected confirmDelete(row: CategoryRow): void {
+  protected confirmDelete(category: QuestionCategory): void {
     const pending = this.pending();
-    if (!pending || pending.id !== row.category.id) {
+    if (!pending || pending.id !== category.id) {
       return;
     }
 
-    this.start(row.category.id);
+    const clearPending = () => this.pending.set(null);
+    this.localError.set(null);
     if (pending.what === 'ai') {
-      this.categoriesApi.deleteAiQuestions(row.category.id).subscribe({
-        next: (result) => this.done({ key: 'admin.aiDeleted', params: { name: row.category.name, count: result.deleted } }),
-        error: (error) => this.fail(error),
-      });
+      this.store.run(
+        category.id,
+        this.categoriesApi.deleteAiQuestions(category.id),
+        (result) => ({ key: 'admin.aiDeleted', params: { name: category.name, count: result.deleted } }),
+        clearPending,
+      );
     } else {
-      this.categoriesApi.delete(row.category.id).subscribe({
-        next: () => this.done({ key: 'admin.categoryDeleted', params: { name: row.category.name } }),
-        error: (error) => this.fail(error),
-      });
+      this.store.run(
+        category.id,
+        this.categoriesApi.delete(category.id),
+        () => ({ key: 'admin.categoryDeleted', params: { name: category.name } }),
+        clearPending,
+      );
     }
   }
 
@@ -188,7 +182,7 @@ export class AiQuestionsSection {
   private async reloadRules(): Promise<GameRules | null> {
     const rules = await this.rulesStore.ensureLoaded();
     if (!rules) {
-      this.error.set({ key: 'errors.rulesUnavailable' });
+      this.localError.set({ key: 'errors.rulesUnavailable' });
     }
     return rules;
   }
@@ -199,44 +193,12 @@ export class AiQuestionsSection {
     if (Number.isInteger(count) && count >= min && count <= max) {
       return true;
     }
-    this.error.set({ key: 'setup.errors.questionCount', params: { min, max } });
+    this.localError.set({ key: 'setup.errors.questionCount', params: { min, max } });
     return false;
   }
 
-  private start(target: number | 'new'): void {
-    this.working.set(target);
-    this.error.set(null);
-    this.notice.set(null);
-  }
-
-  private done(notice: Message): void {
-    this.working.set(null);
-    this.pending.set(null);
-    this.notice.set(notice);
-    this.load();
-  }
-
-  private fail(error: unknown): void {
-    this.working.set(null);
-    this.error.set(toProblem(error).message);
-  }
-
   private load(): void {
-    forkJoin([this.categoriesApi.getAll(), this.questionsApi.getAll()]).subscribe({
-      next: ([categories, questions]) => {
-        const counts = new Map<number, { total: number; ai: number }>();
-        for (const question of questions) {
-          const count = counts.get(question.categoryId) ?? { total: 0, ai: 0 };
-          counts.set(question.categoryId, {
-            total: count.total + 1,
-            ai: count.ai + (question.source === 'Ai' ? 1 : 0),
-          });
-        }
-        this.categories.set(categories);
-        this.counts.set(counts);
-      },
-      error: (error) => this.error.set(toProblem(error).message),
-    });
+    this.categories.reload();
   }
 }
 

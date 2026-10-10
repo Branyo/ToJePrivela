@@ -9,7 +9,6 @@ import { AuthStore } from '../../core/auth/auth-store';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
-import { QuestionsApi } from '../../core/api/questions-api';
 import { badPointsParams } from '../../core/rules/bad-points-params';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { PlayerAvatar } from '../../shared/player-avatar';
@@ -28,7 +27,6 @@ export class Setup {
   private readonly playersApi = inject(PlayersApi);
   private readonly gamesApi = inject(GamesApi);
   private readonly categoriesApi = inject(CategoriesApi);
-  private readonly questionsApi = inject(QuestionsApi);
   private readonly router = inject(Router);
   protected readonly i18n = inject(LanguageService);
   private readonly rules = inject(GameRulesStore).rules;
@@ -48,7 +46,10 @@ export class Setup {
   protected readonly badPointsModes: readonly BadPointsMode[] = ['Question', 'Chooser'];
 
   protected readonly categories = signal<QuestionCategory[]>([]);
-  protected readonly questionCounts = signal<ReadonlyMap<number, number>>(new Map());
+  /** Per category id, from the categories themselves. */
+  protected readonly questionCounts = computed<ReadonlyMap<number, number>>(
+    () => new Map(this.categories().map((category) => [category.id, category.questionCount])),
+  );
   protected readonly selectedCategoryIds = signal<number[]>([]);
 
   protected readonly starting = signal(false);
@@ -230,16 +231,6 @@ export class Setup {
   private loadCategories(): void {
     this.categoriesApi.getAll().subscribe({
       next: (categories) => this.categories.set(categories),
-      error: (error) => this.error.set(toProblem(error).message),
-    });
-    this.questionsApi.getAll().subscribe({
-      next: (questions) => {
-        const counts = new Map<number, number>();
-        for (const question of questions) {
-          counts.set(question.categoryId, (counts.get(question.categoryId) ?? 0) + 1);
-        }
-        this.questionCounts.set(counts);
-      },
       error: (error) => this.error.set(toProblem(error).message),
     });
   }

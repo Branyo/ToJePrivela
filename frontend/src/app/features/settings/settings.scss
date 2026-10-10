@@ -23,3 +23,32 @@
   font-size: 0.85rem;
   font-weight: 700;
 }
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: var(--border);
+}
+
+.tab {
+  padding: 10px 20px;
+  border: var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.15s var(--bounce), background 0.15s ease;
+}
+
+.tab:hover {
+  transform: translateY(-2px);
+}
+
+.tab--on {
+  background: var(--grape);
+  box-shadow: var(--shadow-sm);
+  color: #fff;
+}

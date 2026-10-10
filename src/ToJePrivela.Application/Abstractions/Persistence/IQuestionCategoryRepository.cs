@@ -11,6 +11,12 @@ public interface IQuestionCategoryRepository : IRepository<QuestionCategory>
     /// </param>
     Task<QuestionCategory?> GetByNameAsync(string name, Language language, CancellationToken cancellationToken = default);
 
+    /// <summary>Every category with its question counts, in one query, so a question saved meanwhile cannot make them disagree.</summary>
+    Task<IReadOnlyList<CountedCategory>> GetAllCountedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The category with its question counts, in one query; <c>null</c> when there is no such category.</summary>
+    Task<CountedCategory?> GetCountedAsync(int id, CancellationToken cancellationToken = default);
+
     /// <summary>The given ids that no category has, in ascending order.</summary>
     Task<IReadOnlyList<int>> GetMissingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default);
 }

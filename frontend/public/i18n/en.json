@@ -16,7 +16,10 @@
     "play": "Playing",
     "summary": "Results",
     "signIn": "Sign in",
-    "settings": "Settings"
+    "settings": "Settings",
+    "questions": "Questions",
+    "players": "Players",
+    "categories": "Categories"
   },
   "common": {
     "dateTime": "d MMM, HH:mm",
@@ -239,10 +242,16 @@
   "settings": {
     "title": "⚙️ Settings",
     "signedInAs": "Signed in as {{name}}",
-    "admin": "admin"
+    "admin": "admin",
+    "tabs": {
+      "label": "Settings sections",
+      "players": "👥 Players",
+      "categories": "🗂️ Categories",
+      "questions": "📚 Questions"
+    }
   },
   "admin": {
-    "title": "🛠️ Questions",
+    "title": "🗂️ Categories & AI questions",
     "text": "Every login plays with these questions. Only admins can change them.",
     "categories": "Categories",
     "loading": "Loading categories…",
@@ -258,7 +267,56 @@
     "created": "\"{{name}}\" is ready with {{count}} fresh questions! ✨",
     "added": "{{count}} new questions added to \"{{name}}\". ✨",
     "aiDeleted": "{{count}} AI questions deleted from \"{{name}}\".",
-    "categoryDeleted": "\"{{name}}\" was deleted."
+    "categoryDeleted": "\"{{name}}\" was deleted.",
+    "browseCategory": "Questions of \"{{name}}\""
+  },
+  "questionAdmin": {
+    "title": "📚 Questions",
+    "text": "Pick a category to go through its questions. Answers stay hidden until you show them.",
+    "loading": "Loading questions…",
+    "noCategories": "No categories yet.",
+    "createCategory": "Create one in the categories tab.",
+    "retry": "🔄 Try again",
+    "pickCategory": "Pick a category above.",
+    "empty": "No questions in this category yet.",
+    "add": "➕ New question",
+    "noEnglish": "No English text yet.",
+    "showAnswer": "👁️ Show answer",
+    "hideAnswer": "Hide answer",
+    "answer": "Answer",
+    "edit": "✏️ Edit",
+    "delete": "Delete",
+    "keep": "Keep",
+    "confirmDelete": "Delete this question for good?",
+    "source": {
+      "Ai": "🤖 AI",
+      "Manual": "✍️ Manual"
+    },
+    "created": "The question was added. ✨",
+    "updated": "The question was saved.",
+    "deleted": "The question was deleted.",
+    "form": {
+      "newTitle": "New question in \"{{category}}\"",
+      "editTitle": "Edit question",
+      "textSk": "Slovak text",
+      "textEn": "English text",
+      "textEnOptional": "Optional: this question has no English text yet. Left empty, it stays in Slovak only.",
+      "answer": "Answer",
+      "answerHint": "A number such as 42 or -3.5, without separators.",
+      "badPoints": "Donkeys on the card",
+      "roll": "🎲 Random",
+      "rollTitle": "Pick a random number of donkeys",
+      "aiNote": "Saving turns this AI question into a manual one.",
+      "save": "💾 Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "errors": {
+        "textSk": "The Slovak text needs {{min}} to {{max}} characters.",
+        "textEn": "The English text needs {{min}} to {{max}} characters.",
+        "answer": "Enter the answer.",
+        "badPoints": "Pick {{min}} to {{max}} donkeys, or roll the dice."
+      }
+    }
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

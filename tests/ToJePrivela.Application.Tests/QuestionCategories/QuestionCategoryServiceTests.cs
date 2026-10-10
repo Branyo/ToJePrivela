@@ -37,8 +37,8 @@ public class QuestionCategoryServiceTests
     [Fact]
     public async Task GetAllAsync_MapsEveryCategory()
     {
-        _categories.GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns([TestEntities.Category(1, "Šport", "Sport"), TestEntities.Category(2, "História", "History")]);
+        _categories.GetAllCountedAsync(Arg.Any<CancellationToken>())
+            .Returns([Counted(TestEntities.Category(1, "Šport", "Sport")), Counted(TestEntities.Category(2, "História", "History"))]);
 
         var result = await _sut.GetAllAsync();
 
@@ -50,13 +50,39 @@ public class QuestionCategoryServiceTests
     public async Task GetAllAsync_NamesTheCategoriesInTheRequestedLanguage()
     {
         _language.Language = Language.En;
-        _categories.GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns([TestEntities.Category(1, "Šport", "Sport"), TestEntities.Category(2, "História", "History")]);
+        _categories.GetAllCountedAsync(Arg.Any<CancellationToken>())
+            .Returns([Counted(TestEntities.Category(1, "Šport", "Sport")), Counted(TestEntities.Category(2, "História", "History"))]);
 
         var result = await _sut.GetAllAsync();
 
         Assert.Equal(["Sport", "History"], result.Value.Select(c => c.Name));
         Assert.Equal(["Šport", "História"], result.Value.Select(c => c.NameSk));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_IncludesTheQuestionCounts()
+    {
+        _categories.GetAllCountedAsync(Arg.Any<CancellationToken>())
+            .Returns(
+            [
+                Counted(TestEntities.Category(1, "Šport", "Sport")),
+                Counted(TestEntities.Category(2, "História", "History"), new QuestionCounts(7, 3)),
+            ]);
+
+        var result = await _sut.GetAllAsync();
+
+        Assert.Equal([(0, 0), (7, 3)], result.Value.Select(c => (c.QuestionCount, c.AiQuestionCount)));
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_IncludesTheCategorysQuestionCounts()
+    {
+        _categories.GetCountedAsync(2, Arg.Any<CancellationToken>())
+            .Returns(Counted(TestEntities.Category(2, "História", "History"), new QuestionCounts(7, 3)));
+
+        var result = await _sut.GetByIdAsync(2);
+
+        Assert.Equal((7, 3), (result.Value.QuestionCount, result.Value.AiQuestionCount));
     }
 
     [Fact]
@@ -80,7 +106,7 @@ public class QuestionCategoryServiceTests
     [Fact]
     public async Task GetByIdAsync_ReturnsNotFoundForUnknownCategory()
     {
-        _categories.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((QuestionCategory?)null);
+        _categories.GetCountedAsync(7, Arg.Any<CancellationToken>()).Returns((CountedCategory?)null);
 
         var result = await _sut.GetByIdAsync(7);
 
@@ -370,6 +396,9 @@ public class QuestionCategoryServiceTests
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
     }
+
+    private static CountedCategory Counted(QuestionCategory category, QuestionCounts? counts = null) =>
+        new(category, counts ?? QuestionCounts.None);
 
     private static QuestionGenerationResult Generated(QuestionCategory category, int requested, int created, int discarded = 0) =>
         new(

@@ -7,14 +7,9 @@
   font-size: clamp(1.4rem, 4vw, 1.9rem);
 }
 
-.notice {
-  margin: 0;
-  padding: 12px 16px;
-  border: var(--border);
-  border-color: var(--mint);
-  border-radius: var(--radius);
-  background: #e3fbef;
-  font-weight: 500;
+.row__questions {
+  color: var(--ink-soft);
+  font-weight: 700;
 }
 
 .generator,

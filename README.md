@@ -139,7 +139,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/auth/sign-in` | Anonymous; body `{ name, password }` (password may be empty: an unknown name still answers 404); returns `{ accessToken, expiresAt, account }`; 404 `Auth.UnknownLogin`, 401 `Auth.WrongPassword` |
 | POST | `/api/auth/accounts` | Anonymous; body `{ name, password }`; creates a login (never an admin) and signs it in; 409 `Auth.NameTaken` |
 | GET | `/api/auth/me` | The signed-in login `{ id, name, isAdmin }` |
-| GET | `/api/rules` | Anonymous; includes `loginName` and `password` length limits |
+| GET | `/api/rules` | Anonymous; includes `loginName`, `password` and `questionText` length limits |
 | GET | `/api/info` | Anonymous; `{ title, version }` — `version` is `"unknown"` for an unversioned build |
 | GET | `/api/health` | Anonymous, plain HTTP allowed; `Healthy` (200) when the database answers a real query within 2 s, else 503; healthy answers are cached for 5 s |
 | GET | `/api/players` | |
@@ -159,9 +159,9 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET/DELETE | `/api/questions/{id}` | |
 | PUT | `/api/questions/{id}` | `textSk` required; omitted `textEn` and `badPoints` are kept; an edited AI question becomes `Manual` |
 | POST | `/api/questions` | `textSk` and `textEn` required; `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
-| GET | `/api/question-categories` | |
-| GET/DELETE | `/api/question-categories/{id}` | Delete also removes every question in the category |
-| POST | `/api/question-categories` | `nameSk`, `nameEn` or both (the AI translates a missing one); `questionCount` (0–200) is required; 503 and nothing stored when translation or generation fails |
+| GET | `/api/question-categories` | Each category carries `questionCount` and `aiQuestionCount` (an edited AI question counts as manual) |
+| GET/DELETE | `/api/question-categories/{id}` | Get includes the counts; delete also removes every question in the category |
+| POST | `/api/question-categories` | `nameSk`, `nameEn` or both (the AI translates a missing one); `questionCount` (0–200) is required; the response carries the counts and the generation summary; 503 and nothing stored when translation or generation fails |
 | POST | `/api/question-categories/{id}/ai-questions` | Body `{ "count": 1–200 }`; adds AI questions, skipping ones the category has |
 | DELETE | `/api/question-categories/{id}/ai-questions` | Removes the AI questions only; returns `{ "deleted": n }` |
 

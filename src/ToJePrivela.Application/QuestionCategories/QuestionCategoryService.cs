@@ -39,13 +39,13 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
 
     public async Task<Result<IReadOnlyList<QuestionCategoryDto>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var categories = await _categories.GetAllAsync(cancellationToken);
+        var categories = await _categories.GetAllCountedAsync(cancellationToken);
         return Result.Success(QuestionCategoryMapper.ToDtos(categories, _language.Language));
     }
 
     public async Task<Result<QuestionCategoryDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var category = await _categories.GetByIdAsync(id, cancellationToken);
+        var category = await _categories.GetCountedAsync(id, cancellationToken);
 
         return category is null
             ? Result.Failure<QuestionCategoryDto>(QuestionCategoryErrors.NotFound(id))

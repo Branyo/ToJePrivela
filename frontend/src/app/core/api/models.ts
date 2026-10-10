@@ -66,6 +66,10 @@ export interface QuestionCategory {
   name: string;
   nameSk: string;
   nameEn: string;
+  /** Every question in the category. */
+  questionCount: number;
+  /** Those of them the AI wrote; an edited one counts as manual. */
+  aiQuestionCount: number;
 }
 
 export interface QuestionGenerationSummary {
@@ -96,6 +100,15 @@ export interface Question {
   lastViewedAt: string | null;
 }
 
+/** What an admin writes for a manual question, when adding one or editing any. */
+export interface QuestionDraft {
+  textSk: string;
+  /** Left out only when editing a question without an English text and none was written; it then stays without one. */
+  textEn?: string;
+  answer: string;
+  badPoints: number;
+}
+
 /** Inclusive bounds of a number or of a text's length. */
 export interface Limit {
   min: number;
@@ -119,6 +132,8 @@ export interface GameRules {
   loginName: Limit;
   /** Length of a new login's password. */
   password: Limit;
+  /** Length of a question's text, in either language. */
+  questionText: Limit;
 }
 
 /** A login: a name and a password. Players and games belong to it. */

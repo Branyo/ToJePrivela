@@ -20,7 +20,8 @@ public sealed class GameRulesService : IGameRulesService
         QuestionGenerationOptions.MaxCount,
         PlayerAvatars.All,
         new LimitDto(Account.NameMinLength, Account.NameMaxLength),
-        new LimitDto(PasswordRules.MinLength, PasswordRules.MaxLength));
+        new LimitDto(PasswordRules.MinLength, PasswordRules.MaxLength),
+        new LimitDto(Question.TextMinLength, Question.TextMaxLength));
 
     public Result<GameRulesDto> Get() => Result.Success(Rules);
 }

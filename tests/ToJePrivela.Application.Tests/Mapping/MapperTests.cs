@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Games.Mapping;
 using ToJePrivela.Application.Players.Dtos;
 using ToJePrivela.Application.Players.Mapping;
@@ -82,8 +83,21 @@ public class MapperTests
     public void QuestionCategoryMapper_GivesTheNameInTheLanguageAndBothNames(Language language, string name)
     {
         Assert.Equal(
-            new QuestionCategoryDto(1, name, "Šport", "Sport"),
-            QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Šport", "Sport"), language));
+            new QuestionCategoryDto(1, name, "Šport", "Sport", 5, 2),
+            QuestionCategoryMapper.ToDto(TestEntities.Category(1, "Šport", "Sport"), new QuestionCounts(5, 2), language));
+    }
+
+    [Fact]
+    public void QuestionCategoryMapper_ToDtos_KeepsEachCategorysCounts()
+    {
+        var dtos = QuestionCategoryMapper.ToDtos(
+            [
+                new CountedCategory(TestEntities.Category(1, "Šport", "Sport"), new QuestionCounts(4, 1)),
+                new CountedCategory(TestEntities.Category(2, "Hudba", "Music"), QuestionCounts.None),
+            ],
+            Language.Sk);
+
+        Assert.Equal([(4, 1), (0, 0)], dtos.Select(dto => (dto.QuestionCount, dto.AiQuestionCount)));
     }
 
     [Fact]
@@ -93,6 +107,7 @@ public class MapperTests
 
         var dto = QuestionCategoryMapper.ToCreatedDto(category, new QuestionGenerationResult([], 10, 3), Language.En);
 
+        Assert.Equal((0, 0), (dto.QuestionCount, dto.AiQuestionCount));
         Assert.Equal(4, dto.Id);
         Assert.Equal("Music", dto.Name);
         Assert.Equal("Hudba", dto.NameSk);

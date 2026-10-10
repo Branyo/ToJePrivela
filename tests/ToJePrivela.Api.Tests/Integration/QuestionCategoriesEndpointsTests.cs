@@ -96,6 +96,7 @@ public class QuestionCategoriesEndpointsTests : IClassFixture<ApiFactory>
         var created = await CreateCategoryAsync(questionCount: 3);
 
         Assert.Equal(new QuestionGenerationSummaryDto(3, 3, 0), created.QuestionGeneration);
+        Assert.Equal((3, 3), (created.QuestionCount, created.AiQuestionCount));
 
         var questions = await GetQuestionsAsync(created.Id);
         Assert.Equal(3, questions.Count);
