@@ -381,7 +381,7 @@
         "NameTaken": "Toto prihlasovacie meno je už obsadené.",
         "CurrentPasswordWrong": "Súčasné heslo nie je správne.",
         "SamePassword": "Nové heslo sa musí líšiť od súčasného.",
-        "AdminPasswordFromConfig": "Heslo admina sa nastavuje v konfigurácii servera."
+        "AdminPasswordFromConfig": "Heslo správcu sa nastavuje v konfigurácii servera."
       },
       "RateLimit": {
         "Exceeded": "Príliš veľa pokusov za krátky čas. Skúste to znova o {{seconds}} s."
@@ -390,7 +390,7 @@
   },
   "password": {
     "title": "Zmena hesla",
-    "text": "Zmena hesla odhlási prihlásenie na všetkých ostatných zariadeniach. Toto zostane prihlásené.",
+    "text": "Po zmene hesla budete odhlásení na všetkých ostatných zariadeniach. Na tomto zariadení zostanete prihlásení.",
     "current": "Súčasné heslo",
     "new": "Nové heslo",
     "repeat": "Zopakujte nové heslo",

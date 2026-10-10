@@ -18,8 +18,8 @@ export class AuthApi {
   }
 
   /**
-   * 400 `Auth.CurrentPasswordWrong` / `Auth.SamePassword`. Ends every other sign-in of the login and answers with a
-   * fresh token for this one.
+   * 400 `Auth.CurrentPasswordWrong` / `Auth.SamePassword`, 409 `Auth.AdminPasswordFromConfig` for an admin, 429 when
+   * rate limited. Ends every other sign-in of the login and answers with a fresh token for this one.
    */
   changePassword(currentPassword: string, newPassword: string): Observable<SignedIn> {
     return this.http.put<SignedIn>('/api/auth/password', { currentPassword, newPassword });

@@ -71,9 +71,20 @@ export class AuthStore {
     this.keep(await firstValueFrom(this.api.createAccount(name, password)));
   }
 
-  /** Changes the password and keeps the fresh token, since the change ends the token in use. */
+  /**
+   * Changes the password and keeps the fresh token, since the change ends the token in use. A 401 means this sign-in
+   * had already ended (the password was changed elsewhere), so the session goes; `authInterceptor` leaves the
+   * `/api/auth/` calls to their callers.
+   */
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    this.keep(await firstValueFrom(this.api.changePassword(currentPassword, newPassword)));
+    try {
+      this.keep(await firstValueFrom(this.api.changePassword(currentPassword, newPassword)));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 401) {
+        this.signOut();
+      }
+      throw error;
+    }
   }
 
   signOut(): void {

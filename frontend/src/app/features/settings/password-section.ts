@@ -1,4 +1,6 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, WritableSignal, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { GameRules } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
@@ -22,6 +24,7 @@ import { newPasswordProblem } from '../../core/rules/new-password';
 export class PasswordSection {
   private readonly auth = inject(AuthStore);
   private readonly rulesStore = inject(GameRulesStore);
+  private readonly router = inject(Router);
 
   /** `null` while the backend's rules are missing; the inputs then take any length and saving says so. */
   protected readonly passwordLimit = computed(() => this.rulesStore.rules()?.password ?? null);
@@ -65,6 +68,11 @@ export class PasswordSection {
       this.repeatPassword.set('');
       this.changed.set(true);
     } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 401) {
+        // The sign-in had already ended (`AuthStore` dropped it); sign in again and come back here.
+        void this.router.navigate(['/sign-in'], { queryParams: { returnUrl: this.router.url } });
+        return;
+      }
       this.error.set(toProblem(error).message);
     } finally {
       this.busy.set(false);

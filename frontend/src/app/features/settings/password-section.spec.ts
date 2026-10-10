@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthStore } from '../../core/auth/auth-store';
 import { signedInAs, testSession } from '../../core/auth/testing';
@@ -15,7 +16,7 @@ describe('PasswordSection', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [PasswordSection],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideTranslateService()],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService()],
     });
     http = TestBed.inject(HttpTestingController);
     TestBed.inject(GameRulesStore).rules.set(TEST_RULES);
@@ -80,6 +81,22 @@ describe('PasswordSection', () => {
     expect(page.querySelector('.error-banner')).not.toBeNull();
     expect(page.querySelector('.password__done')).toBeNull();
     expect(TestBed.inject(AuthStore).token()).toBe('test-token');
+  });
+
+  it('signs out and sends to sign-in when the sign-in had already ended', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const { fixture, page } = await render();
+    fill(page, 'old-password', 'new-password');
+    submit(page);
+
+    http
+      .expectOne('/api/auth/password')
+      .flush({ code: 'Auth.SignedOut' }, { status: 401, statusText: 'Unauthorized' });
+    await fixture.whenStable();
+
+    expect(TestBed.inject(AuthStore).isSignedIn()).toBe(false);
+    expect(navigate).toHaveBeenCalledWith(['/sign-in'], { queryParams: { returnUrl: '/' } });
+    expect(page.querySelector('.error-banner')).toBeNull();
   });
 
   it('drops the notice and the error once the user types again', async () => {

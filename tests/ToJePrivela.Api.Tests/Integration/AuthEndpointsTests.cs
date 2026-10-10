@@ -467,3 +467,44 @@ public class SignInAddressCapTests : IClassFixture<ThreeSignInsPerAddressApiFact
 
     private static string UniqueName() => $"u{Guid.NewGuid():N}"[..20];
 }
+
+public class PasswordChangeAddressCapTests : IClassFixture<ThreeSignInsPerAddressApiFactory>
+{
+    private readonly ThreeSignInsPerAddressApiFactory _factory;
+    private readonly HttpClient _anonymous;
+
+    public PasswordChangeAddressCapTests(ThreeSignInsPerAddressApiFactory factory)
+    {
+        _factory = factory;
+        _anonymous = factory.CreateAnonymousClient();
+    }
+
+    [Fact]
+    public async Task ChangingThePassword_NeitherUsesUpNorIsStoppedByTheAddressCap()
+    {
+        var member = _factory.CreateClientAs(_factory.Member);
+        var guess = new { currentPassword = "guess-password", newPassword = "second-password" };
+
+        // Mistyping the current password leaves the address's sign-ins to the others behind it.
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, (await member.PutAsJsonAsync("/api/auth/password", guess)).StatusCode);
+        }
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var allowed = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name = UniqueName(), password = "guess" });
+            Assert.Equal(HttpStatusCode.NotFound, allowed.StatusCode);
+        }
+
+        // The address is over its cap now, which a signed-in login changing its password does not share.
+        var refused = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name = UniqueName(), password = "guess" });
+        var change = await member.PutAsJsonAsync("/api/auth/password", guess);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, change.StatusCode);
+        Assert.Equal("Auth.CurrentPasswordWrong", await ProblemResponse.CodeOf(change));
+    }
+
+    private static string UniqueName() => $"u{Guid.NewGuid():N}"[..20];
+}
