@@ -28,8 +28,9 @@ tab: **Players** (`/settings/players`, the default) lets every login add and del
 `maxPlayersPerAccount`, 100). Admins only (`account.isAdmin`) also get **Categories**
 (`/settings/categories`: create categories, add or delete AI questions, delete categories; generation keeps
 running in `AiQuestionsStore` while another tab is open) and **Questions** (`/settings/questions?category=`:
-a category's questions with both texts, answers hidden until shown; add manual questions, edit or delete any).
-A login with only one tab gets no tab bar, and `adminGuard` sends everyone else from an admin tab to Players.
+a category's questions with both texts, answers hidden until shown; add manual questions, edit or delete any;
+a question without an English text can be edited without adding one; the list also refreshes when AI work from
+Categories finishes). A login with only one tab gets no tab bar, and `adminGuard` sends everyone else from an admin tab to Players.
 The API enforces the same rule; hiding the tabs only spares everyone else screens that would fail. Admin logins come from the API's `Authentication:Admins`
 configuration — see the backend README.
 

@@ -2,13 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { EMPTY, Subject, catchError, switchMap, tap } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
-import { toProblem } from '../../core/api/problem';
-import { LanguageCode, LanguageService, Message, compareNames } from '../../core/i18n/language';
+import { LanguageCode, LanguageService, Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { CategoryList } from '../../shared/category-list';
 import { AiQuestionsStore } from './ai-questions-store';
 
 /** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
@@ -42,9 +41,7 @@ export class AiQuestionsSection {
   protected readonly nameLimit = computed(() => this.rulesStore.rules()?.categoryName ?? null);
   protected readonly countLimit = computed(() => countLimitOf(this.rulesStore.rules()));
 
-  private readonly categories = signal<QuestionCategory[] | null>(null);
-  /** Each value fetches the categories again, dropping a fetch still running. */
-  private readonly reloads = new Subject<void>();
+  private readonly categories = new CategoryList();
 
   protected readonly newName = signal('');
   /** The language the new name is typed in; the AI translates it to the other one. */
@@ -57,34 +54,16 @@ export class AiQuestionsSection {
   protected readonly working = this.store.working;
   protected readonly pending = signal<PendingDelete | null>(null);
   protected readonly notice = this.store.notice;
-  /** What this visit of the tab found wrong (loading, checking the inputs); it goes with the tab. */
+  /** What this visit of the tab found wrong with the inputs; it goes with the tab. */
   private readonly localError = signal<Message | null>(null);
-  /** The tab's own problem first, else why the last change in the store failed. */
-  protected readonly error = computed(() => this.localError() ?? this.store.error());
+  /** The tab's own problems first (inputs, then loading), else why the last change in the store failed. */
+  protected readonly error = computed(() => this.localError() ?? this.categories.error() ?? this.store.error());
 
-  protected readonly loaded = computed(() => this.categories() !== null);
-
-  protected readonly sortedCategories = computed(() => {
-    const locale = this.i18n.locale();
-    return [...(this.categories() ?? [])].sort((a, b) => compareNames(a.name, b.name, locale));
-  });
+  protected readonly loaded = this.categories.loaded;
+  protected readonly sortedCategories = this.categories.sorted;
 
   constructor() {
     void this.rulesStore.ensureLoaded();
-    this.reloads
-      .pipe(
-        switchMap(() =>
-          this.categoriesApi.getAll().pipe(
-            tap(() => this.localError.set(null)),
-            catchError((error: unknown) => {
-              this.localError.set(toProblem(error).message);
-              return EMPTY;
-            }),
-          ),
-        ),
-        takeUntilDestroyed(),
-      )
-      .subscribe((categories) => this.categories.set(categories));
     // Counts change with every generation or deletion, even one started before this tab was opened again.
     this.store.finished.pipe(takeUntilDestroyed()).subscribe(() => this.load());
     // Names arrive in the shown language, so they are fetched again after a switch.
@@ -219,7 +198,7 @@ export class AiQuestionsSection {
   }
 
   private load(): void {
-    this.reloads.next();
+    this.categories.reload();
   }
 }
 

@@ -88,11 +88,13 @@ public class MapperTests
     }
 
     [Fact]
-    public void QuestionCategoryMapper_ToDtos_CountsNoQuestionsForACategoryWithoutAny()
+    public void QuestionCategoryMapper_ToDtos_KeepsEachCategorysCounts()
     {
         var dtos = QuestionCategoryMapper.ToDtos(
-            [TestEntities.Category(1, "Šport", "Sport"), TestEntities.Category(2, "Hudba", "Music")],
-            new Dictionary<int, QuestionCounts> { [1] = new(4, 1) },
+            [
+                new CountedCategory(TestEntities.Category(1, "Šport", "Sport"), new QuestionCounts(4, 1)),
+                new CountedCategory(TestEntities.Category(2, "Hudba", "Music"), QuestionCounts.None),
+            ],
             Language.Sk);
 
         Assert.Equal([(4, 1), (0, 0)], dtos.Select(dto => (dto.QuestionCount, dto.AiQuestionCount)));

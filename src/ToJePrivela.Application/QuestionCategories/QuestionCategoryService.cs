@@ -39,21 +39,17 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
 
     public async Task<Result<IReadOnlyList<QuestionCategoryDto>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var categories = await _categories.GetAllAsync(cancellationToken);
-        var counts = await _questions.CountByCategoryAsync(cancellationToken);
-        return Result.Success(QuestionCategoryMapper.ToDtos(categories, counts, _language.Language));
+        var categories = await _categories.GetAllCountedAsync(cancellationToken);
+        return Result.Success(QuestionCategoryMapper.ToDtos(categories, _language.Language));
     }
 
     public async Task<Result<QuestionCategoryDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var category = await _categories.GetByIdAsync(id, cancellationToken);
-        if (category is null)
-        {
-            return Result.Failure<QuestionCategoryDto>(QuestionCategoryErrors.NotFound(id));
-        }
+        var category = await _categories.GetCountedAsync(id, cancellationToken);
 
-        var counts = await _questions.CountAsync(id, cancellationToken);
-        return Result.Success(QuestionCategoryMapper.ToDto(category, counts, _language.Language));
+        return category is null
+            ? Result.Failure<QuestionCategoryDto>(QuestionCategoryErrors.NotFound(id))
+            : Result.Success(QuestionCategoryMapper.ToDto(category, _language.Language));
     }
 
     public async Task<Result<CreatedQuestionCategoryDto>> CreateAsync(CreateQuestionCategoryRequest request, CancellationToken cancellationToken = default)

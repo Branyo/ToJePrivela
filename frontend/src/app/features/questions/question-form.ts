@@ -56,6 +56,15 @@ export class QuestionForm {
   protected readonly answer = linkedSignal(() => this.original()?.answer ?? '');
   protected readonly badPoints = linkedSignal<number | null>(() => this.original()?.badPoints ?? null);
 
+  /**
+   * A question stored before English texts existed can be edited without writing one; a new question, or one that
+   * has an English text, needs it.
+   */
+  protected readonly englishOptional = computed(() => {
+    const original = this.original();
+    return original !== null && original.textEn === null;
+  });
+
   private readonly invalid = signal<Message | null>(null);
   protected readonly error = computed(() => this.invalid() ?? this.problem());
 
@@ -82,7 +91,7 @@ export class QuestionForm {
 
     if (outOfLimit(textSk)) {
       this.invalid.set({ key: 'questionAdmin.form.errors.textSk', params: { min, max } });
-    } else if (outOfLimit(textEn)) {
+    } else if (!(this.englishOptional() && textEn.length === 0) && outOfLimit(textEn)) {
       this.invalid.set({ key: 'questionAdmin.form.errors.textEn', params: { min, max } });
     } else if (answer.length === 0) {
       this.invalid.set({ key: 'questionAdmin.form.errors.answer' });
@@ -90,7 +99,7 @@ export class QuestionForm {
       this.invalid.set({ key: 'questionAdmin.form.errors.badPoints', params: { ...rules.badPoints } });
     } else {
       this.invalid.set(null);
-      this.saved.emit({ textSk, textEn, answer, badPoints });
+      this.saved.emit(textEn.length === 0 ? { textSk, answer, badPoints } : { textSk, textEn, answer, badPoints });
     }
   }
 

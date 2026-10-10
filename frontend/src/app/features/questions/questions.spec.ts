@@ -7,6 +7,7 @@ import { Question, QuestionCategory } from '../../core/api/models';
 import { LanguageService } from '../../core/i18n/language';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { TEST_RULES } from '../../core/rules/testing';
+import { AiQuestionsStore } from '../settings/ai-questions-store';
 import { Questions } from './questions';
 
 const CATEGORIES: QuestionCategory[] = [
@@ -508,5 +509,68 @@ describe('Questions', () => {
     await fixture.whenStable();
 
     expect(page.querySelector('.confirm')).toBeNull();
+  });
+
+  it('cannot call off a deletion already on its way', async () => {
+    const { fixture, page } = await render(1);
+
+    button(page, 'questionAdmin.delete').click();
+    await fixture.whenStable();
+    button(page.querySelector('.confirm')!, 'questionAdmin.delete').click();
+    await fixture.whenStable();
+
+    expect(button(page, 'questionAdmin.keep').disabled).toBe(true);
+
+    http.expectOne('/api/questions/2').flush(null, { status: 204, statusText: 'No Content' });
+    flushLoad(1, [question(1, 1)]);
+    await fixture.whenStable();
+  });
+
+  it('edits a question without an English text without asking for one', async () => {
+    const { fixture, page } = await render(1);
+
+    button(page, 'questionAdmin.edit').click(); // the newest one, question 2, has no English text
+    await fixture.whenStable();
+    const form = page.querySelector('app-question-form')!;
+    expect(form.textContent).toContain('questionAdmin.form.textEnOptional');
+
+    await type(fixture, form.querySelector('textarea[name="textSk"]')!, 'Opravená otázka číslo 2?');
+    button(form, 'questionAdmin.form.save').click();
+    await fixture.whenStable();
+
+    // Left out, the English text stays missing.
+    const update = http.expectOne('/api/questions/2');
+    expect(update.request.body).toEqual({ textSk: 'Opravená otázka číslo 2?', answer: '200', badPoints: 3, categoryId: 1 });
+    update.flush(null, { status: 204, statusText: 'No Content' });
+    flushLoad(1);
+    await fixture.whenStable();
+
+    expect(page.textContent).toContain('questionAdmin.updated');
+  });
+
+  it('still asks for the English text of a question that has one', async () => {
+    const { fixture, page } = await render(1);
+
+    page.querySelectorAll<HTMLButtonElement>('.actions button')[2].click(); // edit question 1
+    await fixture.whenStable();
+    const form = page.querySelector('app-question-form')!;
+    expect(form.textContent).not.toContain('questionAdmin.form.textEnOptional');
+
+    await type(fixture, form.querySelector('textarea[name="textEn"]')!, '');
+    button(form, 'questionAdmin.form.save').click();
+    await fixture.whenStable();
+
+    expect(form.querySelector('[role="alert"]')?.textContent).toContain('questionAdmin.form.errors.textEn');
+  });
+
+  it('fetches the questions and the counts again when AI work from the categories tab finishes', async () => {
+    const { fixture, page } = await render(1);
+
+    TestBed.inject(AiQuestionsStore).finished.next();
+    flushLoad(1, [...CARS, question(4, 1)], [{ ...CATEGORIES[1], questionCount: 3, aiQuestionCount: 2 }, CATEGORIES[0]]);
+    await fixture.whenStable();
+
+    expect(texts(page, '.categories .chip')).toEqual(['Autá 3', 'Šport 1']);
+    expect(page.querySelectorAll('.list .item').length).toBe(3);
   });
 });

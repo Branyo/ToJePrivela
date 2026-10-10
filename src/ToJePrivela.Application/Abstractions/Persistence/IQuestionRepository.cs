@@ -6,12 +6,6 @@ public interface IQuestionRepository : IRepository<Question>
 {
     Task<IReadOnlyList<Question>> FindAsync(int? categoryId, QuestionSource? source, CancellationToken cancellationToken = default);
 
-    /// <summary>Question counts per category id; a category without questions is missing.</summary>
-    Task<IReadOnlyDictionary<int, QuestionCounts>> CountByCategoryAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>Question counts of one category; <see cref="QuestionCounts.None"/> when it has none.</summary>
-    Task<QuestionCounts> CountAsync(int categoryId, CancellationToken cancellationToken = default);
-
     /// <summary>Slovak texts of every question in the category, newest first.</summary>
     Task<IReadOnlyList<string>> GetTextsAsync(int categoryId, CancellationToken cancellationToken = default);
 

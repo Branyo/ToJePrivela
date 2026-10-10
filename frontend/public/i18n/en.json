@@ -300,6 +300,7 @@
       "editTitle": "Edit question",
       "textSk": "Slovak text",
       "textEn": "English text",
+      "textEnOptional": "Optional: this question has no English text yet. Left empty, it stays in Slovak only.",
       "answer": "Answer",
       "answerHint": "A number such as 42 or -3.5, without separators.",
       "badPoints": "Donkeys on the card",

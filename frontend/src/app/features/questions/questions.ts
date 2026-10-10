@@ -3,13 +3,14 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { EMPTY, Observable, Subject, catchError, map, of, skip, switchMap } from 'rxjs';
-import { CategoriesApi } from '../../core/api/categories-api';
 import { Question, QuestionCategory, QuestionDraft } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { QuestionsApi } from '../../core/api/questions-api';
-import { LanguageService, Message, compareNames } from '../../core/i18n/language';
+import { LanguageService, Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { CategoryList } from '../../shared/category-list';
+import { AiQuestionsStore } from '../settings/ai-questions-store';
 import { QuestionForm } from './question-form';
 
 /** The largest id the API takes (a C# `int`); a longer one in the URL is no id at all. */
@@ -32,7 +33,6 @@ type Timed = { question: Question; time: number };
 })
 export class Questions {
   private readonly router = inject(Router);
-  private readonly categoriesApi = inject(CategoriesApi);
   private readonly questionsApi = inject(QuestionsApi);
   private readonly i18n = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
@@ -40,11 +40,13 @@ export class Questions {
   /** The `category` query parameter. */
   readonly category = input<string>();
 
-  private readonly categories = signal<QuestionCategory[] | null>(null);
+  /**
+   * Names and counts. Their fetch fails on its own: the chips still arrive, to pick another category, when the
+   * questions of the one in the URL cannot be had.
+   */
+  private readonly categories = new CategoryList();
   /** The questions of the category picked when they were fetched, newest first; `null` until they arrive. */
   private readonly questions = signal<{ categoryId: number | null; list: Question[] } | null>(null);
-  /** Each value fetches the categories (names and counts) again, dropping a fetch still running. */
-  private readonly categoryReloads = new Subject<void>();
   /** Each value fetches the picked category's questions again, dropping a fetch still running. */
   private readonly questionReloads = new Subject<void>();
 
@@ -57,14 +59,12 @@ export class Questions {
   protected readonly working = signal<number | 'new' | null>(null);
   protected readonly formProblem = signal<Message | null>(null);
   protected readonly notice = signal<Message | null>(null);
-  protected readonly error = signal<Message | null>(null);
+  /** What went wrong with the questions: fetching, saving or deleting them. */
+  private readonly questionsError = signal<Message | null>(null);
+  protected readonly error = computed(() => this.questionsError() ?? this.categories.error());
 
-  protected readonly loaded = computed(() => this.categories() !== null);
-
-  protected readonly sortedCategories = computed(() => {
-    const locale = this.i18n.locale();
-    return [...(this.categories() ?? [])].sort((a, b) => compareNames(a.name, b.name, locale));
-  });
+  protected readonly loaded = this.categories.loaded;
+  protected readonly sortedCategories = this.categories.sorted;
 
   /** The id in the URL, or `null` when it cannot be one. */
   private readonly requestedId = computed(() => {
@@ -75,7 +75,7 @@ export class Questions {
   /** `null` until a category that exists is picked. */
   protected readonly selected = computed(() => {
     const id = this.requestedId();
-    return this.categories()?.find((category) => category.id === id) ?? null;
+    return this.categories.all()?.find((category) => category.id === id) ?? null;
   });
 
   /** Equal across reloads of the same category, unlike `selected`. */
@@ -89,20 +89,12 @@ export class Questions {
 
   constructor() {
     void inject(GameRulesStore).ensureLoaded();
-    // The two fetches fail on their own: categories still arrive, with chips to pick another category, when the
-    // questions of the one in the URL cannot be had.
-    this.categoryReloads
-      .pipe(
-        switchMap(() => this.categoriesApi.getAll().pipe(catchError((error: unknown) => this.fail(error)))),
-        takeUntilDestroyed(),
-      )
-      .subscribe((categories) => this.categories.set(categories));
     this.questionReloads
       .pipe(
         switchMap(() => {
           const id = untracked(() => this.requestedId());
           // An id the categories already fetched do not know (say, one deleted meanwhile) has nothing to fetch.
-          const known = untracked(() => this.categories());
+          const known = untracked(() => this.categories.all());
           const exists = id !== null && (known === null || known.some((category) => category.id === id));
           const list = exists ? this.questionsApi.getByCategory(id).pipe(map(newestFirst)) : of([]);
           return list.pipe(
@@ -113,6 +105,9 @@ export class Questions {
         takeUntilDestroyed(),
       )
       .subscribe((questions) => this.questions.set(questions));
+    // AI questions generated or deleted in the categories tab change the list and the counts, also when that work
+    // finishes while this tab is shown.
+    inject(AiQuestionsStore).finished.pipe(takeUntilDestroyed()).subscribe(() => this.load());
     // Names and texts arrive in the shown language, so both are fetched again after a switch.
     effect(() => {
       this.i18n.language();
@@ -123,7 +118,7 @@ export class Questions {
     toObservable(this.requestedId)
       .pipe(skip(1), takeUntilDestroyed())
       .subscribe(() => {
-        this.error.set(null);
+        this.questionsError.set(null);
         this.questionReloads.next();
       });
     // Another category starts with nothing open.
@@ -193,14 +188,14 @@ export class Questions {
   }
 
   protected askToDelete(id: number): void {
-    this.error.set(null);
+    this.questionsError.set(null);
     this.pendingDelete.set(id);
   }
 
   protected confirmDelete(id: number): void {
     const categoryId = this.selectedId();
     this.working.set(id);
-    this.error.set(null);
+    this.questionsError.set(null);
     this.questionsApi.delete(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         if (this.left(categoryId)) {
@@ -218,7 +213,7 @@ export class Questions {
         this.working.set(null);
         this.pendingDelete.set(null);
         this.load();
-        this.error.set(toProblem(error).message);
+        this.questionsError.set(toProblem(error).message);
       },
     });
   }
@@ -237,7 +232,7 @@ export class Questions {
 
   private done(notice: Message): void {
     this.working.set(null);
-    this.error.set(null);
+    this.questionsError.set(null);
     this.notice.set(notice);
     this.load();
   }
@@ -252,13 +247,13 @@ export class Questions {
 
   /** Fetches the categories and the picked category's questions again: their counts change with every save. */
   protected load(): void {
-    this.error.set(null);
-    this.categoryReloads.next();
+    this.questionsError.set(null);
+    this.categories.reload();
     this.questionReloads.next();
   }
 
   private fail(error: unknown): Observable<never> {
-    this.error.set(toProblem(error).message);
+    this.questionsError.set(toProblem(error).message);
     return EMPTY;
   }
 }

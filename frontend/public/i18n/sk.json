@@ -310,6 +310,7 @@
       "editTitle": "Úprava otázky",
       "textSk": "Slovenský text",
       "textEn": "Anglický text",
+      "textEnOptional": "Nepovinné: otázka zatiaľ nemá anglický text. Ak ho necháš prázdny, zostane len po slovensky.",
       "answer": "Odpoveď",
       "answerHint": "Číslo, napríklad 42 alebo -3.5, bez oddeľovačov.",
       "badPoints": "Počet somárov na karte",

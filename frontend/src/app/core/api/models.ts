@@ -103,7 +103,8 @@ export interface Question {
 /** What an admin writes for a manual question, when adding one or editing any. */
 export interface QuestionDraft {
   textSk: string;
-  textEn: string;
+  /** Left out only when editing a question without an English text and none was written; it then stays without one. */
+  textEn?: string;
   answer: string;
   badPoints: number;
 }

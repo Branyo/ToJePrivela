@@ -122,7 +122,12 @@
                       >
                         {{ 'questionAdmin.delete' | translate }}
                       </button>
-                      <button type="button" class="btn btn--ghost small" (click)="pendingDelete.set(null)">
+                      <button
+                        type="button"
+                        class="btn btn--ghost small"
+                        [disabled]="working() === question.id"
+                        (click)="pendingDelete.set(null)"
+                      >
                         {{ 'questionAdmin.keep' | translate }}
                       </button>
                     </div>
