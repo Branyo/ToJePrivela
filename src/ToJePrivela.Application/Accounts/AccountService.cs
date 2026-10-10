@@ -101,6 +101,39 @@ public sealed class AccountService : IAccountService
         return Result.Success(AccountMapper.ToSignedInDto(account, _tokenIssuer.Issue(account)));
     }
 
+    public async Task<Result<SignedInDto>> ChangePasswordAsync(
+        ChangePasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (RequestValidator.Validate(request) is { } invalid)
+        {
+            return Result.Failure<SignedInDto>(invalid);
+        }
+
+        var account = await FindLoginAsync(_currentAccount.Id, cancellationToken);
+
+        if (account is null)
+        {
+            return Result.Failure<SignedInDto>(AccountErrors.UnknownAccount);
+        }
+
+        if (_passwordHasher.Verify(account.PasswordHash!, request.CurrentPassword) == PasswordCheck.Failed)
+        {
+            return Result.Failure<SignedInDto>(AccountErrors.CurrentPasswordWrong);
+        }
+
+        if (request.NewPassword == request.CurrentPassword)
+        {
+            return Result.Failure<SignedInDto>(AccountErrors.SamePassword);
+        }
+
+        // A new security stamp: every token issued before, on any device, stops counting.
+        account.ChangePasswordHash(_passwordHasher.Hash(request.NewPassword));
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(AccountMapper.ToSignedInDto(account, _tokenIssuer.Issue(account)));
+    }
+
     public async Task<Result<AccountDto>> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
         var account = await FindLoginAsync(_currentAccount.Id, cancellationToken);

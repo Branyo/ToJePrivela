@@ -40,15 +40,23 @@ describe('Settings', () => {
     http.expectOne('/api/question-categories').flush([]);
   }
 
-  it("opens on the login's players, without tabs for a login that is not an admin", async () => {
+  it("opens on the login's players, with only the players and password tabs for a login that is not an admin", async () => {
     const { harness, page } = await open('/settings', false);
     http.expectOne('/api/players').flush([]);
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/settings/players');
     expect(page.querySelector('app-players-section')).not.toBeNull();
-    expect(page.querySelector('.tabs')).toBeNull();
+    expect(tabs(page)).toEqual(['/settings/players', '/settings/password']);
     expect(page.querySelector('.badge')).toBeNull();
+  });
+
+  it('opens the password tab for a login that is not an admin', async () => {
+    const { harness, page } = await open('/settings/password', false);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/settings/password');
+    expect(page.querySelector('app-password-section')).not.toBeNull();
   });
 
   it('keeps a login that is not an admin out of the admin tabs', async () => {
@@ -83,12 +91,12 @@ describe('Settings', () => {
     expect(TestBed.inject(Router).url).toBe('/sign-in');
   });
 
-  it('gives an admin tabs for players, categories and questions, marking the open one', async () => {
+  it('gives an admin tabs for players, password, categories and questions, marking the open one', async () => {
     const { harness, page } = await open('/settings/categories', true);
     flushCategories();
     await harness.fixture.whenStable();
 
-    expect(tabs(page)).toEqual(['/settings/players', '/settings/categories', '/settings/questions']);
+    expect(tabs(page)).toEqual(['/settings/players', '/settings/password', '/settings/categories', '/settings/questions']);
     expect(page.querySelector('.tab--on')?.getAttribute('href')).toBe('/settings/categories');
     expect(page.querySelector('.tab--on')?.getAttribute('aria-current')).toBe('page');
     expect(page.querySelector('app-ai-questions-section')).not.toBeNull();

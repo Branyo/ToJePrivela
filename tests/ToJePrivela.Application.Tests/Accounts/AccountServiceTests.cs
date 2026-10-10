@@ -248,6 +248,83 @@ public class AccountServiceTests
         Assert.Equal(stamp, account.SecurityStamp);
     }
 
+    [Fact]
+    public async Task ChangePasswordAsync_StoresTheNewHashEndsOtherSignInsAndIssuesAFreshToken()
+    {
+        var account = SignedIn(7, "Brano", "secret-password");
+        var stamp = account.SecurityStamp;
+
+        var result = await _sut.ChangePasswordAsync(
+            new ChangePasswordRequest { CurrentPassword = "secret-password", NewPassword = "brand-new-password" });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("issued-token", result.Value.AccessToken);
+        Assert.Equal(new AccountDto(7, "Brano", false), result.Value.Account);
+        Assert.Equal(FakePasswordHasher.HashOf("brand-new-password"), account.PasswordHash);
+        Assert.NotEqual(stamp, account.SecurityStamp);
+        _tokenIssuer.Received(1).Issue(account);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_RefusesAWrongCurrentPassword()
+    {
+        var account = SignedIn(7, "Brano", "secret-password");
+        var hash = account.PasswordHash;
+
+        var result = await _sut.ChangePasswordAsync(
+            new ChangePasswordRequest { CurrentPassword = "wrong-password", NewPassword = "brand-new-password" });
+
+        Assert.Equal(AccountErrors.CurrentPasswordWrong, result.Error);
+        Assert.Equal(hash, account.PasswordHash);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_RefusesTheSamePasswordAgain()
+    {
+        SignedIn(7, "Brano", "secret-password");
+
+        var result = await _sut.ChangePasswordAsync(
+            new ChangePasswordRequest { CurrentPassword = "secret-password", NewPassword = "secret-password" });
+
+        Assert.Equal(AccountErrors.SamePassword, result.Error);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("secret-password", "short")]
+    [InlineData("secret-password", "")]
+    [InlineData("", "brand-new-password")]
+    public async Task ChangePasswordAsync_RejectsAnInvalidRequest(string current, string next)
+    {
+        SignedIn(7, "Brano", "secret-password");
+
+        var result = await _sut.ChangePasswordAsync(new ChangePasswordRequest { CurrentPassword = current, NewPassword = next });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        await _accounts.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_ReportsALoginThatIsGone()
+    {
+        _currentAccount.Id.Returns(99);
+
+        var result = await _sut.ChangePasswordAsync(
+            new ChangePasswordRequest { CurrentPassword = "secret-password", NewPassword = "brand-new-password" });
+
+        Assert.Equal(AccountErrors.UnknownAccount, result.Error);
+    }
+
+    private Account SignedIn(int id, string name, string password)
+    {
+        var account = TestEntities.Account(id, name, passwordHash: FakePasswordHasher.HashOf(password));
+        _currentAccount.Id.Returns(id);
+        _accounts.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(account);
+        return account;
+    }
+
     private Account Stored(int id, string name, string password)
     {
         var account = TestEntities.Account(id, name, passwordHash: FakePasswordHasher.HashOf(password));

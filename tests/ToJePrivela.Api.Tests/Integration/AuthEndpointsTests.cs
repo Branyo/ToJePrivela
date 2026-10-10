@@ -150,6 +150,52 @@ public class AuthEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task ChangePassword_SwitchesThePasswordAndEndsOtherSignIns()
+    {
+        var name = NewName();
+        var created = await _anonymous.PostAsJsonAsync("/api/auth/accounts", new { name, password = "first-password" });
+        var first = (await created.Content.ReadFromJsonAsync<SignedInDto>())!;
+        var otherDevice = (await (await _anonymous.PostAsJsonAsync(
+            "/api/auth/sign-in", new { name, password = "first-password" })).Content.ReadFromJsonAsync<SignedInDto>())!;
+
+        var response = await WithToken(first.AccessToken).PutAsJsonAsync(
+            "/api/auth/password",
+            new { currentPassword = "first-password", newPassword = "second-password" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var renewed = (await response.Content.ReadFromJsonAsync<SignedInDto>())!;
+        Assert.Equal(first.Account, renewed.Account);
+        Assert.Equal(HttpStatusCode.OK, (await WithToken(renewed.AccessToken).GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await WithToken(otherDevice.AccessToken).GetAsync("/api/auth/me")).StatusCode);
+
+        var oldPassword = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "first-password" });
+        var newPassword = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "second-password" });
+        Assert.Equal(HttpStatusCode.Unauthorized, oldPassword.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, newPassword.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_AnswersAWrongCurrentPasswordWith400()
+    {
+        var response = await _factory.CreateClientAs(_factory.Member).PutAsJsonAsync(
+            "/api/auth/password",
+            new { currentPassword = "not-the-password", newPassword = "second-password" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Auth.CurrentPasswordWrong", await ProblemResponse.CodeOf(response));
+    }
+
+    [Fact]
+    public async Task ChangePassword_WithoutAToken_Answers401()
+    {
+        var response = await _anonymous.PutAsJsonAsync(
+            "/api/auth/password",
+            new { currentPassword = ApiFactory.MemberPassword, newPassword = "second-password" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Me_WithoutAToken_Answers401()
     {
         var response = await _anonymous.GetAsync("/api/auth/me");

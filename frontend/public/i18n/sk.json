@@ -19,7 +19,8 @@
     "settings": "Nastavenia",
     "questions": "Otázky",
     "players": "Hráči",
-    "categories": "Kategórie"
+    "categories": "Kategórie",
+    "password": "Heslo"
   },
   "common": {
     "dateTime": "d. M. HH:mm",
@@ -256,6 +257,7 @@
     "tabs": {
       "label": "Časti nastavení",
       "players": "👥 Hráči",
+      "password": "🔑 Heslo",
       "categories": "🗂️ Kategórie",
       "questions": "📚 Otázky"
     }
@@ -376,11 +378,23 @@
         "Forbidden": "Toto môže urobiť len správca.",
         "WrongPassword": "Heslo nie je správne.",
         "UnknownLogin": "Prihlásenie s týmto menom neexistuje.",
-        "NameTaken": "Toto prihlasovacie meno je už obsadené."
+        "NameTaken": "Toto prihlasovacie meno je už obsadené.",
+        "CurrentPasswordWrong": "Súčasné heslo nie je správne.",
+        "SamePassword": "Nové heslo sa musí líšiť od súčasného."
       },
       "RateLimit": {
         "Exceeded": "Príliš veľa pokusov za krátky čas. Skúste to znova o {{seconds}} s."
       }
     }
+  },
+  "password": {
+    "title": "Zmena hesla",
+    "text": "Zmena hesla odhlási prihlásenie na všetkých ostatných zariadeniach. Toto zostane prihlásené.",
+    "current": "Súčasné heslo",
+    "new": "Nové heslo",
+    "repeat": "Zopakujte nové heslo",
+    "submit": "Zmeniť heslo",
+    "saving": "Ukladám…",
+    "changed": "Heslo bolo zmenené. Ostatné zariadenia sa musia prihlásiť novým heslom."
   }
 }

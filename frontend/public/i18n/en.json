@@ -19,7 +19,8 @@
     "settings": "Settings",
     "questions": "Questions",
     "players": "Players",
-    "categories": "Categories"
+    "categories": "Categories",
+    "password": "Password"
   },
   "common": {
     "dateTime": "d MMM, HH:mm",
@@ -246,6 +247,7 @@
     "tabs": {
       "label": "Settings sections",
       "players": "👥 Players",
+      "password": "🔑 Password",
       "categories": "🗂️ Categories",
       "questions": "📚 Questions"
     }
@@ -366,11 +368,23 @@
         "Forbidden": "Only an admin may do this.",
         "WrongPassword": "The password is not right.",
         "UnknownLogin": "There is no login with this name.",
-        "NameTaken": "This login name is already taken."
+        "NameTaken": "This login name is already taken.",
+        "CurrentPasswordWrong": "The current password is not right.",
+        "SamePassword": "The new password must differ from the current one."
       },
       "RateLimit": {
         "Exceeded": "Too many attempts in a short time. Try again in {{seconds}} s."
       }
     }
+  },
+  "password": {
+    "title": "Change password",
+    "text": "Changing the password signs the login out on every other device. This one stays signed in.",
+    "current": "Current password",
+    "new": "New password",
+    "repeat": "Repeat new password",
+    "submit": "Change password",
+    "saving": "Saving…",
+    "changed": "The password has been changed. Other devices need to sign in with the new one."
   }
 }

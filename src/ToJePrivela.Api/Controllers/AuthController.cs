@@ -50,6 +50,23 @@ public sealed class AuthController : ControllerBase
         (await _accounts.CreateAsync(request, cancellationToken))
             .ToCreatedResult(nameof(GetCurrentAccount), _ => new { });
 
+    /// <summary>
+    /// Changes the signed-in login's password; 400 <c>Auth.CurrentPasswordWrong</c> when the current one is wrong.
+    /// Ends every other sign-in of the login and answers with a fresh token for this one. Rate limited like signing in,
+    /// so a token left on a shared device cannot be used to guess the password at speed.
+    /// </summary>
+    [HttpPut("password")]
+    [EnableRateLimiting(SignInRateLimitOptions.PolicyName)]
+    [SuccessIsFree]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<SignedInDto>> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken) =>
+        (await _accounts.ChangePasswordAsync(request, cancellationToken)).ToActionResult();
+
     /// <summary>The signed-in login, admin flag included.</summary>
     [HttpGet("me")]
     [ProducesResponseType(StatusCodes.Status200OK)]

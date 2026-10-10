@@ -61,6 +61,11 @@ export class AuthStore {
     this.keep(await firstValueFrom(this.api.createAccount(name, password)));
   }
 
+  /** Changes the password and keeps the fresh token, since the change ends the token in use. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    this.keep(await firstValueFrom(this.api.changePassword(currentPassword, newPassword)));
+  }
+
   signOut(): void {
     this.session.set(null);
     try {
