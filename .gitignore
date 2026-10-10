@@ -409,3 +409,5 @@ logs/
 *.db
 *.db-shm
 *.db-wal
+# Angular CLI cache, wherever ng runs from (frontend/ ignores its own as well)
+.angular/
