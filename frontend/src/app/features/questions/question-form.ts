@@ -39,9 +39,17 @@ export class QuestionForm {
 
   /**
    * The question the fields start from. A reload hands over a new object for the same question, which must not
-   * throw away what was typed, so only another id counts as a change.
+   * throw away what was typed, so only another question or a changed one counts as a change; a form opened on the
+   * list from before a save then still picks up the saved texts.
    */
-  private readonly original = computed(() => this.question(), { equal: (a, b) => a?.id === b?.id });
+  private readonly original = computed(() => this.question(), {
+    equal: (a, b) =>
+      a?.id === b?.id &&
+      a?.textSk === b?.textSk &&
+      a?.textEn === b?.textEn &&
+      a?.answer === b?.answer &&
+      a?.badPoints === b?.badPoints,
+  });
 
   protected readonly textSk = linkedSignal(() => this.original()?.textSk ?? '');
   protected readonly textEn = linkedSignal(() => this.original()?.textEn ?? '');
@@ -59,8 +67,8 @@ export class QuestionForm {
     }
   }
 
-  protected submit(): void {
-    const rules = this.rulesStore.rules();
+  protected async submit(): Promise<void> {
+    const rules = this.rulesStore.rules() ?? (await this.rulesStore.ensureLoaded());
     if (!rules) {
       this.invalid.set({ key: 'errors.rulesUnavailable' });
       return;

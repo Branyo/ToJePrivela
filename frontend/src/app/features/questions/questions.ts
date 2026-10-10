@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -29,6 +29,7 @@ export class Questions {
   private readonly categoriesApi = inject(CategoriesApi);
   private readonly questionsApi = inject(QuestionsApi);
   private readonly i18n = inject(LanguageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** The `category` query parameter. */
   readonly category = input<string>();
@@ -157,12 +158,18 @@ export class Questions {
     const request: Observable<unknown> = question
       ? this.questionsApi.update(question.id, category.id, draft)
       : this.questionsApi.create(category.id, draft);
-    request.subscribe({
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
+        if (this.left(category.id)) {
+          return;
+        }
         this.editing.set(null);
         this.done({ key: question ? 'questionAdmin.updated' : 'questionAdmin.created' });
       },
       error: (error) => {
+        if (this.left(category.id)) {
+          return;
+        }
         this.working.set(null);
         this.formProblem.set(toProblem(error).message);
       },
@@ -175,18 +182,41 @@ export class Questions {
   }
 
   protected confirmDelete(id: number): void {
+    const categoryId = this.selectedId();
     this.working.set(id);
     this.error.set(null);
-    this.questionsApi.delete(id).subscribe({
+    this.questionsApi.delete(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
+        if (this.left(categoryId)) {
+          return;
+        }
         this.pendingDelete.set(null);
         this.done({ key: 'questionAdmin.deleted' });
       },
       error: (error) => {
+        if (this.left(categoryId)) {
+          return;
+        }
+        // The list may be out of date (say, the question was deleted elsewhere), so it is fetched again; `load()`
+        // clears the error, so the error is set after it.
         this.working.set(null);
+        this.pendingDelete.set(null);
+        this.load();
         this.error.set(toProblem(error).message);
       },
     });
+  }
+
+  /**
+   * Whether another category was picked while a save or delete was on its way: its outcome then belongs to a list
+   * no longer shown, which has already been reset and fetched on its own.
+   */
+  private left(categoryId: number | null): boolean {
+    if (this.selectedId() === categoryId) {
+      return false;
+    }
+    this.working.set(null);
+    return true;
   }
 
   private done(notice: Message): void {

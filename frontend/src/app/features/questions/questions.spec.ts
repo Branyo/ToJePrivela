@@ -126,6 +126,28 @@ describe('Questions', () => {
     expect(texts(page, '.categories .chip')).toEqual(['Autá 2', 'Šport 1']);
   });
 
+  it("offers to try again when a category's questions cannot be fetched after the categories were", async () => {
+    const { fixture, page } = await render(1);
+
+    fixture.componentRef.setInput('category', '2');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    http.expectOne('/api/question-categories').flush(CATEGORIES);
+    http.expectOne('/api/questions?categoryId=2').flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="alert"]')).not.toBeNull();
+    expect(page.textContent).not.toContain('questionAdmin.loading');
+
+    button(page, 'questionAdmin.retry').click();
+    await fixture.whenStable();
+    flushLoad(2, [question(3, 2)]);
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(texts(page, '.text[lang="sk"]')).toEqual(['SK Otázka číslo 3?']);
+  });
+
   it('shows only the newest fetch when fetches overlap', async () => {
     const { fixture, page } = await render(1);
 
@@ -307,6 +329,73 @@ describe('Questions', () => {
     expect(page.textContent).toContain('questionAdmin.updated');
   });
 
+  it('fills a form opened again before the saved question arrives with the saved texts once they do', async () => {
+    const { fixture, page } = await render(1);
+
+    page.querySelectorAll<HTMLButtonElement>('.actions button')[2].click(); // edit question 1
+    await fixture.whenStable();
+    await type(fixture, page.querySelector('app-question-form input[name="answer"]')!, '7');
+    button(page.querySelector('app-question-form')!, 'questionAdmin.form.save').click();
+    await fixture.whenStable();
+    http.expectOne('/api/questions/1').flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    page.querySelectorAll<HTMLButtonElement>('.actions button')[2].click(); // again, while the list is still the old one
+    await fixture.whenStable();
+    expect(page.querySelector<HTMLInputElement>('app-question-form input[name="answer"]')!.value).toBe('100');
+
+    flushLoad(1, [question(1, 1, { answer: '7', source: 'Manual' }), CARS[1]]);
+    await fixture.whenStable();
+
+    expect(page.querySelector<HTMLInputElement>('app-question-form input[name="answer"]')!.value).toBe('7');
+  });
+
+  it('fetches the missing rules again when a question is saved', async () => {
+    const rules = TestBed.inject(GameRulesStore).rules;
+    rules.set(null);
+    const fixture = TestBed.createComponent(Questions);
+    fixture.componentRef.setInput('category', '1');
+    fixture.detectChanges();
+    http.expectOne('/api/rules').flush(null, { status: 503, statusText: 'Service Unavailable' });
+    flushLoad(1);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    button(page, 'questionAdmin.add').click();
+    await fixture.whenStable();
+    const form = page.querySelector('app-question-form')!;
+    expect(form.querySelectorAll('.bad-points .chip').length).toBe(0);
+
+    button(form, 'questionAdmin.form.save').click();
+    http.expectOne('/api/rules').flush(TEST_RULES);
+    await fixture.whenStable();
+
+    expect(form.querySelectorAll('.bad-points .chip').length).toBeGreaterThan(0);
+    expect(form.querySelector('[role="alert"]')?.textContent).toContain('questionAdmin.form.errors.textSk');
+  });
+
+  it('drops the outcome of a save that arrives after another category was picked', async () => {
+    const { fixture, page } = await render(1);
+
+    page.querySelectorAll<HTMLButtonElement>('.actions button')[2].click();
+    await fixture.whenStable();
+    button(page.querySelector('app-question-form')!, 'questionAdmin.form.save').click();
+    await fixture.whenStable();
+    const save = http.expectOne('/api/questions/1');
+
+    fixture.componentRef.setInput('category', '2');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    flushLoad(2, [question(3, 2)]);
+    await fixture.whenStable();
+    save.flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    // No fetch follows (`http.verify()`), no notice, and the list can be worked on again.
+    expect(page.textContent).not.toContain('questionAdmin.updated');
+    expect(button(page, 'questionAdmin.add').disabled).toBe(false);
+  });
+
   it('keeps what was typed when the questions are fetched again during an edit', async () => {
     const { fixture, page } = await render(1);
 
@@ -353,6 +442,24 @@ describe('Questions', () => {
 
     expect(page.querySelectorAll('.list .item').length).toBe(1);
     expect(page.textContent).toContain('questionAdmin.deleted');
+  });
+
+  it('fetches the list again and closes the confirmation when a deletion fails', async () => {
+    const { fixture, page } = await render(1);
+
+    button(page, 'questionAdmin.delete').click();
+    await fixture.whenStable();
+    button(page.querySelector('.confirm')!, 'questionAdmin.delete').click();
+    await fixture.whenStable();
+    http
+      .expectOne('/api/questions/2')
+      .flush({ code: 'Question.NotFound', detail: 'Gone.' }, { status: 404, statusText: 'Not Found' });
+    flushLoad(1, [question(1, 1)]);
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="alert"]')).not.toBeNull();
+    expect(page.querySelector('.confirm')).toBeNull();
+    expect(page.querySelectorAll('.list .item').length).toBe(1);
   });
 
   it('keeps the question when the deletion is called off', async () => {

@@ -6,7 +6,7 @@
 
   @if (error(); as message) {
     <p class="error-banner" role="alert">{{ message | message }}</p>
-    @if (!loaded()) {
+    @if (!loaded() || (selected() && !questionsLoaded())) {
       <button type="button" class="btn btn--sky" (click)="load()">{{ 'questionAdmin.retry' | translate }}</button>
     }
   }
@@ -64,7 +64,9 @@
         }
 
         @if (!questionsLoaded()) {
-          <p class="muted">{{ 'questionAdmin.loading' | translate }}</p>
+          @if (!error()) {
+            <p class="muted">{{ 'questionAdmin.loading' | translate }}</p>
+          }
         } @else if (shown().length === 0) {
           <p class="muted">{{ 'questionAdmin.empty' | translate }}</p>
         } @else {
