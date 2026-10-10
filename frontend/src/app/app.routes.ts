@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard, signedInGuard, signedOutGuard } from './core/auth/auth-guards';
+import { adminGuard, notAdminGuard, signedInGuard, signedOutGuard } from './core/auth/auth-guards';
 
 /** Titles are translation keys, see `TranslatedTitleStrategy`. Everything but signing in needs a signed-in account. */
 export const routes: Routes = [
@@ -40,6 +40,7 @@ export const routes: Routes = [
           },
           {
             path: 'password',
+            canActivate: [notAdminGuard],
             loadComponent: () => import('./features/settings/password-section').then((m) => m.PasswordSection),
             title: 'titles.password',
           },

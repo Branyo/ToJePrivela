@@ -370,7 +370,8 @@
         "UnknownLogin": "There is no login with this name.",
         "NameTaken": "This login name is already taken.",
         "CurrentPasswordWrong": "The current password is not right.",
-        "SamePassword": "The new password must differ from the current one."
+        "SamePassword": "The new password must differ from the current one.",
+        "AdminPasswordFromConfig": "An admin's password is set in the server configuration."
       },
       "RateLimit": {
         "Exceeded": "Too many attempts in a short time. Try again in {{seconds}} s."

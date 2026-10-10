@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { AuthStore } from './auth-store';
-import { testSession } from './testing';
+import { signedInAs, testSession } from './testing';
 
 describe('AuthStore', () => {
   let store: AuthStore;
@@ -106,5 +106,38 @@ describe('AuthStore', () => {
     expect(store.token()).toBeNull();
     expect(store.account()).toBeNull();
     expect(localStorage.getItem('session')).toBeNull();
+  });
+
+  describe('with other tabs', () => {
+    function storeFromOtherTab(session: ReturnType<typeof testSession>): void {
+      localStorage.setItem('session', JSON.stringify(session));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'session' }));
+    }
+
+    it('picks up the fresh token another tab stored for this login after changing its password', async () => {
+      await signedInAs(store, http, { id: 7 });
+
+      storeFromOtherTab({ ...testSession({ id: 7 }), accessToken: 'fresh-token' });
+
+      expect(store.token()).toBe('fresh-token');
+    });
+
+    it('leaves alone a sign-in another tab stored for another login', async () => {
+      await signedInAs(store, http, { id: 7 });
+
+      storeFromOtherTab({ ...testSession({ id: 8 }), accessToken: 'other-login-token' });
+
+      expect(store.token()).toBe('test-token');
+    });
+
+    it('signing out with an old token keeps the newer sign-in another tab stored', async () => {
+      await signedInAs(store, http, { id: 7 });
+      localStorage.setItem('session', JSON.stringify({ ...testSession({ id: 7 }), accessToken: 'fresh-token' }));
+
+      store.signOut();
+
+      expect(store.isSignedIn()).toBe(false);
+      expect(JSON.parse(localStorage.getItem('session')!).accessToken).toBe('fresh-token');
+    });
   });
 });

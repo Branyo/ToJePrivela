@@ -117,6 +117,12 @@ public sealed class AccountService : IAccountService
             return Result.Failure<SignedInDto>(AccountErrors.UnknownAccount);
         }
 
+        // An admin's password comes from Authentication:Admins and is reset to it on every startup.
+        if (account.IsAdmin)
+        {
+            return Result.Failure<SignedInDto>(AccountErrors.AdminPasswordFromConfig);
+        }
+
         if (_passwordHasher.Verify(account.PasswordHash!, request.CurrentPassword) == PasswordCheck.Failed)
         {
             return Result.Failure<SignedInDto>(AccountErrors.CurrentPasswordWrong);

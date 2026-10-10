@@ -36,6 +36,13 @@ public static class AccountErrors
         Error.Validation("Auth.SamePassword", "The new password must differ from the current one.");
 
     /// <summary>
+    /// An admin's password is set in <c>Authentication:Admins</c> and provisioning resets it on every startup, so a
+    /// change made here would silently be undone.
+    /// </summary>
+    public static readonly Error AdminPasswordFromConfig =
+        Error.Conflict("Auth.AdminPasswordFromConfig", "An admin's password is set in the server configuration.");
+
+    /// <summary>
     /// No login has this name. Saying so is deliberate: the client offers to create the login, so whether a name
     /// exists is not a secret, and sign-in attempts are rate limited instead.
     /// </summary>

@@ -307,6 +307,20 @@ public class AccountServiceTests
     }
 
     [Fact]
+    public async Task ChangePasswordAsync_RefusesAnAdminWhosePasswordComesFromConfiguration()
+    {
+        var account = SignedIn(7, "Brano", "secret-password", isAdmin: true);
+        var hash = account.PasswordHash;
+
+        var result = await _sut.ChangePasswordAsync(
+            new ChangePasswordRequest { CurrentPassword = "secret-password", NewPassword = "brand-new-password" });
+
+        Assert.Equal(AccountErrors.AdminPasswordFromConfig, result.Error);
+        Assert.Equal(hash, account.PasswordHash);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ChangePasswordAsync_ReportsALoginThatIsGone()
     {
         _currentAccount.Id.Returns(99);
@@ -317,9 +331,9 @@ public class AccountServiceTests
         Assert.Equal(AccountErrors.UnknownAccount, result.Error);
     }
 
-    private Account SignedIn(int id, string name, string password)
+    private Account SignedIn(int id, string name, string password, bool isAdmin = false)
     {
-        var account = TestEntities.Account(id, name, passwordHash: FakePasswordHasher.HashOf(password));
+        var account = TestEntities.Account(id, name, isAdmin: isAdmin, passwordHash: FakePasswordHasher.HashOf(password));
         _currentAccount.Id.Returns(id);
         _accounts.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(account);
         return account;

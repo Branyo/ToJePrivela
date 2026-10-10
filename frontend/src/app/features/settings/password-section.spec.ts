@@ -82,6 +82,28 @@ describe('PasswordSection', () => {
     expect(TestBed.inject(AuthStore).token()).toBe('test-token');
   });
 
+  it('drops the notice and the error once the user types again', async () => {
+    const { fixture, page } = await render();
+    fill(page, 'old-password', 'new-password');
+    submit(page);
+    http.expectOne('/api/auth/password').flush(testSession({ name: 'Brano' }));
+    await fixture.whenStable();
+    expect(page.querySelector('.password__done')).not.toBeNull();
+
+    type(page, '.password__current', 'n');
+    await fixture.whenStable();
+    expect(page.querySelector('.password__done')).toBeNull();
+
+    fill(page, 'new-password', 'short');
+    submit(page);
+    await fixture.whenStable();
+    expect(page.querySelector('.error-banner')).not.toBeNull();
+
+    type(page, '.password__new', 'shorter-no-more');
+    await fixture.whenStable();
+    expect(page.querySelector('.error-banner')).toBeNull();
+  });
+
   it.each([
     ['a too short new password', 'old-password', 'short', 'short'],
     ['a repetition that differs', 'old-password', 'new-password', 'other-password'],

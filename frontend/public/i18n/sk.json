@@ -380,7 +380,8 @@
         "UnknownLogin": "Prihlásenie s týmto menom neexistuje.",
         "NameTaken": "Toto prihlasovacie meno je už obsadené.",
         "CurrentPasswordWrong": "Súčasné heslo nie je správne.",
-        "SamePassword": "Nové heslo sa musí líšiť od súčasného."
+        "SamePassword": "Nové heslo sa musí líšiť od súčasného.",
+        "AdminPasswordFromConfig": "Heslo admina sa nastavuje v konfigurácii servera."
       },
       "RateLimit": {
         "Exceeded": "Príliš veľa pokusov za krátky čas. Skúste to znova o {{seconds}} s."

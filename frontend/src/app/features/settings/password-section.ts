@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, WritableSignal, computed, inject, signal } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { GameRules } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
@@ -6,6 +6,7 @@ import { AuthStore } from '../../core/auth/auth-store';
 import { Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { newPasswordProblem } from '../../core/rules/new-password';
 
 /**
  * Changing the login's password: the current one, the new one and its repetition. The server ends every other
@@ -70,8 +71,11 @@ export class PasswordSection {
     }
   }
 
-  protected value(event: Event): string {
-    return (event.target as HTMLInputElement).value;
+  /** Typing again makes an earlier result (the notice or an error) out of date, so it goes. */
+  protected edit(field: WritableSignal<string>, event: Event): void {
+    field.set((event.target as HTMLInputElement).value);
+    this.error.set(null);
+    this.changed.set(false);
   }
 
   private validate(rules: GameRules | null): Message | null {
@@ -79,13 +83,9 @@ export class PasswordSection {
       return { key: 'errors.rulesUnavailable' };
     }
 
-    const passwords = rules.password;
-    if (this.newPassword().length < passwords.min || this.newPassword().length > passwords.max) {
-      return { key: 'signIn.errors.passwordLength', params: passwords };
-    }
-
-    if (this.newPassword() !== this.repeatPassword()) {
-      return { key: 'signIn.errors.passwordsDiffer' };
+    const problem = newPasswordProblem(rules.password, this.newPassword(), this.repeatPassword());
+    if (problem) {
+      return problem;
     }
 
     if (this.newPassword() === this.currentPassword()) {
