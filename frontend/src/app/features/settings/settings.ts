@@ -16,9 +16,9 @@ const ADMIN_TABS: SettingsTab[] = [
 ];
 
 /**
- * The login's settings, one tab per child route: its players and its password for everyone, the shared categories
- * and questions for admins only. An account that turns out not to be an admin (any more) once the session is checked
- * leaves an admin tab it already shows, which `adminGuard` alone cannot do.
+ * The login's settings, one tab per child route: its players for everyone, the shared categories and questions for
+ * admins only, and last the login's password for everyone. An account that turns out not to be an admin (any more)
+ * once the session is checked leaves an admin tab it already shows, which `adminGuard` alone cannot do.
  */
 @Component({
   selector: 'app-settings',
@@ -31,7 +31,7 @@ export class Settings {
   protected readonly auth = inject(AuthStore);
 
   protected readonly tabs = computed(() =>
-    this.auth.isAdmin() ? [PLAYERS, PASSWORD, ...ADMIN_TABS] : [PLAYERS, PASSWORD],
+    this.auth.isAdmin() ? [PLAYERS, ...ADMIN_TABS, PASSWORD] : [PLAYERS, PASSWORD],
   );
 
   constructor() {

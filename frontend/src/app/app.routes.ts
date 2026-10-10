@@ -18,18 +18,13 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
-        // One tab per child; the tabs past players and password are for admins only.
+        // One tab per child; the categories and questions tabs are for admins only.
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'players' },
           {
             path: 'players',
             loadComponent: () => import('./features/settings/players-section').then((m) => m.PlayersSection),
             title: 'titles.players',
-          },
-          {
-            path: 'password',
-            loadComponent: () => import('./features/settings/password-section').then((m) => m.PasswordSection),
-            title: 'titles.password',
           },
           {
             path: 'categories',
@@ -42,6 +37,11 @@ export const routes: Routes = [
             canActivate: [adminGuard],
             loadComponent: () => import('./features/questions/questions').then((m) => m.Questions),
             title: 'titles.questions',
+          },
+          {
+            path: 'password',
+            loadComponent: () => import('./features/settings/password-section').then((m) => m.PasswordSection),
+            title: 'titles.password',
           },
         ],
       },
