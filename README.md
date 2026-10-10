@@ -105,6 +105,11 @@ logins, at speed either. A successful sign-in is not counted there, so people wh
 their address's cap; an address over it is refused before its request body is read. Behind a reverse proxy, list the
 proxy in `ForwardedHeaders:KnownProxies` so the limits see each client's own address.
 
+Changing the password (`PUT /api/auth/password`) shares that limit but counts per signed-in login, whatever the
+address: guessing the current password with a token left on a shared device stays as slow from many addresses as from
+one. It never counts towards, nor is stopped by, the address's cap, so people behind one address do not use up each
+other's sign-ins. A successful change is not counted.
+
 Admin rights come from `Authentication:Admins` only, and the stored logins are made to match it on every startup:
 
 - a configured login that exists becomes admin and gets the configured password, so a login created under an admin's
@@ -116,7 +121,8 @@ The JWT carries no rights: the login is read on every request, so a revoked admi
 login that is gone answers 401 `Auth.UnknownAccount`.
 
 The JWT does carry the login's **security stamp**, a random value that changes whenever who may act as the login
-changes: a password set from configuration, admin rights granted, the reserved login taken over. A token with an older
+changes: the password changed (`PUT /api/auth/password`) or set from configuration, admin rights granted, the
+reserved login taken over. A token with an older
 stamp answers 401 `Auth.SignedOut`. So someone who created a login under an admin's name before it was configured
 cannot go on as admin with the token they already hold. Upgrading a weak hash at sign-in keeps the stamp, and so does
 an admin re-applied with an unchanged password on startup. Tokens issued before stamps existed carry none and need one
@@ -139,6 +145,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/auth/sign-in` | Anonymous; body `{ name, password }` (password may be empty: an unknown name still answers 404); returns `{ accessToken, expiresAt, account }`; 404 `Auth.UnknownLogin`, 401 `Auth.WrongPassword` |
 | POST | `/api/auth/accounts` | Anonymous; body `{ name, password }`; creates a login (never an admin) and signs it in; 409 `Auth.NameTaken` |
 | GET | `/api/auth/me` | The signed-in login `{ id, name, isAdmin }` |
+| PUT | `/api/auth/password` | Body `{ currentPassword, newPassword }`; sets a new password, ends every other sign-in of the login and returns a fresh `{ accessToken, expiresAt, account }`; 400 `Auth.CurrentPasswordWrong` (not 401: the sign-in itself is fine) / `Auth.SamePassword`, 409 `Auth.AdminPasswordFromConfig` for an admin |
 | GET | `/api/rules` | Anonymous; includes `loginName`, `password` and `questionText` length limits |
 | GET | `/api/info` | Anonymous; `{ title, version }` — `version` is `"unknown"` for an unversioned build |
 | GET | `/api/health` | Anonymous, plain HTTP allowed; `Healthy` (200) when the database answers a real query within 2 s, else 503; healthy answers are cached for 5 s |

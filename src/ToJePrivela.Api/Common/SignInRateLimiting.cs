@@ -1,8 +1,10 @@
 using System.Text.Json;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using ToJePrivela.Domain.Common;
+using ToJePrivela.Identity.Tokens;
 using MvcJsonOptions = Microsoft.AspNetCore.Mvc.JsonOptions;
 
 namespace ToJePrivela.Api.Common;
@@ -13,7 +15,10 @@ namespace ToJePrivela.Api.Common;
 /// password stays slow. <see cref="SignInAddressLimiter"/> also caps the attempts one address makes on those endpoints,
 /// so it cannot try many names, or create many logins, at speed; a successful sign-in is not counted there, so people
 /// who know their passwords never use up their address's cap. The rate limiter picks a partition before the body is
-/// bound, so <see cref="UseSignInLimits"/> reads the name out of the JSON body first.
+/// bound, so <see cref="UseSignInLimits"/> reads the name out of the JSON body first. An endpoint that needs a sign-in
+/// (changing the password) counts per signed-in login instead, whatever the address, and never towards the address's
+/// cap: its body carries no name, guessing the current password from many addresses must stay as slow as from one, and
+/// people behind one address must not use up each other's sign-ins.
 /// </summary>
 public static class SignInRateLimiting
 {
@@ -21,11 +26,13 @@ public static class SignInRateLimiting
     public const int MaxReadBodyBytes = 4096;
 
     private const string LoginNameItem = "ToJePrivela.SignInLoginName";
+    private const string AccountItem = "ToJePrivela.SignInAccount";
 
     /// <summary>
-    /// Goes after routing (the endpoint is known) and before <c>UseRateLimiter</c>. An address over its cap is refused
-    /// before its body is read; otherwise the request is counted towards the cap once it is answered, unless the
-    /// endpoint is marked <see cref="SuccessIsFreeAttribute"/> and the answer succeeded.
+    /// Goes after authentication and routing (the signed-in login and the endpoint are known) and before
+    /// <c>UseRateLimiter</c>. A signed-in request skips the address's cap. Otherwise an address over its cap is refused
+    /// before its body is read, and the request is counted towards the cap once it is answered, unless the endpoint is
+    /// marked <see cref="SuccessIsFreeAttribute"/> and the answer succeeded.
     /// </summary>
     public static IApplicationBuilder UseSignInLimits(this IApplicationBuilder app)
     {
@@ -36,6 +43,15 @@ public static class SignInRateLimiting
         {
             if (!IsSignInEndpoint(context))
             {
+                await next(context);
+                return;
+            }
+
+            // Counted per login only (the endpoint policy). The address's cap is for trying many names, and people
+            // behind one address must not lose their sign-ins to someone mistyping a current password, or the other way.
+            if (SignedInAccount(context) is { } account)
+            {
+                context.Items[AccountItem] = account;
                 await next(context);
                 return;
             }
@@ -79,9 +95,17 @@ public static class SignInRateLimiting
                 QueueLimit = 0
             });
 
-    /// <summary>The address and the login name as <see cref="NameKeys.Of"/> compares it ("Brano " counts as "brano").</summary>
+    /// <summary>
+    /// The signed-in login on an endpoint that needs one; otherwise the address and the login name as
+    /// <see cref="NameKeys.Of"/> compares it ("Brano " counts as "brano").
+    /// </summary>
     public static string PartitionKey(HttpContext context)
     {
+        if (context.Items[AccountItem] is string account)
+        {
+            return $"account:{account}";
+        }
+
         var name = context.Items[LoginNameItem] as string ?? string.Empty;
         return $"{Address(context)}|{name}";
     }
@@ -123,6 +147,17 @@ public static class SignInRateLimiting
     }
 
     private static string Address(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    /// <summary>
+    /// The signed-in login's id, on an endpoint that needs a sign-in. Authentication has run, so the user is set only
+    /// for a token that is still valid; anything else counts towards the address's nameless partition and is then
+    /// answered 401.
+    /// </summary>
+    private static string? SignedInAccount(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is null
+        && context.User.Identity?.IsAuthenticated == true
+            ? context.User.FindFirst(AccessTokenClaims.Subject)?.Value
+            : null;
 
     private static bool IsSignInEndpoint(HttpContext context) =>
         context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName

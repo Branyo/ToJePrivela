@@ -8,7 +8,9 @@ const STORAGE_KEY = 'session';
 
 /**
  * The signed-in account and its access token, kept across reloads until the token expires. The server decides who
- * may do what; `isAdmin` only decides what the screens offer.
+ * may do what; `isAdmin` only decides what the screens offer. Tabs share the stored sign-in: a fresh token another tab
+ * stores for the same login (after a password change) is picked up here, and signing out never removes a sign-in
+ * another tab stored since.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
@@ -18,6 +20,14 @@ export class AuthStore {
   readonly account = computed(() => this.session()?.account ?? null);
   readonly isSignedIn = computed(() => this.session() !== null);
   readonly isAdmin = computed(() => this.session()?.account.isAdmin ?? false);
+
+  constructor() {
+    window.addEventListener('storage', (event) => {
+      if (event.key === STORAGE_KEY) {
+        this.adoptStored();
+      }
+    });
+  }
 
   /** The token to send, or `null` when nobody is signed in or the sign-in has expired. */
   token(): string | null {
@@ -61,12 +71,42 @@ export class AuthStore {
     this.keep(await firstValueFrom(this.api.createAccount(name, password)));
   }
 
+  /**
+   * Changes the password and keeps the fresh token, since the change ends the token in use. A 401 means this sign-in
+   * had already ended (the password was changed elsewhere), so the session goes; `authInterceptor` leaves the
+   * `/api/auth/` calls to their callers.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      this.keep(await firstValueFrom(this.api.changePassword(currentPassword, newPassword)));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 401) {
+        this.signOut();
+      }
+      throw error;
+    }
+  }
+
   signOut(): void {
+    const mine = this.session()?.accessToken;
     this.session.set(null);
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      // Another tab may have stored a newer sign-in (a password change there ends this tab's token); keep it.
+      const stored = read();
+      if (!stored || !mine || stored.accessToken === mine || isExpired(stored)) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
       // Storage can be blocked; the session then only lived in memory.
+    }
+  }
+
+  /** Takes over a sign-in another tab stored for the login this tab is signed in to; another login is left alone. */
+  private adoptStored(): void {
+    const current = this.session();
+    const stored = read();
+    if (current && stored && !isExpired(stored) && stored.account.id === current.account.id) {
+      this.session.set(stored);
     }
   }
 

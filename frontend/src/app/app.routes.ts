@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard, signedInGuard, signedOutGuard } from './core/auth/auth-guards';
+import { adminGuard, notAdminGuard, signedInGuard, signedOutGuard } from './core/auth/auth-guards';
 
 /** Titles are translation keys, see `TranslatedTitleStrategy`. Everything but signing in needs a signed-in account. */
 export const routes: Routes = [
@@ -18,7 +18,7 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
-        // One tab per child; the tabs past players are for admins only.
+        // One tab per child; the categories and questions tabs are for admins only.
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'players' },
           {
@@ -37,6 +37,12 @@ export const routes: Routes = [
             canActivate: [adminGuard],
             loadComponent: () => import('./features/questions/questions').then((m) => m.Questions),
             title: 'titles.questions',
+          },
+          {
+            path: 'password',
+            canActivate: [notAdminGuard],
+            loadComponent: () => import('./features/settings/password-section').then((m) => m.PasswordSection),
+            title: 'titles.password',
           },
         ],
       },

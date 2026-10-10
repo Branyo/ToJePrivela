@@ -150,6 +150,63 @@ public class AuthEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task ChangePassword_SwitchesThePasswordAndEndsOtherSignIns()
+    {
+        var name = NewName();
+        var created = await _anonymous.PostAsJsonAsync("/api/auth/accounts", new { name, password = "first-password" });
+        var first = (await created.Content.ReadFromJsonAsync<SignedInDto>())!;
+        var otherDevice = (await (await _anonymous.PostAsJsonAsync(
+            "/api/auth/sign-in", new { name, password = "first-password" })).Content.ReadFromJsonAsync<SignedInDto>())!;
+
+        var response = await WithToken(first.AccessToken).PutAsJsonAsync(
+            "/api/auth/password",
+            new { currentPassword = "first-password", newPassword = "second-password" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var renewed = (await response.Content.ReadFromJsonAsync<SignedInDto>())!;
+        Assert.Equal(first.Account, renewed.Account);
+        Assert.Equal(HttpStatusCode.OK, (await WithToken(renewed.AccessToken).GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await WithToken(otherDevice.AccessToken).GetAsync("/api/auth/me")).StatusCode);
+
+        var oldPassword = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "first-password" });
+        var newPassword = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name, password = "second-password" });
+        Assert.Equal(HttpStatusCode.Unauthorized, oldPassword.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, newPassword.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_AnswersAWrongCurrentPasswordWith400()
+    {
+        var response = await _factory.CreateClientAs(_factory.Member).PutAsJsonAsync(
+            "/api/auth/password",
+            new { currentPassword = "not-the-password", newPassword = "second-password" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Auth.CurrentPasswordWrong", await ProblemResponse.CodeOf(response));
+    }
+
+    [Fact]
+    public async Task ChangePassword_ForAnAdmin_Answers409()
+    {
+        var response = await _factory.CreateClientAs(_factory.Admin).PutAsJsonAsync(
+            "/api/auth/password",
+            new { currentPassword = ApiFactory.AdminPassword, newPassword = "second-password" });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("Auth.AdminPasswordFromConfig", await ProblemResponse.CodeOf(response));
+    }
+
+    [Fact]
+    public async Task ChangePassword_WithoutAToken_Answers401()
+    {
+        var response = await _anonymous.PutAsJsonAsync(
+            "/api/auth/password",
+            new { currentPassword = ApiFactory.MemberPassword, newPassword = "second-password" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Me_WithoutAToken_Answers401()
     {
         var response = await _anonymous.GetAsync("/api/auth/me");
@@ -278,10 +335,12 @@ public sealed class TwoSignInPermitsApiFactory : ApiFactory
 
 public class SignInRateLimitTests : IClassFixture<TwoSignInPermitsApiFactory>
 {
+    private readonly TwoSignInPermitsApiFactory _factory;
     private readonly HttpClient _anonymous;
 
     public SignInRateLimitTests(TwoSignInPermitsApiFactory factory)
     {
+        _factory = factory;
         _anonymous = factory.CreateAnonymousClient();
     }
 
@@ -321,6 +380,25 @@ public class SignInRateLimitTests : IClassFixture<TwoSignInPermitsApiFactory>
         var third = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { Name = name, password = "guess-password" });
 
         Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+    }
+
+    [Fact]
+    public async Task GuessingTheCurrentPassword_IsLimitedPerLoginWhileOtherLoginsKeepTheirAttempts()
+    {
+        var member = _factory.CreateClientAs(_factory.Member);
+        var guess = new { currentPassword = "guess-password", newPassword = "second-password" };
+        await member.PutAsJsonAsync("/api/auth/password", guess);
+        await member.PutAsJsonAsync("/api/auth/password", guess);
+
+        var third = await member.PutAsJsonAsync("/api/auth/password", guess);
+        var otherLogin = await _factory.CreateClientAs(_factory.Admin).PutAsJsonAsync("/api/auth/password", guess);
+        var anonymousSignIn = await _anonymous.PostAsJsonAsync(
+            "/api/auth/sign-in",
+            new { name = UniqueName(), password = "guess-password" });
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, otherLogin.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, anonymousSignIn.StatusCode);
     }
 
     [Fact]
@@ -385,6 +463,47 @@ public class SignInAddressCapTests : IClassFixture<ThreeSignInsPerAddressApiFact
         Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
         Assert.Equal(RateLimitRejection.Code, await ProblemResponse.CodeOf(refused));
         Assert.Equal(HttpStatusCode.OK, otherEndpoint.StatusCode);
+    }
+
+    private static string UniqueName() => $"u{Guid.NewGuid():N}"[..20];
+}
+
+public class PasswordChangeAddressCapTests : IClassFixture<ThreeSignInsPerAddressApiFactory>
+{
+    private readonly ThreeSignInsPerAddressApiFactory _factory;
+    private readonly HttpClient _anonymous;
+
+    public PasswordChangeAddressCapTests(ThreeSignInsPerAddressApiFactory factory)
+    {
+        _factory = factory;
+        _anonymous = factory.CreateAnonymousClient();
+    }
+
+    [Fact]
+    public async Task ChangingThePassword_NeitherUsesUpNorIsStoppedByTheAddressCap()
+    {
+        var member = _factory.CreateClientAs(_factory.Member);
+        var guess = new { currentPassword = "guess-password", newPassword = "second-password" };
+
+        // Mistyping the current password leaves the address's sign-ins to the others behind it.
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, (await member.PutAsJsonAsync("/api/auth/password", guess)).StatusCode);
+        }
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var allowed = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name = UniqueName(), password = "guess" });
+            Assert.Equal(HttpStatusCode.NotFound, allowed.StatusCode);
+        }
+
+        // The address is over its cap now, which a signed-in login changing its password does not share.
+        var refused = await _anonymous.PostAsJsonAsync("/api/auth/sign-in", new { name = UniqueName(), password = "guess" });
+        var change = await member.PutAsJsonAsync("/api/auth/password", guess);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, change.StatusCode);
+        Assert.Equal("Auth.CurrentPasswordWrong", await ProblemResponse.CodeOf(change));
     }
 
     private static string UniqueName() => $"u{Guid.NewGuid():N}"[..20];

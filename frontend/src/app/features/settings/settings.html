@@ -11,19 +11,17 @@
     }
   </header>
 
-  @if (tabs().length > 1) {
-    <nav class="tabs" [attr.aria-label]="'settings.tabs.label' | translate">
-      @for (tab of tabs(); track tab.path) {
-        <a
-          class="tab"
-          [routerLink]="tab.path"
-          routerLinkActive="tab--on"
-          ariaCurrentWhenActive="page"
-          >{{ tab.label | translate }}</a
-        >
-      }
-    </nav>
-  }
+  <nav class="tabs" [attr.aria-label]="'settings.tabs.label' | translate">
+    @for (tab of tabs(); track tab.path) {
+      <a
+        class="tab"
+        [routerLink]="tab.path"
+        routerLinkActive="tab--on"
+        ariaCurrentWhenActive="page"
+        >{{ tab.label | translate }}</a
+      >
+    }
+  </nav>
 
   <router-outlet />
 </section>

@@ -11,6 +11,12 @@ public interface IAccountService
     /// <summary>Creates a login (never an admin) and signs it in.</summary>
     Task<Result<SignedInDto>> CreateAsync(CreateAccountRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Sets a new password for the signed-in login once the current one checks out. Every other sign-in of the login
+    /// ends; the caller gets a fresh access token so it stays signed in.
+    /// </summary>
+    Task<Result<SignedInDto>> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default);
+
     Task<Result<AccountDto>> GetCurrentAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

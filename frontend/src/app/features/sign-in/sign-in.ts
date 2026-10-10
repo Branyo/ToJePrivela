@@ -17,6 +17,7 @@ import { AuthStore } from '../../core/auth/auth-store';
 import { Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { newPasswordProblem } from '../../core/rules/new-password';
 
 /** Where to go after signing in: only a path inside this app, never back here. */
 export function safeReturnUrl(url: string | undefined): string {
@@ -151,16 +152,7 @@ export class SignIn {
       return { key: 'signIn.errors.nameLength', params: names };
     }
 
-    const passwords = rules.password;
-    if (this.newPassword().length < passwords.min || this.newPassword().length > passwords.max) {
-      return { key: 'signIn.errors.passwordLength', params: passwords };
-    }
-
-    if (this.newPassword() !== this.repeatPassword()) {
-      return { key: 'signIn.errors.passwordsDiffer' };
-    }
-
-    return null;
+    return newPasswordProblem(rules.password, this.newPassword(), this.repeatPassword());
   }
 
   private async leave(): Promise<void> {

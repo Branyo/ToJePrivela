@@ -9,6 +9,7 @@ interface SettingsTab {
 }
 
 const PLAYERS: SettingsTab = { path: 'players', label: 'settings.tabs.players' };
+const PASSWORD: SettingsTab = { path: 'password', label: 'settings.tabs.password' };
 const ADMIN_TABS: SettingsTab[] = [
   { path: 'categories', label: 'settings.tabs.categories' },
   { path: 'questions', label: 'settings.tabs.questions' },
@@ -16,8 +17,9 @@ const ADMIN_TABS: SettingsTab[] = [
 
 /**
  * The login's settings, one tab per child route: its players for everyone, the shared categories and questions for
- * admins only. A login with just one tab gets no tab bar. An account that turns out not to be an admin (any more)
- * once the session is checked leaves an admin tab it already shows, which `adminGuard` alone cannot do.
+ * admins only, and last the login's password for everyone but admins, whose password the server configuration sets
+ * (the server refuses to change it). Once the session is checked, a tab the account turns out not to get (admin
+ * rights gained or lost) is left for the players tab, which the route guards alone cannot do.
  */
 @Component({
   selector: 'app-settings',
@@ -29,19 +31,20 @@ const ADMIN_TABS: SettingsTab[] = [
 export class Settings {
   protected readonly auth = inject(AuthStore);
 
-  protected readonly tabs = computed(() => (this.auth.isAdmin() ? [PLAYERS, ...ADMIN_TABS] : [PLAYERS]));
+  protected readonly tabs = computed(() => (this.auth.isAdmin() ? [PLAYERS, ...ADMIN_TABS] : [PLAYERS, PASSWORD]));
 
   constructor() {
     const router = inject(Router);
     const route = inject(ActivatedRoute);
     effect(() => {
       // Signing out navigates to the sign-in screen on its own; redirecting here would override it.
-      if (!this.auth.isSignedIn() || this.auth.isAdmin()) {
+      if (!this.auth.isSignedIn()) {
         return;
       }
+      const tabs = this.tabs();
       untracked(() => {
         const shown = route.firstChild?.snapshot.routeConfig?.path;
-        if (ADMIN_TABS.some((tab) => tab.path === shown)) {
+        if (shown && !tabs.some((tab) => tab.path === shown)) {
           void router.navigate(['/settings', PLAYERS.path]);
         }
       });
