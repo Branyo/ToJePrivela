@@ -511,7 +511,7 @@ describe('PlayStore', () => {
     expect(store.error()).not.toBeNull();
   });
 
-  it('can be ended while the next question is still on its way, which is then dropped', async () => {
+  it('can be ended while the next question is still on its way, which is then dropped unseen', async () => {
     await startWithQuestion();
 
     const next = store.nextQuestion();
@@ -522,9 +522,9 @@ describe('PlayStore', () => {
     expect(await deleted).toBe(true);
 
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 43 });
-    await flush();
-    http.expectOne('/api/questions/43/views').flush(question);
     await next;
+
+    http.expectNone('/api/questions/43/views');
 
     expect(store.phase()).toBe('deleted');
     expect(store.question()).toBeNull();
@@ -540,11 +540,52 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('error');
 
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 43 });
-    await flush();
-    http.expectOne('/api/questions/43/views').flush(question);
     await next;
 
+    http.expectNone('/api/questions/43/views');
     expect(store.phase()).toBe('error');
+  });
+
+  it('does not let a reload still running reopen a game being ended', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    // A failed card reloads the game; meanwhile its players can end it.
+    const awarded = store.award(1);
+    http.expectOne('/api/games/5/bad-cards').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+    await flush();
+    expect(store.phase()).toBe('loading');
+
+    const finished = store.finish();
+    expect(store.phase()).toBe('ending');
+    http.expectOne('/api/games/5/details').flush(game());
+    await awarded;
+
+    http.expectNone((req) => req.url === '/api/questions/random');
+    expect(store.phase()).toBe('ending');
+    expect(store.canEnd()).toBe(false);
+    expect(store.error()).toBeNull();
+
+    http.expectOne('/api/games/5/finish').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await finished;
+    expect(store.phase()).toBe('finished');
+    expect(store.error()).toBeNull();
+  });
+
+  it('does not end the game when a double tapped before fails, and keeps its error', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    void store.awardDouble(1);
+    const finished = store.finish();
+    await flush();
+
+    http.expectOne('/api/games/5/doubles').flush({ detail: 'Nope.' }, { status: 409, statusText: 'Conflict' });
+    await finished;
+
+    http.expectNone('/api/games/5/finish');
+    expect(store.phase()).toBe('revealed');
+    expect(store.error()).not.toBeNull();
   });
 
   it('cannot end a game that was never loaded', async () => {

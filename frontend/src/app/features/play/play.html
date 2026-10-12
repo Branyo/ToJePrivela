@@ -23,6 +23,12 @@
           <p>{{ 'play.loading' | translate }}</p>
         </div>
       }
+      @case ('ending') {
+        <div class="question question--loading" aria-live="polite">
+          <span class="shuffle" aria-hidden="true">🃏</span>
+          <p>{{ 'play.ending' | translate }}</p>
+        </div>
+      }
       @case ('error') {
         <div class="question question--empty">
           <span class="big-emoji" aria-hidden="true">🙈</span>
@@ -204,7 +210,7 @@
     </div>
   }
   @case ('delete') {
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" (keydown.escape)="closeConfirm()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" (keydown.escape)="askEnd()">
       <div class="modal__box panel">
         <span class="big-emoji" aria-hidden="true">🗑️</span>
         <h2 id="delete-title">{{ 'play.confirmDelete.title' | translate }}</h2>

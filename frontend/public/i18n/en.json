@@ -141,6 +141,7 @@
     },
     "end": "🏳️ End game",
     "loading": "Shuffling the next question…",
+    "ending": "Wrapping up the game…",
     "failed": "Oops, that didn't work.",
     "retry": "🔄 Try again",
     "outOfQuestions": {

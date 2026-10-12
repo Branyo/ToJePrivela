@@ -80,6 +80,8 @@ export class Play implements OnInit, OnDestroy {
   });
 
   private timers: ReturnType<typeof setTimeout>[] = [];
+  /** Set once the screen is left, so a request answering later does not navigate away from wherever the user went. */
+  private destroyed = false;
 
   constructor() {
     effect(() => {
@@ -101,15 +103,20 @@ export class Play implements OnInit, OnDestroy {
 
     // Each confirmation is rendered anew, so its safe answer is focused for the keyboard (`autofocus` is not). Once
     // it closes, the focus goes back to "End" instead of being lost with the removed dialog; while the game is being
-    // ended that button is disabled, so it waits until the request failed and the button is usable again.
+    // ended that button is disabled, so it waits until the request failed and the button is usable again; once the
+    // game is over there is nothing to go back to.
     let returnFocus = false;
     afterRenderEffect(() => {
       if (this.confirming()) {
         this.confirmDefault()?.nativeElement.focus();
         returnFocus = true;
-      } else if (returnFocus && this.store.canEnd()) {
-        this.endButton()?.nativeElement.focus();
-        returnFocus = false;
+      } else if (returnFocus) {
+        if (this.store.canEnd()) {
+          this.endButton()?.nativeElement.focus();
+          returnFocus = false;
+        } else if (this.store.phase() !== 'ending') {
+          returnFocus = false;
+        }
       }
     });
 
@@ -125,6 +132,7 @@ export class Play implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.timers.forEach(clearTimeout);
   }
 
@@ -172,15 +180,13 @@ export class Play implements OnInit, OnDestroy {
 
   protected async deleteGame(): Promise<void> {
     this.confirming.set(null);
-    if (!(await this.store.delete())) {
+    if (!(await this.store.delete()) || this.destroyed) {
       return;
     }
 
-    // The screen already says the game is gone and links home, so a refused navigation only needs a note.
-    const left = await this.router.navigate(['/']).catch(() => false);
-    if (!left) {
-      this.store.error.set({ key: 'errors.generic' });
-    }
+    // If the navigation is refused, the screen still says the game is gone and links home; an error banner there
+    // would only suggest the delete failed.
+    await this.router.navigate(['/']).catch((error: unknown) => console.error('Navigating home failed.', error));
   }
 
   private later(action: () => void, ms: number): void {

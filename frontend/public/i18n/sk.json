@@ -149,6 +149,7 @@
     },
     "end": "🏳️ Ukončiť hru",
     "loading": "Miešam ďalšiu otázku…",
+    "ending": "Ukončujem hru…",
     "failed": "Ups, to nevyšlo.",
     "retry": "🔄 Skúsiť znova",
     "outOfQuestions": {
