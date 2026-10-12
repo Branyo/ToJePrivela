@@ -6,7 +6,7 @@
     @if (store.badCardLimit() > 0) {
       <span class="pill pill--sun">{{ i18n.pluralKey('play.limit', store.badCardLimit()) | translate: { count: store.badCardLimit() } }}</span>
     }
-    <button type="button" class="btn btn--ghost bar__end" (click)="askEnd()" [disabled]="store.phase() === 'finished'">
+    <button type="button" class="btn btn--ghost bar__end" (click)="askEnd()" [disabled]="!store.canEnd()">
       {{ 'play.end' | translate }}
     </button>
   </header>
@@ -190,21 +190,21 @@
         <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
         <div class="actions">
           <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
-          <button type="button" class="btn" (click)="closeConfirm()" autofocus>{{ 'play.confirmEnd.no' | translate }}</button>
+          <button #confirmDefault type="button" class="btn" (click)="closeConfirm()">{{ 'play.confirmEnd.no' | translate }}</button>
         </div>
-        <button type="button" class="btn btn--ghost" (click)="askCancel()">{{ 'play.confirmEnd.cancelGame' | translate }}</button>
+        <button type="button" class="btn btn--ghost" (click)="askDelete()">{{ 'play.confirmEnd.deleteGame' | translate }}</button>
       </div>
     </div>
   }
-  @case ('cancel') {
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title" (keydown.escape)="closeConfirm()">
+  @case ('delete') {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" (keydown.escape)="askEnd()">
       <div class="modal__box panel">
         <span class="big-emoji" aria-hidden="true">🗑️</span>
-        <h2 id="cancel-title">{{ 'play.confirmCancel.title' | translate }}</h2>
-        <p class="muted">{{ 'play.confirmCancel.text' | translate }}</p>
+        <h2 id="delete-title">{{ 'play.confirmDelete.title' | translate }}</h2>
+        <p class="muted">{{ 'play.confirmDelete.text' | translate }}</p>
         <div class="actions">
-          <button type="button" class="btn btn--danger" (click)="cancelGame()">{{ 'play.confirmCancel.yes' | translate }}</button>
-          <button type="button" class="btn" (click)="askEnd()" autofocus>{{ 'play.confirmCancel.no' | translate }}</button>
+          <button type="button" class="btn btn--danger" (click)="deleteGame()">{{ 'play.confirmDelete.yes' | translate }}</button>
+          <button #confirmDefault type="button" class="btn" (click)="askEnd()">{{ 'play.confirmDelete.no' | translate }}</button>
         </div>
       </div>
     </div>

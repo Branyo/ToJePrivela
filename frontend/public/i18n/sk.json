@@ -182,10 +182,10 @@
       "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi po odrátaní Double.",
       "yes": "Áno, zobraziť výsledky",
       "no": "Hrať ďalej",
-      "cancelGame": "Zrušiť hru bez výsledkov"
+      "deleteGame": "Vymazať hru bez výsledkov"
     },
-    "confirmCancel": {
-      "title": "Zrušiť hru?",
+    "confirmDelete": {
+      "title": "Vymazať hru?",
       "text": "Hra sa vymaže so všetkými zlými kartami aj Double, akoby sa nikdy nehrala. Nikto neprehráva.",
       "yes": "Áno, vymazať hru",
       "no": "Späť"

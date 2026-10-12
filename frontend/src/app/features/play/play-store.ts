@@ -55,6 +55,8 @@ export class PlayStore {
   );
   /** While bidding and after "To je priveľa!", but before the card is handed out. */
   readonly canDouble = computed(() => this.phase() === 'asking' || this.phase() === 'revealed');
+  /** The game may be finished or deleted: not over yet, and no question or card is on its way. */
+  readonly canEnd = computed(() => !['loading', 'awarding', 'finished'].includes(this.phase()));
 
   /** One more card ends the game for this player (meaningless when a single card does it). */
   isOnTheEdge(player: GamePlayer): boolean {
@@ -245,13 +247,34 @@ export class PlayStore {
     }
   }
 
-  /** Deletes the game instead of finishing it; `true` once it is gone, so the screen can leave. */
-  async cancel(): Promise<boolean> {
+  /**
+   * Deletes the game instead of finishing it; `true` once it is gone, so the screen can leave. Waits for the doubles
+   * still being saved, and nothing else is sent meanwhile. On a failure the round goes on where it was.
+   */
+  async delete(): Promise<boolean> {
+    const phase = this.phase();
+    if (!this.canEnd()) {
+      return false;
+    }
+
+    // No double, card or skip is accepted outside its phases, so none can reach the server after the delete.
+    this.phase.set('loading');
+    this.error.set(null);
+    if (this.doubles) {
+      await this.doubles;
+    }
+
     try {
       await firstValueFrom(this.gamesApi.delete(this.gameId));
       return true;
     } catch (error) {
-      this.fail(error);
+      const problem = toProblem(error);
+      // e.g. deleted from another device: it is gone either way.
+      if (problem.code === 'Game.NotFound') {
+        return true;
+      }
+      this.error.set(problem.message);
+      this.phase.set(phase);
       return false;
     }
   }

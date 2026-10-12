@@ -1,4 +1,5 @@
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -61,11 +62,13 @@ export class Play implements OnInit, OnDestroy {
 
   private readonly cardSource = viewChild('cardSource', { read: ElementRef });
   private readonly seatButtons = viewChildren<ElementRef<HTMLElement>>('seatButton');
+  /** The safe answer of the open confirmation, which takes the focus. */
+  private readonly confirmDefault = viewChild<ElementRef<HTMLElement>>('confirmDefault');
 
   protected readonly hitPlayerId = signal<number | null>(null);
   protected readonly doubledPlayerId = signal<number | null>(null);
-  /** Which confirmation is open: ending the game (results) or cancelling it (deleted, no results). */
-  protected readonly confirming = signal<'end' | 'cancel' | null>(null);
+  /** Which confirmation is open: ending the game (results) or deleting it (no results). */
+  protected readonly confirming = signal<'end' | 'delete' | null>(null);
   protected readonly formatAnswer = formatAnswer;
   private readonly rules = inject(GameRulesStore).rules;
   /** Every worth the starting player may choose, from the backend's limits. */
@@ -85,6 +88,18 @@ export class Play implements OnInit, OnDestroy {
           });
         }, GAME_OVER_PAUSE_MS);
       }
+    });
+
+    // A game can only be ended or deleted while it runs, so a confirmation still open then is moot.
+    effect(() => {
+      if (!this.store.canEnd()) {
+        untracked(() => this.confirming.set(null));
+      }
+    });
+
+    // Each confirmation is rendered anew, so its safe answer is focused for the keyboard (`autofocus` is not).
+    afterRenderEffect(() => {
+      this.confirmDefault()?.nativeElement.focus();
     });
 
     // The question arrives in the shown language, so it is fetched again after a switch (a no-op before the first one).
@@ -131,8 +146,8 @@ export class Play implements OnInit, OnDestroy {
     this.confirming.set('end');
   }
 
-  protected askCancel(): void {
-    this.confirming.set('cancel');
+  protected askDelete(): void {
+    this.confirming.set('delete');
   }
 
   protected closeConfirm(): void {
@@ -144,9 +159,9 @@ export class Play implements OnInit, OnDestroy {
     void this.store.finish();
   }
 
-  protected async cancelGame(): Promise<void> {
+  protected async deleteGame(): Promise<void> {
     this.confirming.set(null);
-    if (await this.store.cancel()) {
+    if (await this.store.delete()) {
       void this.router.navigate(['/']);
     }
   }

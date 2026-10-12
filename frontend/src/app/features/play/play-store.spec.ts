@@ -374,27 +374,79 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('finished');
   });
 
-  it('cancels a game by deleting it', async () => {
+  it('deletes a game', async () => {
     await startWithQuestion();
 
-    const cancelled = store.cancel();
+    const deleted = store.delete();
     const request = http.expectOne('/api/games/5');
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 204, statusText: 'No Content' });
 
-    expect(await cancelled).toBe(true);
+    expect(await deleted).toBe(true);
   });
 
-  it('stays on the game when cancelling fails', async () => {
+  it('deletes the game only after the doubles tapped before are saved', async () => {
     await startWithQuestion();
 
-    const cancelled = store.cancel();
+    void store.awardDouble(1);
+    const deleted = store.delete();
+    await flush();
+
+    http.expectNone('/api/games/5');
+    http.expectOne('/api/games/5/doubles').flush(game());
+    await flush();
+
+    http.expectOne('/api/games/5').flush(null, { status: 204, statusText: 'No Content' });
+    expect(await deleted).toBe(true);
+  });
+
+  it('sends nothing else while the game is being deleted', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    const deleted = store.delete();
+    await store.award(1);
+    await store.awardDouble(1);
+
+    http.expectNone('/api/games/5/bad-cards');
+    http.expectNone('/api/games/5/doubles');
+    http.expectOne('/api/games/5').flush(null, { status: 204, statusText: 'No Content' });
+    expect(await deleted).toBe(true);
+  });
+
+  it('does not delete a game while its card is being handed out', async () => {
+    await startWithQuestion();
+    store.reveal();
+    const awarded = store.award(1);
+
+    expect(await store.delete()).toBe(false);
+
+    http.expectNone('/api/games/5');
+    http.expectOne('/api/games/5/bad-cards').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await awarded;
+  });
+
+  it('treats a game deleted elsewhere as deleted', async () => {
+    await startWithQuestion();
+
+    const deleted = store.delete();
     http
       .expectOne('/api/games/5')
       .flush({ code: 'Game.NotFound', detail: 'Game with id 5 was not found.' }, { status: 404, statusText: 'Not Found' });
 
-    expect(await cancelled).toBe(false);
-    expect(store.phase()).toBe('error');
+    expect(await deleted).toBe(true);
+  });
+
+  it('keeps the round where it was when deleting fails', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    const deleted = store.delete();
+    http.expectOne('/api/games/5').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+
+    expect(await deleted).toBe(false);
+    expect(store.phase()).toBe('revealed');
+    expect(store.question()?.id).toBe(42);
     expect(store.error()).not.toBeNull();
   });
 

@@ -44,7 +44,7 @@ export class GamesApi {
     return this.http.post<GameDetails>(`/api/games/${id}/finish`, null);
   }
 
-  /** Cancels the game: it is deleted with all its scores, as if it was never played. */
+  /** Deletes the game with all its scores, as if it was never played (unlike a `cancelled` game, nothing remains). */
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`/api/games/${id}`);
   }
