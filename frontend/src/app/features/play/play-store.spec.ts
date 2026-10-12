@@ -374,6 +374,30 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('finished');
   });
 
+  it('cancels a game by deleting it', async () => {
+    await startWithQuestion();
+
+    const cancelled = store.cancel();
+    const request = http.expectOne('/api/games/5');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(await cancelled).toBe(true);
+  });
+
+  it('stays on the game when cancelling fails', async () => {
+    await startWithQuestion();
+
+    const cancelled = store.cancel();
+    http
+      .expectOne('/api/games/5')
+      .flush({ code: 'Game.NotFound', detail: 'Game with id 5 was not found.' }, { status: 404, statusText: 'Not Found' });
+
+    expect(await cancelled).toBe(false);
+    expect(store.phase()).toBe('error');
+    expect(store.error()).not.toBeNull();
+  });
+
   it('flags a player one card away from the limit', async () => {
     await startWithQuestion();
 

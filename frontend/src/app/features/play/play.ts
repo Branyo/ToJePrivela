@@ -64,7 +64,8 @@ export class Play implements OnInit, OnDestroy {
 
   protected readonly hitPlayerId = signal<number | null>(null);
   protected readonly doubledPlayerId = signal<number | null>(null);
-  protected readonly confirmingEnd = signal(false);
+  /** Which confirmation is open: ending the game (results) or cancelling it (deleted, no results). */
+  protected readonly confirming = signal<'end' | 'cancel' | null>(null);
   protected readonly formatAnswer = formatAnswer;
   private readonly rules = inject(GameRulesStore).rules;
   /** Every worth the starting player may choose, from the backend's limits. */
@@ -127,16 +128,27 @@ export class Play implements OnInit, OnDestroy {
   }
 
   protected askEnd(): void {
-    this.confirmingEnd.set(true);
+    this.confirming.set('end');
   }
 
-  protected cancelEnd(): void {
-    this.confirmingEnd.set(false);
+  protected askCancel(): void {
+    this.confirming.set('cancel');
+  }
+
+  protected closeConfirm(): void {
+    this.confirming.set(null);
   }
 
   protected endGame(): void {
-    this.confirmingEnd.set(false);
+    this.confirming.set(null);
     void this.store.finish();
+  }
+
+  protected async cancelGame(): Promise<void> {
+    this.confirming.set(null);
+    if (await this.store.cancel()) {
+      void this.router.navigate(['/']);
+    }
   }
 
   private later(action: () => void, ms: number): void {

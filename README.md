@@ -154,7 +154,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET/PUT/DELETE | `/api/players/{id}` | |
 | POST | `/api/players` | 409 `Player.NameTaken` when the login already has the name (case-insensitive); 409 `Player.LimitReached` at 100 players per login |
 | GET | `/api/games` | |
-| GET/PUT/DELETE | `/api/games/{id}` | |
+| GET/PUT/DELETE | `/api/games/{id}` | DELETE cancels a game, finished or not: it is removed with its scores, players stay |
 | GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
 | POST | `/api/games` | 2–12 known, distinct players; optional `badCardLimit` (2–10, default 3) |
 | POST | `/api/games/{id}/bad-cards` | Body `{ playerId, questionId }`; the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |

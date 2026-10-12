@@ -173,7 +173,14 @@
       "title": "End the game now?",
       "text": "Results are counted as they stand, and the player with the most donkeys after Doubles loses.",
       "yes": "Yes, show results",
-      "no": "Keep playing"
+      "no": "Keep playing",
+      "cancelGame": "Cancel the game without results"
+    },
+    "confirmCancel": {
+      "title": "Cancel the game?",
+      "text": "The game is deleted with all its bad cards and Doubles, as if it was never played. Nobody loses.",
+      "yes": "Yes, delete the game",
+      "no": "Back"
     },
     "choose": {
       "title": "Starting player: how many donkeys is this question worth?",

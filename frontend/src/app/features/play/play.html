@@ -181,16 +181,32 @@
   </ul>
 </section>
 
-@if (confirmingEnd()) {
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title" (keydown.escape)="cancelEnd()">
-    <div class="modal__box panel">
-      <span class="big-emoji" aria-hidden="true">🏳️</span>
-      <h2 id="end-title">{{ 'play.confirmEnd.title' | translate }}</h2>
-      <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
-      <div class="actions">
-        <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
-        <button type="button" class="btn" (click)="cancelEnd()" autofocus>{{ 'play.confirmEnd.no' | translate }}</button>
+@switch (confirming()) {
+  @case ('end') {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title" (keydown.escape)="closeConfirm()">
+      <div class="modal__box panel">
+        <span class="big-emoji" aria-hidden="true">🏳️</span>
+        <h2 id="end-title">{{ 'play.confirmEnd.title' | translate }}</h2>
+        <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
+        <div class="actions">
+          <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
+          <button type="button" class="btn" (click)="closeConfirm()" autofocus>{{ 'play.confirmEnd.no' | translate }}</button>
+        </div>
+        <button type="button" class="btn btn--ghost" (click)="askCancel()">{{ 'play.confirmEnd.cancelGame' | translate }}</button>
       </div>
     </div>
-  </div>
+  }
+  @case ('cancel') {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title" (keydown.escape)="closeConfirm()">
+      <div class="modal__box panel">
+        <span class="big-emoji" aria-hidden="true">🗑️</span>
+        <h2 id="cancel-title">{{ 'play.confirmCancel.title' | translate }}</h2>
+        <p class="muted">{{ 'play.confirmCancel.text' | translate }}</p>
+        <div class="actions">
+          <button type="button" class="btn btn--danger" (click)="cancelGame()">{{ 'play.confirmCancel.yes' | translate }}</button>
+          <button type="button" class="btn" (click)="askEnd()" autofocus>{{ 'play.confirmCancel.no' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  }
 }

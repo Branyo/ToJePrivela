@@ -144,6 +144,20 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task DeleteGame_CancelsAGameInProgressAndKeepsItsPlayers()
+    {
+        var game = await CreateGameAsync();
+        var question = await CreateQuestionAsync(badPoints: 3);
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/doubles", new { playerId = 1 });
+
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/games/{game.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/games/{game.Id}/details")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/players/1")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/players/2")).StatusCode);
+    }
+
+    [Fact]
     public async Task PostGame_AcceptsTwelvePlayersAndABadCardLimit()
     {
         var playerIds = new List<int>();

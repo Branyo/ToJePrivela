@@ -245,6 +245,17 @@ export class PlayStore {
     }
   }
 
+  /** Deletes the game instead of finishing it; `true` once it is gone, so the screen can leave. */
+  async cancel(): Promise<boolean> {
+    try {
+      await firstValueFrom(this.gamesApi.delete(this.gameId));
+      return true;
+    } catch (error) {
+      this.fail(error);
+      return false;
+    }
+  }
+
   retry(): Promise<void> {
     return this.game() ? this.nextQuestion() : this.start(this.gameId, this.categoryIds);
   }
