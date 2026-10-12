@@ -4,9 +4,11 @@ import {
   ElementRef,
   afterRenderEffect,
   computed,
+  effect,
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
@@ -65,6 +67,13 @@ export class SignIn {
   constructor() {
     // The backend may have been down when the app started; try again so the limits are there for a new login.
     void this.rulesStore.ensureLoaded();
+
+    // Another tab signed this login in again (its password changed there, ending the sign-in here): carry on.
+    effect(() => {
+      if (this.auth.isSignedIn() && !untracked(this.busy)) {
+        void this.leave();
+      }
+    });
 
     // The window takes the focus when it opens, so the keyboard lands inside it.
     afterRenderEffect(() => {

@@ -54,11 +54,11 @@ public sealed class AuthController : ControllerBase
     /// Changes the signed-in login's password; 400 <c>Auth.CurrentPasswordWrong</c> when the current one is wrong.
     /// Ends every other sign-in of the login and answers with a fresh token for this one. 409
     /// <c>Auth.AdminPasswordFromConfig</c> for an admin, whose password the server configuration sets. Rate limited per
-    /// login whatever the address, so a token left on a shared device cannot be used to guess the password at speed.
+    /// login whatever the address, so a token left on a shared device cannot be used to guess the password at speed;
+    /// every change counts, a successful one too.
     /// </summary>
     [HttpPut("password")]
     [EnableRateLimiting(SignInRateLimitOptions.PolicyName)]
-    [SuccessIsFree]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

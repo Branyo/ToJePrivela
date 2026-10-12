@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { authInterceptor } from './auth-interceptor';
 import { AuthStore } from './auth-store';
-import { signedInAs } from './testing';
+import { signedInAs, testSession } from './testing';
 
 describe('authInterceptor', () => {
   let http: HttpTestingController;
@@ -64,6 +64,36 @@ describe('authInterceptor', () => {
 
     const response = firstValueFrom(client.get('/api/games'));
     http.expectOne('/api/games').flush({ code: 'Auth.Unauthenticated' }, { status: 401, statusText: 'Unauthorized' });
+
+    await expect(response).rejects.toBeTruthy();
+    expect(store.isSignedIn()).toBe(false);
+    expect(navigate).toHaveBeenCalledWith(['/sign-in'], { queryParams: { returnUrl: '/' } });
+  });
+
+  it('sends the request again with a newer sign-in another tab stored for the same login', async () => {
+    await signedInAs(store, http, { id: 7 });
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+    localStorage.setItem(
+      'session',
+      JSON.stringify({ ...testSession({ id: 7 }, 2 * 60 * 60 * 1000), accessToken: 'fresh-token' }),
+    );
+
+    const response = firstValueFrom(client.get('/api/games'));
+    http.expectOne('/api/games').flush({ code: 'Auth.Unauthenticated' }, { status: 401, statusText: 'Unauthorized' });
+    const retry = http.expectOne('/api/games');
+    retry.flush([]);
+
+    await expect(response).resolves.toEqual([]);
+    expect(retry.request.headers.get('Authorization')).toBe('Bearer fresh-token');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('handles a 401 from the password change like any other', async () => {
+    await signedInAs(store, http);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    const response = firstValueFrom(client.put('/api/auth/password', {}));
+    http.expectOne('/api/auth/password').flush({}, { status: 401, statusText: 'Unauthorized' });
 
     await expect(response).rejects.toBeTruthy();
     expect(store.isSignedIn()).toBe(false);

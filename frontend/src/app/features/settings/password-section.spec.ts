@@ -1,8 +1,9 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
+import { authInterceptor } from '../../core/auth/auth-interceptor';
 import { AuthStore } from '../../core/auth/auth-store';
 import { signedInAs, testSession } from '../../core/auth/testing';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
@@ -16,7 +17,12 @@ describe('PasswordSection', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [PasswordSection],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideTranslateService(),
+      ],
     });
     http = TestBed.inject(HttpTestingController);
     TestBed.inject(GameRulesStore).rules.set(TEST_RULES);

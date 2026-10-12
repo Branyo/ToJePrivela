@@ -114,12 +114,68 @@ describe('AuthStore', () => {
       window.dispatchEvent(new StorageEvent('storage', { key: 'session' }));
     }
 
+    const later = 2 * 60 * 60 * 1000;
+
     it('picks up the fresh token another tab stored for this login after changing its password', async () => {
       await signedInAs(store, http, { id: 7 });
 
-      storeFromOtherTab({ ...testSession({ id: 7 }), accessToken: 'fresh-token' });
+      storeFromOtherTab({ ...testSession({ id: 7 }, later), accessToken: 'fresh-token' });
 
       expect(store.token()).toBe('fresh-token');
+    });
+
+    it('leaves alone an older token another tab stored for this login', async () => {
+      await signedInAs(store, http, { id: 7 });
+
+      storeFromOtherTab({ ...testSession({ id: 7 }, 60 * 1000), accessToken: 'old-token' });
+
+      expect(store.token()).toBe('test-token');
+    });
+
+    it('does not write its token back over a newer one another tab stored while restoring', async () => {
+      localStorage.setItem('session', JSON.stringify(testSession({ id: 7 })));
+
+      const restoring = store.restore();
+      localStorage.setItem('session', JSON.stringify({ ...testSession({ id: 7 }, later), accessToken: 'fresh-token' }));
+      http.expectOne('/api/auth/me').flush(testSession({ id: 7 }).account);
+      await restoring;
+
+      expect(store.token()).toBe('fresh-token');
+      expect(JSON.parse(localStorage.getItem('session')!).accessToken).toBe('fresh-token');
+    });
+
+    it('takes over a newer sign-in another tab stored when the server ends this one', async () => {
+      await signedInAs(store, http, { id: 7 });
+      localStorage.setItem('session', JSON.stringify({ ...testSession({ id: 7 }, later), accessToken: 'fresh-token' }));
+
+      expect(store.ended('test-token')).toBe(true);
+      expect(store.token()).toBe('fresh-token');
+    });
+
+    it('signs out when the server ends this sign-in and no newer one is stored', async () => {
+      await signedInAs(store, http, { id: 7 });
+
+      expect(store.ended('test-token')).toBe(false);
+      expect(store.isSignedIn()).toBe(false);
+      expect(localStorage.getItem('session')).toBeNull();
+    });
+
+    it('picks up the sign-in another tab stores later for the login the server ended here', async () => {
+      await signedInAs(store, http, { id: 7 });
+      store.ended('test-token');
+
+      storeFromOtherTab({ ...testSession({ id: 7 }, later), accessToken: 'fresh-token' });
+
+      expect(store.token()).toBe('fresh-token');
+    });
+
+    it('stays signed out of a login signed out of on purpose', async () => {
+      await signedInAs(store, http, { id: 7 });
+      store.signOut();
+
+      storeFromOtherTab({ ...testSession({ id: 7 }, later), accessToken: 'fresh-token' });
+
+      expect(store.isSignedIn()).toBe(false);
     });
 
     it('leaves alone a sign-in another tab stored for another login', async () => {

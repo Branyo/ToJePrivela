@@ -402,6 +402,24 @@ public class SignInRateLimitTests : IClassFixture<TwoSignInPermitsApiFactory>
     }
 
     [Fact]
+    public async Task RequestsWithASignInEndedByAPasswordChange_AreNotCounted()
+    {
+        var name = UniqueName();
+        var created = await _anonymous.PostAsJsonAsync("/api/auth/accounts", new { name, password = "first-password" });
+        var first = (await created.Content.ReadFromJsonAsync<SignedInDto>())!;
+        var otherDevice = _factory.CreateAnonymousClient();
+        otherDevice.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", first.AccessToken);
+        var change = new { currentPassword = "first-password", newPassword = "second-password" };
+        await otherDevice.PutAsJsonAsync("/api/auth/password", change);
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var stale = await otherDevice.PutAsJsonAsync("/api/auth/password", change);
+            Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task ARefusal_SaysHowLongToWait()
     {
         var attempt = new { name = UniqueName(), password = "guess-password" };

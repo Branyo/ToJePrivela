@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter, firstValueFrom, fromEvent } from 'rxjs';
 import { AuthApi } from '../api/auth-api';
 import { SignedIn } from '../api/models';
 
@@ -8,25 +9,28 @@ const STORAGE_KEY = 'session';
 
 /**
  * The signed-in account and its access token, kept across reloads until the token expires. The server decides who
- * may do what; `isAdmin` only decides what the screens offer. Tabs share the stored sign-in: a fresh token another tab
- * stores for the same login (after a password change) is picked up here, and signing out never removes a sign-in
- * another tab stored since.
+ * may do what; `isAdmin` only decides what the screens offer. Tabs share the stored sign-in: a newer token another tab
+ * stores for the same login (after a password change) is picked up here, also by a tab whose sign-in that change has
+ * just ended, and signing out never removes a sign-in another tab stored since.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(AuthApi);
   private readonly session = signal<SignedIn | null>(null);
+  /** The login whose sign-in the server ended (not one signed out of on purpose), until another sign-in replaces it. */
+  private endedAccountId: number | null = null;
 
   readonly account = computed(() => this.session()?.account ?? null);
   readonly isSignedIn = computed(() => this.session() !== null);
   readonly isAdmin = computed(() => this.session()?.account.isAdmin ?? false);
 
   constructor() {
-    window.addEventListener('storage', (event) => {
-      if (event.key === STORAGE_KEY) {
-        this.adoptStored();
-      }
-    });
+    fromEvent<StorageEvent>(window, 'storage')
+      .pipe(
+        filter((event) => event.key === STORAGE_KEY),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.adoptStored());
   }
 
   /** The token to send, or `null` when nobody is signed in or the sign-in has expired. */
@@ -53,10 +57,16 @@ export class AuthStore {
     this.session.set(stored);
     try {
       const account = await firstValueFrom(this.api.me());
+      // Another tab may have stored a newer sign-in while the server answered; writing this one back would end it.
+      const latest = read();
+      if (latest && latest.accessToken !== stored.accessToken) {
+        this.adoptStored();
+        return;
+      }
       this.keep({ ...stored, account });
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 401) {
-        this.signOut();
+        this.ended(stored.accessToken);
       }
       // Otherwise the server is unreachable: keep the session, the screens report the outage.
     }
@@ -71,23 +81,39 @@ export class AuthStore {
     this.keep(await firstValueFrom(this.api.createAccount(name, password)));
   }
 
-  /**
-   * Changes the password and keeps the fresh token, since the change ends the token in use. A 401 means this sign-in
-   * had already ended (the password was changed elsewhere), so the session goes; `authInterceptor` leaves the
-   * `/api/auth/` calls to their callers.
-   */
+  /** Changes the password and keeps the fresh token, since the change ends the token in use. */
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    try {
-      this.keep(await firstValueFrom(this.api.changePassword(currentPassword, newPassword)));
-    } catch (error) {
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        this.signOut();
-      }
-      throw error;
+    this.keep(await firstValueFrom(this.api.changePassword(currentPassword, newPassword)));
+  }
+
+  /**
+   * The server answered 401 to `rejectedToken`. A newer sign-in another tab stored for the same login (a password
+   * change there ended this tab's token) is taken over; otherwise the session goes. Returns whether this tab is still
+   * signed in, with the token to send in `token()`.
+   */
+  ended(rejectedToken: string): boolean {
+    const current = this.session();
+    const stored = read();
+    if (
+      current &&
+      stored &&
+      stored.accessToken !== rejectedToken &&
+      !isExpired(stored) &&
+      stored.account.id === current.account.id &&
+      !isOlder(stored, current)
+    ) {
+      this.session.set(stored);
+      return true;
     }
+
+    const accountId = current?.account.id ?? null;
+    this.signOut();
+    this.endedAccountId = accountId;
+    return false;
   }
 
   signOut(): void {
+    this.endedAccountId = null;
     const mine = this.session()?.accessToken;
     this.session.set(null);
     try {
@@ -101,16 +127,28 @@ export class AuthStore {
     }
   }
 
-  /** Takes over a sign-in another tab stored for the login this tab is signed in to; another login is left alone. */
+  /**
+   * Takes over a newer sign-in another tab stored for the login this tab is signed in to, or whose sign-in the server
+   * just ended; another login, an older token and a login signed out of on purpose are left alone.
+   */
   private adoptStored(): void {
     const current = this.session();
     const stored = read();
-    if (current && stored && !isExpired(stored) && stored.account.id === current.account.id) {
+    if (!stored || isExpired(stored)) {
+      return;
+    }
+
+    const takesOver = current
+      ? stored.account.id === current.account.id && isOlder(current, stored)
+      : stored.account.id === this.endedAccountId;
+    if (takesOver) {
+      this.endedAccountId = null;
       this.session.set(stored);
     }
   }
 
   private keep(session: SignedIn): void {
+    this.endedAccountId = null;
     this.session.set(session);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
@@ -122,6 +160,11 @@ export class AuthStore {
 
 function isExpired(session: SignedIn): boolean {
   return Date.parse(session.expiresAt) <= Date.now();
+}
+
+/** Tokens last equally long, so the one that expires earlier was issued earlier. */
+function isOlder(session: SignedIn, than: SignedIn): boolean {
+  return Date.parse(session.expiresAt) < Date.parse(than.expiresAt);
 }
 
 function read(): SignedIn | null {

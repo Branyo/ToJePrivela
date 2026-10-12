@@ -108,7 +108,8 @@ proxy in `ForwardedHeaders:KnownProxies` so the limits see each client's own add
 Changing the password (`PUT /api/auth/password`) shares that limit but counts per signed-in login, whatever the
 address: guessing the current password with a token left on a shared device stays as slow from many addresses as from
 one. It never counts towards, nor is stopped by, the address's cap, so people behind one address do not use up each
-other's sign-ins. A successful change is not counted.
+other's sign-ins. Every change counts, a successful one too. A request without a valid sign-in (a token that a password
+change on another device ended) is answered 401 and not counted at all.
 
 Admin rights come from `Authentication:Admins` only, and the stored logins are made to match it on every startup:
 

@@ -21,7 +21,9 @@ dialog asks whether to create that login; on yes, a second window offers the nam
 editable), a password and its repetition, checked against the limits `/api/rules` serves, and posts to
 `POST /api/auth/accounts`. Either way the API's access token is kept by `AuthStore` (in `localStorage`
 until it expires) and sent with every `/api` request by `authInterceptor`. A 401 drops the session and
-returns to sign-in with a `returnUrl`.
+returns to sign-in with a `returnUrl` — unless another tab has stored a newer sign-in for the same login (it changed the
+password there), which is taken over and the request sent once more. Only sign-in, creating a login and the startup
+`GET /api/auth/me` handle their own 401.
 
 `/settings` is the login's settings page, one tab per child route so a reload or the back button keeps the
 tab: **Players** (`/settings/players`, the default) lets every login add and delete its own players (at most
