@@ -1,4 +1,5 @@
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -61,10 +62,15 @@ export class Play implements OnInit, OnDestroy {
 
   private readonly cardSource = viewChild('cardSource', { read: ElementRef });
   private readonly seatButtons = viewChildren<ElementRef<HTMLElement>>('seatButton');
+  /** The safe answer of the open confirmation, which takes the focus. */
+  private readonly confirmDefault = viewChild<ElementRef<HTMLElement>>('confirmDefault');
+  /** Where the focus goes back once a confirmation closes. */
+  private readonly endButton = viewChild<ElementRef<HTMLElement>>('endButton');
 
   protected readonly hitPlayerId = signal<number | null>(null);
   protected readonly doubledPlayerId = signal<number | null>(null);
-  protected readonly confirmingEnd = signal(false);
+  /** Which confirmation is open: ending the game (results) or deleting it (no results). */
+  protected readonly confirming = signal<'end' | 'delete' | null>(null);
   protected readonly formatAnswer = formatAnswer;
   private readonly rules = inject(GameRulesStore).rules;
   /** Every worth the starting player may choose, from the backend's limits. */
@@ -74,6 +80,8 @@ export class Play implements OnInit, OnDestroy {
   });
 
   private timers: ReturnType<typeof setTimeout>[] = [];
+  /** Set once the screen is left, so a request answering later does not navigate away from wherever the user went. */
+  private destroyed = false;
 
   constructor() {
     effect(() => {
@@ -83,6 +91,32 @@ export class Play implements OnInit, OnDestroy {
             queryParams: this.categories() ? { categories: this.categories() } : {},
           });
         }, GAME_OVER_PAUSE_MS);
+      }
+    });
+
+    // A game can only be ended or deleted while it runs, so a confirmation still open then is moot.
+    effect(() => {
+      if (!this.store.canEnd()) {
+        untracked(() => this.confirming.set(null));
+      }
+    });
+
+    // Each confirmation is rendered anew, so its safe answer is focused for the keyboard (`autofocus` is not). Once
+    // it closes, the focus goes back to "End" instead of being lost with the removed dialog; while the game is being
+    // ended that button is disabled, so it waits until the request failed and the button is usable again; once the
+    // game is over there is nothing to go back to.
+    let returnFocus = false;
+    afterRenderEffect(() => {
+      if (this.confirming()) {
+        this.confirmDefault()?.nativeElement.focus();
+        returnFocus = true;
+      } else if (returnFocus) {
+        if (this.store.canEnd()) {
+          this.endButton()?.nativeElement.focus();
+          returnFocus = false;
+        } else if (this.store.phase() !== 'ending') {
+          returnFocus = false;
+        }
       }
     });
 
@@ -98,6 +132,7 @@ export class Play implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.timers.forEach(clearTimeout);
   }
 
@@ -127,16 +162,31 @@ export class Play implements OnInit, OnDestroy {
   }
 
   protected askEnd(): void {
-    this.confirmingEnd.set(true);
+    this.confirming.set('end');
   }
 
-  protected cancelEnd(): void {
-    this.confirmingEnd.set(false);
+  protected askDelete(): void {
+    this.confirming.set('delete');
+  }
+
+  protected closeConfirm(): void {
+    this.confirming.set(null);
   }
 
   protected endGame(): void {
-    this.confirmingEnd.set(false);
+    this.confirming.set(null);
     void this.store.finish();
+  }
+
+  protected async deleteGame(): Promise<void> {
+    this.confirming.set(null);
+    if (!(await this.store.delete()) || this.destroyed) {
+      return;
+    }
+
+    // If the navigation is refused, the screen still says the game is gone and links home; an error banner there
+    // would only suggest the delete failed.
+    await this.router.navigate(['/']).catch((error: unknown) => console.error('Navigating home failed.', error));
   }
 
   private later(action: () => void, ms: number): void {

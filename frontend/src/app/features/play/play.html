@@ -6,7 +6,7 @@
     @if (store.badCardLimit() > 0) {
       <span class="pill pill--sun">{{ i18n.pluralKey('play.limit', store.badCardLimit()) | translate: { count: store.badCardLimit() } }}</span>
     }
-    <button type="button" class="btn btn--ghost bar__end" (click)="askEnd()" [disabled]="store.phase() === 'finished'">
+    <button #endButton type="button" class="btn btn--ghost bar__end" (click)="askEnd()" [disabled]="!store.canEnd()">
       {{ 'play.end' | translate }}
     </button>
   </header>
@@ -21,6 +21,12 @@
         <div class="question question--loading" aria-live="polite">
           <span class="shuffle" aria-hidden="true">🃏</span>
           <p>{{ 'play.loading' | translate }}</p>
+        </div>
+      }
+      @case ('ending') {
+        <div class="question question--loading" aria-live="polite">
+          <span class="shuffle" aria-hidden="true">🃏</span>
+          <p>{{ 'play.ending' | translate }}</p>
         </div>
       }
       @case ('error') {
@@ -39,6 +45,13 @@
             <button type="button" class="btn btn--fun" (click)="endGame()">{{ 'play.outOfQuestions.results' | translate }}</button>
             <a routerLink="/new" class="btn">{{ 'common.newGame' | translate }}</a>
           </div>
+        </div>
+      }
+      @case ('deleted') {
+        <div class="question question--empty" role="status">
+          <span class="big-emoji" aria-hidden="true">🗑️</span>
+          <h2>{{ 'play.deleted.title' | translate }}</h2>
+          <a routerLink="/" class="btn btn--primary">{{ 'play.deleted.home' | translate }}</a>
         </div>
       }
       @case ('finished') {
@@ -181,16 +194,32 @@
   </ul>
 </section>
 
-@if (confirmingEnd()) {
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title" (keydown.escape)="cancelEnd()">
-    <div class="modal__box panel">
-      <span class="big-emoji" aria-hidden="true">🏳️</span>
-      <h2 id="end-title">{{ 'play.confirmEnd.title' | translate }}</h2>
-      <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
-      <div class="actions">
-        <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
-        <button type="button" class="btn" (click)="cancelEnd()" autofocus>{{ 'play.confirmEnd.no' | translate }}</button>
+@switch (confirming()) {
+  @case ('end') {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title" (keydown.escape)="closeConfirm()">
+      <div class="modal__box panel">
+        <span class="big-emoji" aria-hidden="true">🏳️</span>
+        <h2 id="end-title">{{ 'play.confirmEnd.title' | translate }}</h2>
+        <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
+        <div class="actions">
+          <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
+          <button #confirmDefault type="button" class="btn" (click)="closeConfirm()">{{ 'play.confirmEnd.no' | translate }}</button>
+        </div>
+        <button type="button" class="btn btn--ghost" (click)="askDelete()">{{ 'play.confirmEnd.deleteGame' | translate }}</button>
       </div>
     </div>
-  </div>
+  }
+  @case ('delete') {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" (keydown.escape)="askEnd()">
+      <div class="modal__box panel">
+        <span class="big-emoji" aria-hidden="true">🗑️</span>
+        <h2 id="delete-title">{{ 'play.confirmDelete.title' | translate }}</h2>
+        <p class="muted">{{ 'play.confirmDelete.text' | translate }}</p>
+        <div class="actions">
+          <button type="button" class="btn btn--danger" (click)="deleteGame()">{{ 'play.confirmDelete.yes' | translate }}</button>
+          <button #confirmDefault type="button" class="btn" (click)="askEnd()">{{ 'play.confirmDelete.no' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  }
 }

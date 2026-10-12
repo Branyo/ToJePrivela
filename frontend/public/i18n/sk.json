@@ -149,6 +149,7 @@
     },
     "end": "🏳️ Ukončiť hru",
     "loading": "Miešam ďalšiu otázku…",
+    "ending": "Ukončujem hru…",
     "failed": "Ups, to nevyšlo.",
     "retry": "🔄 Skúsiť znova",
     "outOfQuestions": {
@@ -181,7 +182,18 @@
       "title": "Ukončiť hru teraz?",
       "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi po odrátaní Double.",
       "yes": "Áno, zobraziť výsledky",
-      "no": "Hrať ďalej"
+      "no": "Hrať ďalej",
+      "deleteGame": "Vymazať hru bez výsledkov"
+    },
+    "confirmDelete": {
+      "title": "Vymazať hru?",
+      "text": "Hra sa vymaže so všetkými zlými kartami aj Double, akoby sa nikdy nehrala. Nikto neprehráva.",
+      "yes": "Áno, vymazať hru",
+      "no": "Späť"
+    },
+    "deleted": {
+      "title": "Hra bola vymazaná.",
+      "home": "Späť na začiatok"
     },
     "choose": {
       "title": "Začínajúci hráč: koľko somárov bude stáť táto otázka?",

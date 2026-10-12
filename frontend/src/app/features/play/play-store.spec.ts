@@ -374,6 +374,234 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('finished');
   });
 
+  it('deletes a game', async () => {
+    await startWithQuestion();
+
+    const deleted = store.delete();
+    const request = http.expectOne('/api/games/5');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(await deleted).toBe(true);
+    expect(store.phase()).toBe('deleted');
+    expect(store.game()).toBeNull();
+    expect(store.canEnd()).toBe(false);
+  });
+
+  it('deletes the game only after the doubles tapped before are saved', async () => {
+    await startWithQuestion();
+
+    void store.awardDouble(1);
+    const deleted = store.delete();
+    await flush();
+
+    http.expectNone('/api/games/5');
+    http.expectOne('/api/games/5/doubles').flush(game());
+    await flush();
+
+    http.expectOne('/api/games/5').flush(null, { status: 204, statusText: 'No Content' });
+    expect(await deleted).toBe(true);
+  });
+
+  it('sends nothing else while the game is being deleted', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    const deleted = store.delete();
+    await store.award(1);
+    await store.awardDouble(1);
+
+    http.expectNone('/api/games/5/bad-cards');
+    http.expectNone('/api/games/5/doubles');
+    http.expectOne('/api/games/5').flush(null, { status: 204, statusText: 'No Content' });
+    expect(await deleted).toBe(true);
+  });
+
+  it('does not delete a game while its card is being handed out', async () => {
+    await startWithQuestion();
+    store.reveal();
+    const awarded = store.award(1);
+
+    expect(await store.delete()).toBe(false);
+
+    http.expectNone('/api/games/5');
+    http.expectOne('/api/games/5/bad-cards').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await awarded;
+  });
+
+  it('treats a game deleted elsewhere as deleted', async () => {
+    await startWithQuestion();
+
+    const deleted = store.delete();
+    http
+      .expectOne('/api/games/5')
+      .flush({ code: 'Game.NotFound', detail: 'Game with id 5 was not found.' }, { status: 404, statusText: 'Not Found' });
+
+    expect(await deleted).toBe(true);
+  });
+
+  it('keeps the round where it was when deleting fails', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    const deleted = store.delete();
+    http.expectOne('/api/games/5').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+
+    expect(await deleted).toBe(false);
+    expect(store.phase()).toBe('revealed');
+    expect(store.question()?.id).toBe(42);
+    expect(store.error()).not.toBeNull();
+  });
+
+  it('finishes the game only after the doubles tapped before are saved', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    void store.awardDouble(1);
+    const finished = store.finish();
+    await flush();
+
+    http.expectNone('/api/games/5/finish');
+    http.expectOne('/api/games/5/doubles').flush(game());
+    await flush();
+
+    http.expectOne('/api/games/5/finish').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await finished;
+    expect(store.phase()).toBe('finished');
+  });
+
+  it('sends no card while the game is being finished', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    const finished = store.finish();
+    await store.award(1);
+
+    http.expectNone('/api/games/5/bad-cards');
+    http.expectOne('/api/games/5/finish').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await finished;
+  });
+
+  it('does not finish a game while its card is being handed out', async () => {
+    await startWithQuestion();
+    store.reveal();
+    const awarded = store.award(1);
+
+    await store.finish();
+
+    http.expectNone('/api/games/5/finish');
+    http.expectOne('/api/games/5/bad-cards').flush(game());
+    await flush();
+    http.expectOne((req) => req.url === '/api/questions/random').flush(question);
+    await flush();
+    http.expectOne('/api/questions/42/views').flush(question);
+    await awarded;
+  });
+
+  it('keeps the round where it was when finishing fails', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    const finished = store.finish();
+    http.expectOne('/api/games/5/finish').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+    await finished;
+
+    expect(store.phase()).toBe('revealed');
+    expect(store.question()?.id).toBe(42);
+    expect(store.error()).not.toBeNull();
+  });
+
+  it('can be ended while the next question is still on its way, which is then dropped unseen', async () => {
+    await startWithQuestion();
+
+    const next = store.nextQuestion();
+    expect(store.canEnd()).toBe(true);
+    const deleted = store.delete();
+
+    http.expectOne('/api/games/5').flush(null, { status: 204, statusText: 'No Content' });
+    expect(await deleted).toBe(true);
+
+    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 43 });
+    await next;
+
+    http.expectNone('/api/questions/43/views');
+
+    expect(store.phase()).toBe('deleted');
+    expect(store.question()).toBeNull();
+  });
+
+  it('offers a retry when ending fails while the next question was on its way', async () => {
+    await startWithQuestion();
+
+    const next = store.nextQuestion();
+    const deleted = store.delete();
+    http.expectOne('/api/games/5').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+    expect(await deleted).toBe(false);
+    expect(store.phase()).toBe('error');
+
+    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 43 });
+    await next;
+
+    http.expectNone('/api/questions/43/views');
+    expect(store.phase()).toBe('error');
+  });
+
+  it('does not let a reload still running reopen a game being ended', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    // A failed card reloads the game; meanwhile its players can end it.
+    const awarded = store.award(1);
+    http.expectOne('/api/games/5/bad-cards').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+    await flush();
+    expect(store.phase()).toBe('loading');
+
+    const finished = store.finish();
+    expect(store.phase()).toBe('ending');
+    http.expectOne('/api/games/5/details').flush(game());
+    await awarded;
+
+    http.expectNone((req) => req.url === '/api/questions/random');
+    expect(store.phase()).toBe('ending');
+    expect(store.canEnd()).toBe(false);
+    expect(store.error()).toBeNull();
+
+    http.expectOne('/api/games/5/finish').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await finished;
+    expect(store.phase()).toBe('finished');
+    expect(store.error()).toBeNull();
+  });
+
+  it('does not end the game when a double tapped before fails, and keeps its error', async () => {
+    await startWithQuestion();
+    store.reveal();
+
+    void store.awardDouble(1);
+    const finished = store.finish();
+    await flush();
+
+    http.expectOne('/api/games/5/doubles').flush({ detail: 'Nope.' }, { status: 409, statusText: 'Conflict' });
+    await finished;
+
+    http.expectNone('/api/games/5/finish');
+    expect(store.phase()).toBe('revealed');
+    expect(store.error()).not.toBeNull();
+  });
+
+  it('cannot end a game that was never loaded', async () => {
+    const started = store.start(5, []);
+    http.expectOne('/api/games/5/details').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+    await started;
+
+    expect(store.phase()).toBe('error');
+    expect(store.canEnd()).toBe(false);
+    expect(await store.delete()).toBe(false);
+    await store.finish();
+
+    http.expectNone('/api/games/5');
+    http.expectNone('/api/games/5/finish');
+  });
+
   it('flags a player one card away from the limit', async () => {
     await startWithQuestion();
 
