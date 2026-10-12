@@ -21,7 +21,9 @@ dialog asks whether to create that login; on yes, a second window offers the nam
 editable), a password and its repetition, checked against the limits `/api/rules` serves, and posts to
 `POST /api/auth/accounts`. Either way the API's access token is kept by `AuthStore` (in `localStorage`
 until it expires) and sent with every `/api` request by `authInterceptor`. A 401 drops the session and
-returns to sign-in with a `returnUrl`.
+returns to sign-in with a `returnUrl` — unless another tab has stored a newer sign-in for the same login (it changed the
+password there), which is taken over and the request sent once more. Only sign-in, creating a login and the startup
+`GET /api/auth/me` handle their own 401.
 
 `/settings` is the login's settings page, one tab per child route so a reload or the back button keeps the
 tab: **Players** (`/settings/players`, the default) lets every login add and delete its own players (at most
@@ -30,7 +32,11 @@ tab: **Players** (`/settings/players`, the default) lets every login add and del
 running in `AiQuestionsStore` while another tab is open) and **Questions** (`/settings/questions?category=`:
 a category's questions with both texts, answers hidden until shown; add manual questions, edit or delete any;
 a question without an English text can be edited without adding one; the list also refreshes when AI work from
-Categories finishes). A login with only one tab gets no tab bar, and `adminGuard` sends everyone else from an admin tab to Players.
+Categories finishes). Every login but an admin also gets **Password** last (`/settings/password`: the current
+password, the new one and its repetition, checked against `/api/rules`; the fresh token the API answers with keeps this
+device signed in, while every other sign-in of the login ends, and other tabs pick up the fresh token). Admins get no
+Password tab, since `Authentication:Admins` sets their password. `adminGuard` sends everyone else from an admin tab,
+and `notAdminGuard` admins from Password, to Players.
 The API enforces the same rule; hiding the tabs only spares everyone else screens that would fail. Admin logins come from the API's `Authentication:Admins`
 configuration — see the backend README.
 
@@ -59,7 +65,7 @@ src/app/
     sign-in/       name + password sign-in, create-login dialogs
     home/          landing page, running games, rules
     setup/         players, card limit, categories
-    settings/      tabbed settings: the login's players and, for admins, categories with AI generation
+    settings/      tabbed settings: the login's players, for admins categories with AI generation and questions, for everyone else the password
     questions/     admin questions tab: browse a category, show answers, add, edit, delete
     play/          PlayStore (round state machine) + game screen
     summary/       loser spotlight and scoreboard

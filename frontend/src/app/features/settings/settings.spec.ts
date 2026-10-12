@@ -40,15 +40,23 @@ describe('Settings', () => {
     http.expectOne('/api/question-categories').flush([]);
   }
 
-  it("opens on the login's players, without tabs for a login that is not an admin", async () => {
+  it("opens on the login's players, with only the players and password tabs for a login that is not an admin", async () => {
     const { harness, page } = await open('/settings', false);
     http.expectOne('/api/players').flush([]);
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/settings/players');
     expect(page.querySelector('app-players-section')).not.toBeNull();
-    expect(page.querySelector('.tabs')).toBeNull();
+    expect(tabs(page)).toEqual(['/settings/players', '/settings/password']);
     expect(page.querySelector('.badge')).toBeNull();
+  });
+
+  it('opens the password tab for a login that is not an admin', async () => {
+    const { harness, page } = await open('/settings/password', false);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/settings/password');
+    expect(page.querySelector('app-password-section')).not.toBeNull();
   });
 
   it('keeps a login that is not an admin out of the admin tabs', async () => {
@@ -81,6 +89,13 @@ describe('Settings', () => {
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/sign-in');
+  });
+
+  it('keeps an admin, whose password the server configuration sets, out of the password tab', async () => {
+    await open('/settings/password', true);
+    http.expectOne('/api/players').flush([]);
+
+    expect(TestBed.inject(Router).url).toBe('/settings/players');
   });
 
   it('gives an admin tabs for players, categories and questions, marking the open one', async () => {

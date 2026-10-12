@@ -12,6 +12,10 @@ export const signedInGuard: CanActivateFn = (_route, state) =>
 export const adminGuard: CanActivateFn = () =>
   inject(AuthStore).isAdmin() ? true : inject(Router).createUrlTree(['/settings']);
 
+/** The password tab is not for admins: the server configuration sets their password and the API refuses a change. */
+export const notAdminGuard: CanActivateFn = () =>
+  inject(AuthStore).isAdmin() ? inject(Router).createUrlTree(['/settings']) : true;
+
 /** Signing in again while signed in makes no sense, so the sign-in screen sends you home. */
 export const signedOutGuard: CanActivateFn = () =>
   inject(AuthStore).token() === null ? true : inject(Router).createUrlTree(['/']);

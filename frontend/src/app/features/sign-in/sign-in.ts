@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { GameRules } from '../../core/api/models';
@@ -17,6 +18,7 @@ import { AuthStore } from '../../core/auth/auth-store';
 import { Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
+import { newPasswordProblem } from '../../core/rules/new-password';
 
 /** Where to go after signing in: only a path inside this app, never back here. */
 export function safeReturnUrl(url: string | undefined): string {
@@ -64,6 +66,14 @@ export class SignIn {
   constructor() {
     // The backend may have been down when the app started; try again so the limits are there for a new login.
     void this.rulesStore.ensureLoaded();
+
+    // Another tab signed this login in again (its password changed there, ending the sign-in here): carry on, unless
+    // the user is busy here or creating another login.
+    this.auth.adopted.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!this.busy() && this.step() !== 'create') {
+        void this.leave();
+      }
+    });
 
     // The window takes the focus when it opens, so the keyboard lands inside it.
     afterRenderEffect(() => {
@@ -151,16 +161,7 @@ export class SignIn {
       return { key: 'signIn.errors.nameLength', params: names };
     }
 
-    const passwords = rules.password;
-    if (this.newPassword().length < passwords.min || this.newPassword().length > passwords.max) {
-      return { key: 'signIn.errors.passwordLength', params: passwords };
-    }
-
-    if (this.newPassword() !== this.repeatPassword()) {
-      return { key: 'signIn.errors.passwordsDiffer' };
-    }
-
-    return null;
+    return newPasswordProblem(rules.password, this.newPassword(), this.repeatPassword());
   }
 
   private async leave(): Promise<void> {
