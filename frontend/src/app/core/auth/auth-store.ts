@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter, firstValueFrom, fromEvent } from 'rxjs';
+import { Observable, Subject, filter, firstValueFrom, fromEvent } from 'rxjs';
 import { AuthApi } from '../api/auth-api';
 import { SignedIn } from '../api/models';
 
@@ -11,7 +11,8 @@ const STORAGE_KEY = 'session';
  * The signed-in account and its access token, kept across reloads until the token expires. The server decides who
  * may do what; `isAdmin` only decides what the screens offer. Tabs share the stored sign-in: a newer token another tab
  * stores for the same login (after a password change) is picked up here, also by a tab whose sign-in that change has
- * just ended, and signing out never removes a sign-in another tab stored since.
+ * just ended, and signing out never removes a sign-in another tab stored since. Storage only ever holds the latest
+ * sign-in written, so a stored token that differs from this tab's is the newer one, whatever its expiry.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
@@ -19,6 +20,10 @@ export class AuthStore {
   private readonly session = signal<SignedIn | null>(null);
   /** The login whose sign-in the server ended (not one signed out of on purpose), until another sign-in replaces it. */
   private endedAccountId: number | null = null;
+  private readonly adoptions = new Subject<void>();
+
+  /** Emits each time this tab takes over a sign-in another tab stored. */
+  readonly adopted: Observable<void> = this.adoptions.asObservable();
 
   readonly account = computed(() => this.session()?.account ?? null);
   readonly isSignedIn = computed(() => this.session() !== null);
@@ -30,7 +35,7 @@ export class AuthStore {
         filter((event) => event.key === STORAGE_KEY),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.adoptStored());
+      .subscribe(() => this.takeOverStored());
   }
 
   /** The token to send, or `null` when nobody is signed in or the sign-in has expired. */
@@ -60,7 +65,7 @@ export class AuthStore {
       // Another tab may have stored a newer sign-in while the server answered; writing this one back would end it.
       const latest = read();
       if (latest && latest.accessToken !== stored.accessToken) {
-        this.adoptStored();
+        this.takeOverStored();
         return;
       }
       this.keep({ ...stored, account });
@@ -92,21 +97,11 @@ export class AuthStore {
    * signed in, with the token to send in `token()`.
    */
   ended(rejectedToken: string): boolean {
-    const current = this.session();
-    const stored = read();
-    if (
-      current &&
-      stored &&
-      stored.accessToken !== rejectedToken &&
-      !isExpired(stored) &&
-      stored.account.id === current.account.id &&
-      !isOlder(stored, current)
-    ) {
-      this.session.set(stored);
+    if (this.takeOverStored(rejectedToken)) {
       return true;
     }
 
-    const accountId = current?.account.id ?? null;
+    const accountId = this.session()?.account.id ?? null;
     this.signOut();
     this.endedAccountId = accountId;
     return false;
@@ -128,23 +123,21 @@ export class AuthStore {
   }
 
   /**
-   * Takes over a newer sign-in another tab stored for the login this tab is signed in to, or whose sign-in the server
-   * just ended; another login, an older token and a login signed out of on purpose are left alone.
+   * The one rule for taking over the sign-in another tab stored: it must be for the login this tab is signed in to, or
+   * whose sign-in the server ended here, carry a token other than `stale` (by default the one in use here) and not have
+   * expired. Another login and a login signed out of on purpose are left alone. Returns whether it was taken over.
    */
-  private adoptStored(): void {
-    const current = this.session();
+  private takeOverStored(stale = this.session()?.accessToken): boolean {
+    const accountId = this.session()?.account.id ?? this.endedAccountId;
     const stored = read();
-    if (!stored || isExpired(stored)) {
-      return;
+    if (!stored || isExpired(stored) || stored.account.id !== accountId || stored.accessToken === stale) {
+      return false;
     }
 
-    const takesOver = current
-      ? stored.account.id === current.account.id && isOlder(current, stored)
-      : stored.account.id === this.endedAccountId;
-    if (takesOver) {
-      this.endedAccountId = null;
-      this.session.set(stored);
-    }
+    this.endedAccountId = null;
+    this.session.set(stored);
+    this.adoptions.next();
+    return true;
   }
 
   private keep(session: SignedIn): void {
@@ -160,11 +153,6 @@ export class AuthStore {
 
 function isExpired(session: SignedIn): boolean {
   return Date.parse(session.expiresAt) <= Date.now();
-}
-
-/** Tokens last equally long, so the one that expires earlier was issued earlier. */
-function isOlder(session: SignedIn, than: SignedIn): boolean {
-  return Date.parse(session.expiresAt) < Date.parse(than.expiresAt);
 }
 
 function read(): SignedIn | null {

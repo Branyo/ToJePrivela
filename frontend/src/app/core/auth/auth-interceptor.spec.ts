@@ -88,6 +88,20 @@ describe('authInterceptor', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('signs out and asks to sign in again when the request sent once more is answered 401 too', async () => {
+    await signedInAs(store, http, { id: 7 });
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    localStorage.setItem('session', JSON.stringify({ ...testSession({ id: 7 }), accessToken: 'fresh-token' }));
+
+    const response = firstValueFrom(client.get('/api/games'));
+    http.expectOne('/api/games').flush({ code: 'Auth.Unauthenticated' }, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne('/api/games').flush({ code: 'Auth.Unauthenticated' }, { status: 401, statusText: 'Unauthorized' });
+
+    await expect(response).rejects.toBeTruthy();
+    expect(store.isSignedIn()).toBe(false);
+    expect(navigate).toHaveBeenCalledWith(['/sign-in'], { queryParams: { returnUrl: '/' } });
+  });
+
   it('handles a 401 from the password change like any other', async () => {
     await signedInAs(store, http);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Claims;
 using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Identity.Tokens;
 
@@ -14,15 +15,22 @@ public sealed class HttpCurrentAccount : ICurrentAccount
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public int Id
-    {
-        get
-        {
-            var subject = _httpContextAccessor.HttpContext?.User.FindFirst(AccessTokenClaims.Subject)?.Value;
+    public int Id =>
+        _httpContextAccessor.HttpContext?.User is { } user && IdOf(user) is { } id
+            ? id
+            : throw new InvalidOperationException("The request carries no signed-in account.");
 
-            return int.TryParse(subject, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
-                ? id
-                : throw new InvalidOperationException("The request carries no signed-in account.");
-        }
-    }
+    /// <summary>
+    /// The signed-in account's id, or <c>null</c> when the user carries no valid access token (authentication sets the
+    /// user only for a token that is still valid).
+    /// </summary>
+    public static int? IdOf(ClaimsPrincipal user) =>
+        user.Identity?.IsAuthenticated == true
+        && int.TryParse(
+            user.FindFirst(AccessTokenClaims.Subject)?.Value,
+            NumberStyles.None,
+            CultureInfo.InvariantCulture,
+            out var id)
+            ? id
+            : null;
 }

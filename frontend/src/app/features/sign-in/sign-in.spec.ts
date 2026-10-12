@@ -76,6 +76,44 @@ describe('SignIn', () => {
     await fixture.whenStable();
   }
 
+  /** The server ended this login's sign-in here; another tab then stores a fresh one for it. */
+  async function endedHere(): Promise<() => void> {
+    const store = TestBed.inject(AuthStore);
+    localStorage.setItem('session', JSON.stringify(testSession({ id: 7 })));
+    const restoring = store.restore();
+    http.expectOne('/api/auth/me').flush(testSession({ id: 7 }).account);
+    await restoring;
+    store.ended('test-token');
+    navigateByUrl.mockClear();
+
+    return () => {
+      localStorage.setItem('session', JSON.stringify({ ...testSession({ id: 7 }), accessToken: 'fresh-token' }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'session' }));
+    };
+  }
+
+  it('carries on when another tab signs in again the login whose sign-in ended here', async () => {
+    const signInElsewhere = await endedHere();
+    const { fixture } = await render('/games/3');
+
+    signInElsewhere();
+    await settle(fixture);
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/games/3');
+  });
+
+  it('stays while a new login is being created when another tab signs in again', async () => {
+    const signInElsewhere = await endedHere();
+    const { fixture, page } = await render();
+    await openCreate(fixture, page);
+
+    signInElsewhere();
+    await settle(fixture);
+
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    expect(page.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
   it('needs a name before it signs in', async () => {
     const { page } = await render();
 

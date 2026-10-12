@@ -1,10 +1,9 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using ToJePrivela.Domain.Common;
-using ToJePrivela.Identity.Tokens;
 using MvcJsonOptions = Microsoft.AspNetCore.Mvc.JsonOptions;
 
 namespace ToJePrivela.Api.Common;
@@ -15,12 +14,12 @@ namespace ToJePrivela.Api.Common;
 /// password stays slow. <see cref="SignInAddressLimiter"/> also caps the attempts one address makes on those endpoints,
 /// so it cannot try many names, or create many logins, at speed; a successful sign-in is not counted there, so people
 /// who know their passwords never use up their address's cap. The rate limiter picks a partition before the body is
-/// bound, so <see cref="UseSignInLimits"/> reads the name out of the JSON body first. An endpoint that needs a sign-in
-/// (changing the password) counts every request per signed-in login instead, whatever the address, and never towards
-/// the address's cap: its body carries no name, guessing the current password from many addresses must stay as slow as
-/// from one, and people behind one address must not use up each other's sign-ins. A request to it without a valid
-/// sign-in (a token that a password change on another device ended) is not counted at all: authorization answers it 401
-/// before it can try anything.
+/// bound, so <see cref="UseSignInLimits"/> reads the name out of the JSON body first. An endpoint marked
+/// <see cref="LimitPerAccountAttribute"/> (changing the password) counts every request per signed-in login instead,
+/// whatever the address, and never towards the address's cap: its body carries no name, guessing the current password
+/// from many addresses must stay as slow as from one, and people behind one address must not use up each other's
+/// sign-ins. A request to it without a valid sign-in (a token that a password change on another device ended) is not
+/// counted at all: authorization answers it 401 before it can try anything.
 /// </summary>
 public static class SignInRateLimiting
 {
@@ -32,9 +31,10 @@ public static class SignInRateLimiting
 
     /// <summary>
     /// Goes after authentication and routing (the signed-in login and the endpoint are known) and before
-    /// <c>UseRateLimiter</c>. A request to an endpoint that needs a sign-in skips the address's cap. Otherwise an address over its cap is refused
-    /// before its body is read, and the request is counted towards the cap once it is answered, unless the endpoint is
-    /// marked <see cref="SuccessIsFreeAttribute"/> and the answer succeeded.
+    /// <c>UseRateLimiter</c>. A request to an endpoint marked <see cref="LimitPerAccountAttribute"/> skips the
+    /// address's cap. Otherwise an address over its cap is refused before its body is read, and the request is counted
+    /// towards the cap once it is answered, unless the endpoint is marked <see cref="SuccessIsFreeAttribute"/> and the
+    /// answer succeeded.
     /// </summary>
     public static IApplicationBuilder UseSignInLimits(this IApplicationBuilder app)
     {
@@ -52,11 +52,11 @@ public static class SignInRateLimiting
             // Counted per login only (the endpoint policy). The address's cap is for trying many names, and people
             // behind one address must not lose their sign-ins to someone mistyping a current password, or the other way.
             // Without a valid sign-in nothing is counted: the request is answered 401 before it can try anything.
-            if (NeedsSignIn(context))
+            if (IsLimitedPerAccount(context))
             {
-                if (SignedInAccount(context) is { } account)
+                if (HttpCurrentAccount.IdOf(context.User) is { } account)
                 {
-                    context.Items[AccountItem] = account;
+                    context.Items[AccountItem] = account.ToString(CultureInfo.InvariantCulture);
                 }
 
                 await next(context);
@@ -93,11 +93,11 @@ public static class SignInRateLimiting
     }
 
     /// <summary>
-    /// No limit for a request without a valid sign-in on an endpoint that needs one (authorization answers it 401);
+    /// No limit for a request without a valid sign-in on an endpoint limited per account (authorization answers it 401);
     /// otherwise a fixed window per <see cref="PartitionKey"/>.
     /// </summary>
     public static RateLimitPartition<string> Partition(HttpContext context, SignInRateLimitOptions options) =>
-        NeedsSignIn(context) && context.Items[AccountItem] is not string
+        IsLimitedPerAccount(context) && context.Items[AccountItem] is not string
             ? RateLimitPartition.GetNoLimiter("signed-out")
             : RateLimitPartition.GetFixedWindowLimiter(
             PartitionKey(context),
@@ -109,7 +109,7 @@ public static class SignInRateLimiting
             });
 
     /// <summary>
-    /// The signed-in login on an endpoint that needs one; otherwise the address and the login name as
+    /// The signed-in login on an endpoint limited per account; otherwise the address and the login name as
     /// <see cref="NameKeys.Of"/> compares it ("Brano " counts as "brano").
     /// </summary>
     public static string PartitionKey(HttpContext context)
@@ -161,16 +161,8 @@ public static class SignInRateLimiting
 
     private static string Address(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-    /// <summary>
-    /// The signed-in login's id. Authentication has run, so the user is set only for a token that is still valid.
-    /// </summary>
-    private static string? SignedInAccount(HttpContext context) =>
-        context.User.Identity?.IsAuthenticated == true
-            ? context.User.FindFirst(AccessTokenClaims.Subject)?.Value
-            : null;
-
-    private static bool NeedsSignIn(HttpContext context) =>
-        context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is null;
+    private static bool IsLimitedPerAccount(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<LimitPerAccountAttribute>() is not null;
 
     private static bool IsSignInEndpoint(HttpContext context) =>
         context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName
@@ -183,11 +175,18 @@ public static class SignInRateLimiting
 }
 
 /// <summary>
-/// On an anonymous sign-in endpoint: an answer that succeeds does not count towards the address's cap. An endpoint that
-/// needs a sign-in never counts towards that cap, so the attribute has no effect there.
+/// On an anonymous sign-in endpoint: an answer that succeeds does not count towards the address's cap. An endpoint
+/// marked <see cref="LimitPerAccountAttribute"/> never counts towards that cap, so the attribute has no effect there.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class SuccessIsFreeAttribute : Attribute;
+
+/// <summary>
+/// On a sign-in endpoint that needs a sign-in (changing the password): every request counts per signed-in login,
+/// whatever the address, and never towards the address's cap; a request without a valid sign-in is not counted.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class LimitPerAccountAttribute : Attribute;
 
 /// <summary>
 /// Counts, per client address, the sign-in attempts <see cref="SignInRateLimiting.UseSignInLimits"/> reports, in fixed

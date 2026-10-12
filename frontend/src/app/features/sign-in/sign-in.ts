@@ -4,13 +4,12 @@ import {
   ElementRef,
   afterRenderEffect,
   computed,
-  effect,
   inject,
   input,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { GameRules } from '../../core/api/models';
@@ -68,9 +67,10 @@ export class SignIn {
     // The backend may have been down when the app started; try again so the limits are there for a new login.
     void this.rulesStore.ensureLoaded();
 
-    // Another tab signed this login in again (its password changed there, ending the sign-in here): carry on.
-    effect(() => {
-      if (this.auth.isSignedIn() && !untracked(this.busy)) {
+    // Another tab signed this login in again (its password changed there, ending the sign-in here): carry on, unless
+    // the user is busy here or creating another login.
+    this.auth.adopted.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!this.busy() && this.step() !== 'create') {
         void this.leave();
       }
     });

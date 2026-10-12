@@ -124,12 +124,24 @@ describe('AuthStore', () => {
       expect(store.token()).toBe('fresh-token');
     });
 
-    it('leaves alone an older token another tab stored for this login', async () => {
+    it('picks up a fresh token for this login even when it expires no later than the one in use', async () => {
       await signedInAs(store, http, { id: 7 });
 
-      storeFromOtherTab({ ...testSession({ id: 7 }, 60 * 1000), accessToken: 'old-token' });
+      storeFromOtherTab({ ...testSession({ id: 7 }, 60 * 1000), accessToken: 'fresh-token' });
 
-      expect(store.token()).toBe('test-token');
+      expect(store.token()).toBe('fresh-token');
+    });
+
+    it('tells whoever listens when it takes over the sign-in another tab stored', async () => {
+      await signedInAs(store, http, { id: 7 });
+      const adopted = vi.fn();
+      store.adopted.subscribe(adopted);
+
+      storeFromOtherTab({ ...testSession({ id: 8 }), accessToken: 'other-login-token' });
+      expect(adopted).not.toHaveBeenCalled();
+
+      storeFromOtherTab({ ...testSession({ id: 7 }), accessToken: 'fresh-token' });
+      expect(adopted).toHaveBeenCalledTimes(1);
     });
 
     it('does not write its token back over a newer one another tab stored while restoring', async () => {
