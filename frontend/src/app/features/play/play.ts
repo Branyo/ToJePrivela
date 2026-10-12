@@ -64,6 +64,8 @@ export class Play implements OnInit, OnDestroy {
   private readonly seatButtons = viewChildren<ElementRef<HTMLElement>>('seatButton');
   /** The safe answer of the open confirmation, which takes the focus. */
   private readonly confirmDefault = viewChild<ElementRef<HTMLElement>>('confirmDefault');
+  /** Where the focus goes back once a confirmation closes. */
+  private readonly endButton = viewChild<ElementRef<HTMLElement>>('endButton');
 
   protected readonly hitPlayerId = signal<number | null>(null);
   protected readonly doubledPlayerId = signal<number | null>(null);
@@ -97,9 +99,18 @@ export class Play implements OnInit, OnDestroy {
       }
     });
 
-    // Each confirmation is rendered anew, so its safe answer is focused for the keyboard (`autofocus` is not).
+    // Each confirmation is rendered anew, so its safe answer is focused for the keyboard (`autofocus` is not). Once
+    // it closes, the focus goes back to "End" instead of being lost with the removed dialog; while the game is being
+    // ended that button is disabled, so it waits until the request failed and the button is usable again.
+    let returnFocus = false;
     afterRenderEffect(() => {
-      this.confirmDefault()?.nativeElement.focus();
+      if (this.confirming()) {
+        this.confirmDefault()?.nativeElement.focus();
+        returnFocus = true;
+      } else if (returnFocus && this.store.canEnd()) {
+        this.endButton()?.nativeElement.focus();
+        returnFocus = false;
+      }
     });
 
     // The question arrives in the shown language, so it is fetched again after a switch (a no-op before the first one).
@@ -161,8 +172,14 @@ export class Play implements OnInit, OnDestroy {
 
   protected async deleteGame(): Promise<void> {
     this.confirming.set(null);
-    if (await this.store.delete()) {
-      void this.router.navigate(['/']);
+    if (!(await this.store.delete())) {
+      return;
+    }
+
+    // The screen already says the game is gone and links home, so a refused navigation only needs a note.
+    const left = await this.router.navigate(['/']).catch(() => false);
+    if (!left) {
+      this.store.error.set({ key: 'errors.generic' });
     }
   }
 

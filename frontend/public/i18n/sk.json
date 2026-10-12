@@ -190,6 +190,10 @@
       "yes": "Áno, vymazať hru",
       "no": "Späť"
     },
+    "deleted": {
+      "title": "Hra bola vymazaná.",
+      "home": "Späť na začiatok"
+    },
     "choose": {
       "title": "Začínajúci hráč: koľko somárov bude stáť táto otázka?",
       "group": "Trestné body za túto otázku",

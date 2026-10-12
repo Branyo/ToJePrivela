@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, catchError, firstValueFrom, of, throwError } from 'rxjs';
 import { GamesApi } from '../../core/api/games-api';
 import { GameDetails, GamePlayer, Question, isKnownPlayer } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
@@ -15,7 +15,9 @@ export type PlayPhase =
   | 'revealed'
   | 'awarding'
   | 'no-questions'
+  | 'ending'
   | 'finished'
+  | 'deleted'
   | 'error';
 
 /**
@@ -55,8 +57,13 @@ export class PlayStore {
   );
   /** While bidding and after "To je priveľa!", but before the card is handed out. */
   readonly canDouble = computed(() => this.phase() === 'asking' || this.phase() === 'revealed');
-  /** The game may be finished or deleted: not over yet, and no question or card is on its way. */
-  readonly canEnd = computed(() => !['loading', 'awarding', 'finished'].includes(this.phase()));
+  /**
+   * The game may be finished or deleted: it is loaded, not over or being ended yet, and no card is on its way. A
+   * question still on its way does not hold it up, so a request that never answers cannot trap the players.
+   */
+  readonly canEnd = computed(
+    () => !!this.game() && !['ending', 'awarding', 'finished', 'deleted'].includes(this.phase()),
+  );
 
   /** One more card ends the game for this player (meaningless when a single card does it). */
   isOnTheEdge(player: GamePlayer): boolean {
@@ -95,11 +102,17 @@ export class PlayStore {
       const drawn = await firstValueFrom(this.questionsApi.getRandom(this.categoryIds));
       // A lost view only makes a repeat a bit likelier; the round can go on.
       await firstValueFrom(this.questionsApi.recordView(drawn.id)).catch(() => undefined);
+      if (this.phase() !== 'loading') {
+        return; // The game was ended meanwhile.
+      }
       this.question.set(drawn);
       this.chosenBadPoints.set(null);
       this.questionNumber.update((n) => n + 1);
       this.phase.set(this.choosesBadPoints() ? 'choosing' : 'asking');
     } catch (error) {
+      if (this.phase() !== 'loading') {
+        return;
+      }
       if (toProblem(error).code === 'Question.NoneAvailable') {
         this.question.set(null);
         this.phase.set('no-questions');
@@ -238,44 +251,59 @@ export class PlayStore {
     await this.nextQuestion();
   }
 
+  /** Ends the game early with its results counted. On a failure the round goes on where it was. */
   async finish(): Promise<void> {
-    try {
-      this.game.set(await firstValueFrom(this.gamesApi.finish(this.gameId)));
+    const ended = await this.end(() => this.gamesApi.finish(this.gameId));
+    if (ended.ok) {
+      this.game.set(ended.value);
       this.phase.set('finished');
-    } catch (error) {
-      this.fail(error);
     }
   }
 
   /**
-   * Deletes the game instead of finishing it; `true` once it is gone, so the screen can leave. Waits for the doubles
-   * still being saved, and nothing else is sent meanwhile. On a failure the round goes on where it was.
+   * Deletes the game instead of finishing it; `true` once it is gone, so the screen can leave. On a failure the round
+   * goes on where it was.
    */
   async delete(): Promise<boolean> {
-    const phase = this.phase();
-    if (!this.canEnd()) {
+    const ended = await this.end(() =>
+      this.gamesApi.delete(this.gameId).pipe(
+        // e.g. deleted from another device: it is gone either way.
+        catchError((error: unknown) => (toProblem(error).code === 'Game.NotFound' ? of(undefined) : throwError(() => error))),
+      ),
+    );
+    if (!ended.ok) {
       return false;
     }
 
-    // No double, card or skip is accepted outside its phases, so none can reach the server after the delete.
-    this.phase.set('loading');
+    this.game.set(null);
+    this.question.set(null);
+    this.phase.set('deleted');
+    return true;
+  }
+
+  /**
+   * Sends a request that ends the game once every double tapped before it is saved; nothing else is sent meanwhile,
+   * since no double, card or skip is accepted in `ending`. A failure shows the error and puts the round back where it
+   * was (a question that was on its way is drawn again by `retry`).
+   */
+  private async end<T>(request: () => Observable<T>): Promise<{ ok: true; value: T } | { ok: false }> {
+    if (!this.canEnd()) {
+      return { ok: false };
+    }
+
+    const phase = this.phase();
+    this.phase.set('ending');
     this.error.set(null);
     if (this.doubles) {
       await this.doubles;
     }
 
     try {
-      await firstValueFrom(this.gamesApi.delete(this.gameId));
-      return true;
+      return { ok: true, value: await firstValueFrom(request()) };
     } catch (error) {
-      const problem = toProblem(error);
-      // e.g. deleted from another device: it is gone either way.
-      if (problem.code === 'Game.NotFound') {
-        return true;
-      }
-      this.error.set(problem.message);
-      this.phase.set(phase);
-      return false;
+      this.error.set(toProblem(error).message);
+      this.phase.set(phase === 'loading' ? 'error' : phase);
+      return { ok: false };
     }
   }
 

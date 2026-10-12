@@ -6,7 +6,7 @@
     @if (store.badCardLimit() > 0) {
       <span class="pill pill--sun">{{ i18n.pluralKey('play.limit', store.badCardLimit()) | translate: { count: store.badCardLimit() } }}</span>
     }
-    <button type="button" class="btn btn--ghost bar__end" (click)="askEnd()" [disabled]="!store.canEnd()">
+    <button #endButton type="button" class="btn btn--ghost bar__end" (click)="askEnd()" [disabled]="!store.canEnd()">
       {{ 'play.end' | translate }}
     </button>
   </header>
@@ -39,6 +39,13 @@
             <button type="button" class="btn btn--fun" (click)="endGame()">{{ 'play.outOfQuestions.results' | translate }}</button>
             <a routerLink="/new" class="btn">{{ 'common.newGame' | translate }}</a>
           </div>
+        </div>
+      }
+      @case ('deleted') {
+        <div class="question question--empty" role="status">
+          <span class="big-emoji" aria-hidden="true">🗑️</span>
+          <h2>{{ 'play.deleted.title' | translate }}</h2>
+          <a routerLink="/" class="btn btn--primary">{{ 'play.deleted.home' | translate }}</a>
         </div>
       }
       @case ('finished') {
@@ -197,7 +204,7 @@
     </div>
   }
   @case ('delete') {
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" (keydown.escape)="askEnd()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" (keydown.escape)="closeConfirm()">
       <div class="modal__box panel">
         <span class="big-emoji" aria-hidden="true">🗑️</span>
         <h2 id="delete-title">{{ 'play.confirmDelete.title' | translate }}</h2>

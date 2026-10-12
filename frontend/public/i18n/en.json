@@ -182,6 +182,10 @@
       "yes": "Yes, delete the game",
       "no": "Back"
     },
+    "deleted": {
+      "title": "The game was deleted.",
+      "home": "Back to the start"
+    },
     "choose": {
       "title": "Starting player: how many donkeys is this question worth?",
       "group": "Bad points for this question",
