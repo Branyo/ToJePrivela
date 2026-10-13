@@ -182,7 +182,8 @@
     "onTheEdge": "🔥 na hrane",
     "confirmEnd": {
       "title": "Ukončiť hru teraz?",
-      "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi po odrátaní Double.",
+      "text": "Výsledky sa spočítajú podľa aktuálneho stavu, aj keď to nemusí byť voči každému férové: prehráva ten, kto má po odrátaní Double najviac trestných bodov, pri rovnosti prehrávajú spolu.",
+      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Hrajte ďalej alebo hru vymažte.",
       "yes": "Áno, zobraziť výsledky",
       "no": "Hrať ďalej",
       "deleteGame": "Vymazať hru bez výsledkov"
@@ -215,7 +216,13 @@
       "single": "prehráva túto hru!",
       "tie": "prehrávajú túto hru!"
     },
-    "score": "🫏 trestné body: {{points}}",
+    "score": {
+      "one": "🫏 trestné body: {{points}} z {{count}} karty",
+      "few": "🫏 trestné body: {{points}} z {{count}} kariet",
+      "many": "🫏 trestné body: {{points}} z {{count}} karty",
+      "other": "🫏 trestné body: {{points}} z {{count}} kariet"
+    },
+    "scoreTie": "🫏 trestné body: {{points}}",
     "doublesOff": "(✌️ −{{count}})",
     "doublesLabel": "Double: {{count}}",
     "board": "📊 Počet somárov",
@@ -355,7 +362,8 @@
         "PlayerNotInGame": "Tento hráč v hre nehrá.",
         "UnknownQuestion": "Táto otázka neexistuje.",
         "NoDoubleToRemove": "Tento hráč nemá žiadny Double na ubratie.",
-        "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz."
+        "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz.",
+        "NoBadCardsYet": "Nikto ešte nemá somársku kartu, takže hra nemá výsledok. Hrajte ďalej alebo ju vymažte."
       },
       "Player": {
         "NotFound": "Tento hráč neexistuje.",
@@ -457,7 +465,7 @@
       },
       "flawlessVictories": {
         "label": "Čistá výhra",
-        "hint": "Hry, ktoré niekto prehral bez jedinej tvojej trestnej karty."
+        "hint": "Hry, ktoré si skončil bez jedinej trestnej karty a neprehral si."
       },
       "luckyFinishes": {
         "label": "Šťastný koniec",

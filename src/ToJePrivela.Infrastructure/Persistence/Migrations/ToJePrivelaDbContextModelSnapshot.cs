@@ -123,6 +123,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Property<int>("GameId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsLoser")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<int?>("PlayerId")
                         .HasColumnType("INTEGER");
 

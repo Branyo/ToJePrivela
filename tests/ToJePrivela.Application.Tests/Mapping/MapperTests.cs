@@ -56,6 +56,7 @@ public class MapperTests
         var game = TestEntities.Game(3, [6, 5], Start);
         var question = TestEntities.Question(1, "How many wheels does a car have?", "4", TestEntities.Category(1, "Cars"), badPoints: 2);
         game.AwardBadCard(6, question, null, Start);
+        game.Finish(Start.AddHours(1));
 
         var details = GameMapper.ToDetailsDto(game);
 

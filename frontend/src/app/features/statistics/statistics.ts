@@ -48,10 +48,15 @@ export class Statistics {
   protected readonly i18n = inject(LanguageService);
   protected readonly none = NONE;
 
+  /** Undefined when no player is picked; NaN for an id that is not a whole number, which no player can have. */
   readonly playerId = input<number | undefined, string | undefined>(undefined, {
     transform: (value) => {
+      if (value === undefined) {
+        return undefined;
+      }
+
       const id = numberAttribute(value, NaN);
-      return Number.isInteger(id) ? id : undefined;
+      return Number.isInteger(id) ? id : NaN;
     },
   });
 
@@ -134,16 +139,20 @@ export class Statistics {
           this.statistics.set(null);
           this.statisticsError.set(null);
         }),
-        switchMap((id) =>
-          id === undefined
+        switchMap((id) => {
+          if (Number.isNaN(id)) {
+            this.statisticsError.set({ key: 'errors.api.Player.NotFound' });
+          }
+
+          return id === undefined || Number.isNaN(id)
             ? EMPTY
             : this.playersApi.getStatistics(id).pipe(
                 catchError((error) => {
                   this.statisticsError.set(toProblem(error).message);
                   return EMPTY;
                 }),
-              ),
-        ),
+              );
+        }),
         takeUntilDestroyed(),
       )
       .subscribe((statistics) => this.statistics.set(statistics));

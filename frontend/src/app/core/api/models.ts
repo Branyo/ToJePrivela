@@ -38,7 +38,10 @@ export interface GamePlayer {
   finalBadPoints: number;
   /** 1-based, decided by the server; players who stand equal share it. */
   rank: number;
-  /** The server's verdict: most final bad points, several on a tie (cards never break it), nobody without cards. */
+  /**
+   * The server's verdict, stored when the game finished: everyone on the most final bad points loses (cards never break
+   * a tie, and a player without a card can lose too). Always false while the game runs and in a cancelled game.
+   */
   isLoser: boolean;
 }
 

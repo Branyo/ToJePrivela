@@ -161,7 +161,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/games/{id}/bad-cards` | Body `{ playerId, questionId }`; the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
 | POST | `/api/games/{id}/doubles` | Body `{ playerId }`; credits a double that held (one bad point off at the end); never finishes the game; 409 on a finished game |
 | DELETE | `/api/games/{id}/doubles/{playerId}` | Takes back one double tapped by mistake; 409 when the player has none or the game is finished |
-| POST | `/api/games/{id}/finish` | Ends a running game now; 409 when already finished |
+| POST | `/api/games/{id}/finish` | Ends a running game now, its result counted as it stands; 409 when already finished, and 409 `Game.NoBadCardsYet` while nobody holds a bad card (keep playing or delete it) |
 | GET | `/api/questions?categoryId=&source=` | Both filters optional; `source` is `Manual` or `Ai` |
 | GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none); 400 for unknown ids, 404 when they hold no questions; does not count a view |
 | POST | `/api/questions/{id}/views` | Records that the question was shown; returns it with the new `viewCount` |
@@ -256,7 +256,17 @@ a `CreatedAt` timestamp.
 
 - **Bad cards.** A game ends as soon as one player holds `BadCardLimit` cards. `GamePlayer` keeps the
   card count (`BadCards`) and their sum (`BadPoints`); the value of a card always comes from the stored
-  question, never from the client. The loser is the player with the most bad points.
+  question, never from the client.
+
+- **Losers.** The verdict is decided once, when the game finishes, and stored on each seat
+  (`GamePlayer.IsLoser`), so a later rule change never rewrites a result. Everyone on the most final bad
+  points loses, whatever their cards: a tie is a shared loss, and a player without a card can lose when
+  doubles push everyone else below them. Nobody has lost a running or cancelled game. Ending a game early
+  (`POST /api/games/{id}/finish`, or `PUT` giving a running game its end) is the players' own choice, so
+  its result counts as it stands even when that is not fair to everyone; only a game nobody holds a bad
+  card in cannot be finished (409 `Game.NoBadCardsYet`): it can be played on or deleted. Games finished
+  before the verdict was stored got it from the `StoreGameLosers` migration, under the rule they were
+  shown with (a tie on final bad points broken by the number of cards).
 
 - **Doubles.** A player who thinks the previous estimate is too low calls "double" and at least doubles
   it. When the next player raises it again or wrongly calls "To je priveľa!", the double held and is
@@ -268,9 +278,10 @@ a `CreatedAt` timestamp.
   never below zero doubles.
 
 - **Player statistics.** `GET /api/players/{id}/statistics` is worked out on every request from the
-  player's games that are finished and not cancelled (`Domain/Statistics/PlayerStatistics`); nothing is
-  stored. Who lost is the game's own verdict (`Game.Standings`): everyone on the most final bad points,
-  never a tie broken by cards, and nobody while nobody holds a card. The loss index is
+  player's games that are started, finished and not cancelled (`PlayerStatistics.CountedGame`, the one
+  definition shared by the domain and the repository query); nothing but the verdict is stored. Who lost
+  is the stored verdict (see *Losers*). A flawless victory is a game the player ended with 0 bad cards and
+  did not lose. The loss index is
   the actual loss rate over the expected one, the average of (losers / players) per game, so a game
   without a loser counts for nothing and a shared loss weighs as much as chance says. A closest escape is
   exactly one final point below the loser; best and worst games pick the latest game on a tie. Averages

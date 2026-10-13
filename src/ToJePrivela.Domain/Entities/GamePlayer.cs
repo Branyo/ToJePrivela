@@ -38,6 +38,12 @@ public class GamePlayer
     /// <summary>What counts at the end of the game: <see cref="BadPoints"/> minus one per double.</summary>
     public int FinalBadPoints => BadPoints - Doubles;
 
+    /// <summary>
+    /// The game's verdict, stored when it finished (see <see cref="Game.Standings"/>), so a later change of the rule
+    /// never rewrites a result. Always false while the game runs and in a cancelled game.
+    /// </summary>
+    public bool IsLoser { get; private set; }
+
     internal void AddBadCard(int badPoints)
     {
         BadPoints += Guard.AgainstOutOfRange(badPoints, nameof(badPoints), Question.MinBadPoints, Question.MaxBadPoints);
@@ -45,6 +51,8 @@ public class GamePlayer
     }
 
     internal void AddDouble() => Doubles++;
+
+    internal void MarkLoser() => IsLoser = true;
 
     /// <summary>The player is gone; the score stays, credited to nobody.</summary>
     internal void ForgetPlayer()

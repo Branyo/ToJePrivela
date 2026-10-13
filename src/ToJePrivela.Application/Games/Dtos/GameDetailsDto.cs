@@ -12,7 +12,8 @@ public sealed record GameDetailsDto(
 
 /// <summary>
 /// <see cref="FinalBadPoints"/> is <see cref="BadPoints"/> minus one per double. <see cref="Rank"/> and
-/// <see cref="IsLoser"/> are the game's own verdict (<c>Game.Standings</c>), so clients never decide who lost.
+/// <see cref="IsLoser"/> are the game's own verdict (<c>Game.Standings</c>, the losers stored when it finished), so
+/// clients never decide who lost.
 /// <see cref="PlayerId"/>, <see cref="Name"/> and <see cref="Avatar"/> are null for a player deleted since: an
 /// unknown player whose score stays in the game's history.
 /// </summary>

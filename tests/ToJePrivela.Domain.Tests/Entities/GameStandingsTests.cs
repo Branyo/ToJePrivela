@@ -19,7 +19,7 @@ public class GameStandingsTests
         Cards(Bo, 3, 3, 3);
         Cards(Cy, 3, 2);
 
-        var standings = _game.Standings();
+        var standings = FinishedStandings();
 
         Assert.Equal([Bo, Cy, Ana], standings.Select(s => s.Player.PlayerId));
         Assert.Equal([1, 2, 3], standings.Select(s => s.Rank));
@@ -32,7 +32,7 @@ public class GameStandingsTests
         Cards(Ana, 3, 3);
         Cards(Bo, 2, 2, 2);
 
-        var standings = _game.Standings();
+        var standings = FinishedStandings();
 
         Assert.Equal([1, 1, 3], standings.Select(s => s.Rank));
         Assert.Equal([Ana, Bo], Losers(standings));
@@ -45,18 +45,21 @@ public class GameStandingsTests
         Cards(Bo, 4, 2);
         Cards(Cy, 1);
 
-        var standings = _game.Standings();
+        var standings = FinishedStandings();
 
         Assert.Equal([1, 1, 3], standings.Select(s => s.Rank));
         Assert.Equal([Ana, Bo], Losers(standings));
     }
 
     [Fact]
-    public void Standings_HaveNoLoserWhileNobodyHoldsACard()
+    public void Standings_HaveNoLoserWhileTheGameRuns()
     {
+        Cards(Ana, 3);
+
         var standings = _game.Standings();
 
-        Assert.All(standings, s => Assert.Equal(1, s.Rank));
+        Assert.Equal([Ana, Bo, Cy], standings.Select(s => s.Player.PlayerId));
+        Assert.Equal([1, 2, 2], standings.Select(s => s.Rank));
         Assert.Empty(Losers(standings));
     }
 
@@ -67,7 +70,7 @@ public class GameStandingsTests
         Doubles(Ana, 3);
         Cards(Bo, 3, 2);
 
-        var standings = _game.Standings();
+        var standings = FinishedStandings();
 
         Assert.Equal([Bo, Ana, Cy], standings.Select(s => s.Player.PlayerId));
         Assert.Equal([Bo], Losers(standings));
@@ -80,15 +83,27 @@ public class GameStandingsTests
         Doubles(Ana, 2);
         Doubles(Cy, 1);
 
-        Assert.Equal([Bo], Losers(_game.Standings()));
+        Assert.Equal([Bo], Losers(FinishedStandings()));
     }
 
     [Fact]
-    public void Standings_HaveNoLoserWithOnlyDoublesAndNoCards()
+    public void Standings_KeepTheStoredVerdictWhenTheScoresLaterChangeHands()
     {
-        Doubles(Ana, 1);
+        Cards(Ana, 3);
+        Cards(Bo, 3);
+        _game.Finish(Start.AddHours(1));
+        _game.ForgetPlayer(Bo, Start.AddHours(2));
 
-        Assert.Empty(Losers(_game.Standings()));
+        var standings = _game.Standings();
+
+        Assert.Equal([Ana, null, Cy], standings.Select(s => s.Player.PlayerId));
+        Assert.Equal([true, true, false], standings.Select(s => s.IsLoser));
+    }
+
+    private IReadOnlyList<GameStanding> FinishedStandings()
+    {
+        _game.Finish(Start.AddHours(1));
+        return _game.Standings();
     }
 
     private void Cards(int playerId, params int[] badPoints)

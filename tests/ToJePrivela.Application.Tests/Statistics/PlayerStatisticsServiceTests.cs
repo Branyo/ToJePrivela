@@ -30,24 +30,24 @@ public class PlayerStatisticsServiceTests
 
         Assert.Equal(PlayerErrors.NotFound(7), result.Error);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
-        await _games.DidNotReceiveWithAnyArgs().GetFinishedByPlayerAsync(default, default, default);
+        await _games.DidNotReceiveWithAnyArgs().GetCountedByPlayerAsync(default, default, default);
     }
 
     [Fact]
     public async Task GetAsync_WorksOutThePlayersStatisticsFromTheirGames()
     {
         _players.GetByIdAsync(TestAccountId, 0, Arg.Any<CancellationToken>()).Returns(new Player(TestAccountId, "Brano", "🦊"));
-        var game = new Game(TestAccountId, [0, 1], Start);
+        var game = TestEntities.WithABadCard(new Game(TestAccountId, [0, 1], Start), 1);
         game.AwardDouble(0);
         game.Finish(Start.AddHours(1));
-        _games.GetFinishedByPlayerAsync(TestAccountId, 0, Arg.Any<CancellationToken>()).Returns([game]);
+        _games.GetCountedByPlayerAsync(TestAccountId, 0, Arg.Any<CancellationToken>()).Returns([game]);
 
         var result = await _sut.GetAsync(0);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Brano", result.Value.Player.Name);
-        Assert.Equal((1, 1, 0, 1), (result.Value.GamesPlayed, result.Value.Doubles, result.Value.FlawlessVictories, result.Value.Reversals));
+        Assert.Equal((1, 1, 1, 1), (result.Value.GamesPlayed, result.Value.Doubles, result.Value.FlawlessVictories, result.Value.Reversals));
         Assert.Equal(-1, result.Value.BestGame!.FinalBadPoints);
-        Assert.Null(result.Value.LossIndex);
+        Assert.Equal(0, result.Value.LossIndex);
     }
 }

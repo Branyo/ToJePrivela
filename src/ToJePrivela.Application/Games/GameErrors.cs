@@ -42,6 +42,11 @@ public static class GameErrors
     public static Error StartsInFuture(int gameId) =>
         Error.Validation("Game.StartsInFuture", $"Game {gameId} cannot start later than now.");
 
+    public static Error NoBadCardsYet(int gameId) =>
+        Error.Conflict(
+            "Game.NoBadCardsYet",
+            $"Nobody holds a bad card in game {gameId} yet, so it has no result: keep playing or delete it.");
+
     /// <summary>The error for a rule the domain reported; the rule itself lives in <see cref="Game"/>.</summary>
     public static Error From(GameRuleViolation violation, int gameId, int? playerId = null) => violation switch
     {
@@ -53,6 +58,7 @@ public static class GameErrors
         GameRuleViolation.CannotReopen => CannotReopen(gameId),
         GameRuleViolation.EndsBeforeStart => EndsBeforeStart(gameId),
         GameRuleViolation.StartsInFuture => StartsInFuture(gameId),
+        GameRuleViolation.NoBadCardsYet => NoBadCardsYet(gameId),
         _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
     };
 

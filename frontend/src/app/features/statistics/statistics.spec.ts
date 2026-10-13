@@ -117,4 +117,19 @@ describe('Statistics', () => {
 
     expect((fixture.nativeElement as HTMLElement).querySelector('.error-banner')).not.toBeNull();
   });
+
+  it('says a player id that is not a number cannot be found, without asking the server', async () => {
+    const fixture = TestBed.createComponent(Statistics);
+    fixture.componentRef.setInput('playerId', 'abc');
+    fixture.detectChanges();
+    http.expectOne('/api/players').flush(players);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    http.expectNone((request) => request.url.includes('/statistics'));
+    expect(page.querySelector('.error-banner')?.textContent).toContain('errors.api.Player.NotFound');
+    expect(page.querySelector('.detail__back')).not.toBeNull();
+    expect(page.querySelector('.stats--picked')).not.toBeNull();
+  });
 });

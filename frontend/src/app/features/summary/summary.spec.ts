@@ -107,7 +107,22 @@ describe('Summary', () => {
       }),
     );
 
-    expect(page.querySelector('.spotlight__score')?.textContent?.trim()).toBe('summary.score');
+    expect(page.querySelector('.spotlight__score')?.textContent?.trim()).toBe('summary.scoreTie');
+  });
+
+  it('shows a single loser with the cards behind the points and the doubles taken off', async () => {
+    const page = await render(
+      game({
+        players: [
+          seat(1, 'Ana', { badCards: 3, badPoints: 9, doubles: 1, finalBadPoints: 8, isLoser: true }),
+          seat(2, 'Bo', { badCards: 1, badPoints: 2, finalBadPoints: 2 }),
+        ],
+      }),
+    );
+
+    const score = page.querySelector('.spotlight__score')?.textContent ?? '';
+    expect(score).toContain('summary.score.few'); // Slovak plural of 3 cards
+    expect(score).toContain('summary.doublesOff');
   });
 
   it('offers a rematch when every player still exists', async () => {

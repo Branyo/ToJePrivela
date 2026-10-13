@@ -200,9 +200,15 @@
       <div class="modal__box panel">
         <span class="big-emoji" aria-hidden="true">🏳️</span>
         <h2 id="end-title">{{ 'play.confirmEnd.title' | translate }}</h2>
-        <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
+        @if (store.hasResult()) {
+          <p class="muted">{{ 'play.confirmEnd.text' | translate }}</p>
+        } @else {
+          <p class="muted">{{ 'play.confirmEnd.noResult' | translate }}</p>
+        }
         <div class="actions">
-          <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
+          @if (store.hasResult()) {
+            <button type="button" class="btn btn--danger" (click)="endGame()">{{ 'play.confirmEnd.yes' | translate }}</button>
+          }
           <button #confirmDefault type="button" class="btn" (click)="closeConfirm()">{{ 'play.confirmEnd.no' | translate }}</button>
         </div>
         <button type="button" class="btn btn--ghost" (click)="askDelete()">{{ 'play.confirmEnd.deleteGame' | translate }}</button>

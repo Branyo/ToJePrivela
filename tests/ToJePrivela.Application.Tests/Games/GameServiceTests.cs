@@ -98,7 +98,7 @@ public class GameServiceTests
     [Fact]
     public async Task UpdateAsync_ReschedulesTheGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 1);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
         var finished = Now.UtcDateTime.AddHours(2);
@@ -148,7 +148,7 @@ public class GameServiceTests
     [Fact]
     public async Task UpdateAsync_ReturnsConflictWhenReopeningAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime.AddHours(1));
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
@@ -312,7 +312,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardBadCardAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
@@ -374,7 +374,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardDoubleAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
@@ -435,7 +435,7 @@ public class GameServiceTests
     [Fact]
     public async Task RemoveDoubleAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.AwardDouble(1);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
@@ -448,18 +448,34 @@ public class GameServiceTests
     [Fact]
     public async Task FinishAsync_FinishesTheGameNow()
     {
-        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.FinishAsync(1);
 
         Assert.Equal(Now.UtcDateTime, result.Value.Finished);
+        Assert.True(Assert.Single(result.Value.Players, p => p.PlayerId == 2).IsLoser);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FinishAsync_ReturnsConflictWhileNobodyHoldsABadCard()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.FinishAsync(1);
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        Assert.Equal("Game.NoBadCardsYet", result.Error.Code);
+        Assert.False(game.IsFinished);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task FinishAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 

@@ -91,13 +91,13 @@ public class PlayerStatisticsTests
     }
 
     [Fact]
-    public void For_LeavesAGameWithoutALoserOutOfTheLossIndex()
+    public void For_HasNoLossIndexWhileNoCountedGameHadALoser()
     {
-        var noLoser = Finished(NewGame(Ana, Bo).Doubles(Bo, 1));
+        var running = NewGame(Ana, Bo).Cards(Ana, 2);
         var lost = Finished(NewGame(Ana, Bo).Cards(Ana, 2));
 
-        Assert.Null(PlayerStatistics.For(Ana, [noLoser]).LossIndex);
-        Assert.Equal(2, PlayerStatistics.For(Ana, [noLoser, lost]).LossIndex!.Value, 10);
+        Assert.Null(PlayerStatistics.For(Ana, [running]).LossIndex);
+        Assert.Equal(2, PlayerStatistics.For(Ana, [running, lost]).LossIndex!.Value, 10);
     }
 
     [Fact]
@@ -114,12 +114,11 @@ public class PlayerStatisticsTests
     }
 
     [Fact]
-    public void For_CountsNoFlawlessVictoryWhenThePlayerLostOrNobodyDid()
+    public void For_CountsNoFlawlessVictoryWhenThePlayerLostWithoutABadCard()
     {
         var lostWithoutCards = Finished(NewGame(Ana, Bo).Cards(Bo, 1).Doubles(Bo, 2));
-        var noCards = Finished(NewGame(Ana, Bo));
 
-        var statistics = PlayerStatistics.For(Ana, [lostWithoutCards, noCards]);
+        var statistics = PlayerStatistics.For(Ana, [lostWithoutCards]);
 
         Assert.Equal(1, statistics.Losses);
         Assert.Equal(0, statistics.FlawlessVictories);

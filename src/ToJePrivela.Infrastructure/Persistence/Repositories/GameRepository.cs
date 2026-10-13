@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Domain.Entities;
+using ToJePrivela.Domain.Statistics;
 
 namespace ToJePrivela.Infrastructure.Persistence.Repositories;
 
@@ -15,11 +16,14 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
             .Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId))
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<Game>> GetFinishedByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
-        await Owned(accountId)
+    /// <summary>Only the seats: the statistics never read the players behind them.</summary>
+    public async Task<IReadOnlyList<Game>> GetCountedByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
+        await Set
             .AsNoTracking()
-            .Where(g => g.Started != null && g.Finished != null && !g.IsCancelled)
+            .Where(g => g.AccountId == accountId)
+            .Where(PlayerStatistics.CountedGame)
             .Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId))
+            .Include(g => g.GamePlayers)
             .ToListAsync(cancellationToken);
 
     /// <summary>Always whole: with the players, so the game's rules never run on half an aggregate.</summary>

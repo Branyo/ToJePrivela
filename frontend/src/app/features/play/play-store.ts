@@ -63,6 +63,11 @@ export class PlayStore {
    * The game may be finished or deleted: it is loaded, not over or being ended yet, and no card is on its way. A
    * question still on its way does not hold it up, so a request that never answers cannot trap the players.
    */
+  /**
+   * Whether ending now would count a result: somebody holds a bad card. Until then the game can only be played on or
+   * deleted; the server refuses to finish it (`Game.NoBadCardsYet`).
+   */
+  readonly hasResult = computed(() => this.seats().some((player) => player.badCards > 0));
   readonly canEnd = computed(
     () => !!this.game() && !['ending', 'awarding', 'finished', 'deleted'].includes(this.phase()),
   );

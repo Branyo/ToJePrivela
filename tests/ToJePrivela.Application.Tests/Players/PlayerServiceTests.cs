@@ -218,7 +218,7 @@ public class PlayerServiceTests
     {
         var player = TestEntities.Player(1, "Brano");
         var running = TestEntities.Game(10, [1, 2], Now.UtcDateTime.AddHours(-1));
-        var finished = TestEntities.Game(11, [1, 3], Now.UtcDateTime.AddDays(-1));
+        var finished = TestEntities.WithABadCard(TestEntities.Game(11, [1, 3], Now.UtcDateTime.AddDays(-1)), 3);
         finished.Finish(Now.UtcDateTime.AddDays(-1).AddHours(1));
         _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
         _games.GetByPlayerAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns([running, finished]);

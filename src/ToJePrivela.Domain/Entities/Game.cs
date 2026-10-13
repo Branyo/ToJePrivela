@@ -76,9 +76,14 @@ public class Game
     /// </summary>
     public bool RequiresChosenBadPoints => BadPointsMode == BadPointsMode.Chooser;
 
+    /// <summary>
+    /// Ending a running game is the players' own call, so its result counts as it stands, fair or not. Only a game
+    /// nobody holds a bad card in has no result yet: it can be played on or deleted, not finished.
+    /// </summary>
     public GameRuleViolation? CheckFinish(DateTime finishedAt) =>
         IsFinished ? GameRuleViolation.AlreadyFinished
         : UtcTime.Normalize(finishedAt) < Started ? GameRuleViolation.EndsBeforeStart
+        : !HasBadCards ? GameRuleViolation.NoBadCardsYet
         : null;
 
     public GameRuleViolation? CheckAwardBadCard(int playerId, int? chosenBadPoints) =>
@@ -96,18 +101,22 @@ public class Game
         CheckRunningPlayer(playerId)
         ?? (FindPlayer(playerId)!.Doubles == 0 ? GameRuleViolation.NoDoubleToRemove : null);
 
+    /// <summary>Giving a running game its end is held to the same rule as <see cref="CheckFinish"/>.</summary>
     /// <param name="now">The current time: a game that has not started yet cannot be on record.</param>
     public GameRuleViolation? CheckReschedule(DateTime started, DateTime? finished, DateTime now) =>
         IsFinished && finished is null ? GameRuleViolation.CannotReopen
         : UtcTime.Normalize(started) > UtcTime.Normalize(now) ? GameRuleViolation.StartsInFuture
         : UtcTime.Normalize(finished) < UtcTime.Normalize(started) ? GameRuleViolation.EndsBeforeStart
+        : !IsFinished && finished is not null && !HasBadCards ? GameRuleViolation.NoBadCardsYet
         : null;
 
+    /// <summary>Ends the game and stores its verdict on the players (<see cref="GamePlayer.IsLoser"/>).</summary>
     public void Finish(DateTime finishedAt)
     {
         ThrowIfBroken(CheckFinish(finishedAt));
 
         Finished = UtcTime.Normalize(finishedAt);
+        MarkLosers();
     }
 
     /// <summary>
@@ -168,8 +177,15 @@ public class Game
     {
         ThrowIfBroken(CheckReschedule(started, finished, now));
 
+        var finishesNow = !IsFinished && finished is not null;
+
         Started = UtcTime.Normalize(started);
         Finished = UtcTime.Normalize(finished);
+
+        if (finishesNow)
+        {
+            MarkLosers();
+        }
     }
 
     /// <summary>
@@ -193,32 +209,48 @@ public class Game
     }
 
     /// <summary>
-    /// Where every player stands, worst first: most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus
-    /// doubles); the number of bad cards never breaks a tie. Everyone on the most final bad points loses, so a tie
-    /// is a shared loss; nobody loses while nobody holds a card, nor in a cancelled game. Players who tie share the
-    /// rank and keep their seat order (player id, unknown players last).
+    /// Where every player stands, worst first: the losers (<see cref="GamePlayer.IsLoser"/>, the verdict stored when
+    /// the game finished), then most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus doubles). Players with
+    /// the same verdict and final bad points share the rank and keep their seat order (player id, unknown players
+    /// last). Nobody has lost a running or cancelled game.
     /// </summary>
     public IReadOnlyList<GameStanding> Standings()
     {
         var ordered = _gamePlayers
-            .OrderByDescending(gp => gp.FinalBadPoints)
+            .OrderByDescending(gp => gp.IsLoser)
+            .ThenByDescending(gp => gp.FinalBadPoints)
             .ThenBy(gp => gp.PlayerId ?? int.MaxValue)
             .ToList();
 
-        var anyLoser = !IsCancelled && ordered.Any(gp => gp.BadCards > 0);
         var standings = new List<GameStanding>(ordered.Count);
 
         for (var index = 0; index < ordered.Count; index++)
         {
             var player = ordered[index];
-            var rank = index > 0 && ordered[index - 1].FinalBadPoints == player.FinalBadPoints
-                ? standings[index - 1].Rank
-                : index + 1;
+            var sharesRank = index > 0
+                && ordered[index - 1].IsLoser == player.IsLoser
+                && ordered[index - 1].FinalBadPoints == player.FinalBadPoints;
 
-            standings.Add(new GameStanding(player, rank, anyLoser && player.FinalBadPoints == ordered[0].FinalBadPoints));
+            standings.Add(new GameStanding(player, sharesRank ? standings[index - 1].Rank : index + 1, player.IsLoser));
         }
 
         return standings;
+    }
+
+    private bool HasBadCards => _gamePlayers.Any(gp => gp.BadCards > 0);
+
+    /// <summary>
+    /// The verdict, decided once when the game finishes: everyone on the most final bad points loses, whatever their
+    /// cards (a player without any included), so a tie is a shared loss. A game ended early counts as it stands.
+    /// </summary>
+    private void MarkLosers()
+    {
+        var most = _gamePlayers.Max(gp => gp.FinalBadPoints);
+
+        foreach (var loser in _gamePlayers.Where(gp => gp.FinalBadPoints == most))
+        {
+            loser.MarkLoser();
+        }
     }
 
     private GameRuleViolation? CheckRunningPlayer(int playerId) =>

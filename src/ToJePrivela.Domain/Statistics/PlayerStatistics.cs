@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Domain.Statistics;
@@ -8,10 +9,19 @@ public sealed record GameScore(int GameId, DateTime Finished, int FinalBadPoints
 /// <summary>
 /// A player's record over their counted games: started, finished and not cancelled. Averages are per counted game
 /// and null when there is none.
-/// Who lost each game is the game's own verdict (<see cref="Game.Standings"/>).
+/// Who lost each game is the game's own verdict, stored when it finished (<see cref="GamePlayer.IsLoser"/>).
 /// </summary>
 public sealed class PlayerStatistics
 {
+    /// <summary>
+    /// Which games count: started, finished and not cancelled. The one definition, shared by <see cref="Counts"/>
+    /// and the database query that loads the games.
+    /// </summary>
+    public static readonly Expression<Func<Game, bool>> CountedGame =
+        g => g.Started != null && g.Finished != null && !g.IsCancelled;
+
+    private static readonly Func<Game, bool> IsCounted = CountedGame.Compile();
+
     private PlayerStatistics()
     {
     }
@@ -45,7 +55,7 @@ public sealed class PlayerStatistics
     /// </summary>
     public double? LossIndex { get; private init; }
 
-    /// <summary>Games somebody lost while the player finished without a single bad card.</summary>
+    /// <summary>Games the player finished without a single bad card and did not lose.</summary>
     public int FlawlessVictories { get; private init; }
 
     /// <summary>Games the player ended by reaching the bad card limit, yet somebody else lost.</summary>
@@ -63,12 +73,12 @@ public sealed class PlayerStatistics
     /// <summary>Fewest final bad points in one game; the latest such game on a tie.</summary>
     public GameScore? BestGame { get; private init; }
 
-    /// <summary>Whether the game counts: started, finished and not cancelled.</summary>
+    /// <summary>Whether the game counts (<see cref="CountedGame"/>).</summary>
     public static bool Counts(Game game)
     {
         ArgumentNullException.ThrowIfNull(game);
 
-        return game is { Started: not null, Finished: not null, IsCancelled: false };
+        return IsCounted(game);
     }
 
     /// <param name="games">Any games; only the counted ones the player took part in are used.</param>
@@ -106,7 +116,7 @@ public sealed class PlayerStatistics
             Losses = losses,
             SharedLosses = played.Count(p => p.IsLoss && p.Losers.Count > 1),
             LossIndex = expectedLosses > 0 ? losses / expectedLosses : null,
-            FlawlessVictories = played.Count(p => p.Seat.BadCards == 0 && !p.IsLoss && p.Losers.Count > 0),
+            FlawlessVictories = played.Count(p => p.Seat.BadCards == 0 && !p.IsLoss),
             LuckyFinishes = played.Count(p => !p.IsLoss && p.Seat.BadCards >= p.Game.BadCardLimit),
             ClosestEscapes = played.Count(p =>
                 !p.IsLoss && p.Losers.Count > 0 && p.Seat.FinalBadPoints == p.Losers[0].FinalBadPoints - 1),
@@ -118,7 +128,7 @@ public sealed class PlayerStatistics
     }
 
     private static IReadOnlyList<GamePlayer> Losers(Game game) =>
-        game.Standings().Where(s => s.IsLoser).Select(s => s.Player).ToList();
+        game.GamePlayers.Where(gp => gp.IsLoser).OrderByDescending(gp => gp.FinalBadPoints).ToList();
 
     private static double? Average(int total, int count) => count == 0 ? null : (double)total / count;
 

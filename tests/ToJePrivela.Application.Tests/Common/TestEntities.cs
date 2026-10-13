@@ -39,6 +39,13 @@ public static class TestEntities
         BadPointsMode badPointsMode = BadPointsMode.Question) =>
         WithId(new Game(TestAccountId, playerIds, started, badCardLimit, badPointsMode), id);
 
+    /// <summary>Gives the player a bad card worth 3, so the running game has a result and may be finished.</summary>
+    public static Game WithABadCard(Game game, int playerId)
+    {
+        game.AwardBadCard(playerId, Question(99, "Koľko kolies má auto?", "4", Category(99, "Autá")), null, game.Started!.Value);
+        return game;
+    }
+
     public static Account Account(int id, string name = "brano", bool isAdmin = false, string passwordHash = "hash")
     {
         var account = isAdmin

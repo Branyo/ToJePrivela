@@ -116,17 +116,19 @@ public class GameRepositoryTests : IDisposable
 
         await using (var context = _database.CreateContext())
         {
-            var game = await context.Games.FirstAsync(g => g.Id == gameId);
-            game.Finish(finished);
+            var game = await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == gameId);
+            WithABadCard(game, 2).Finish(finished);
             await context.SaveChangesAsync();
         }
 
         await using var verification = _database.CreateContext();
-        Assert.Equal(finished, (await verification.Games.FirstAsync(g => g.Id == gameId)).Finished);
+        var stored = await verification.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == gameId);
+        Assert.Equal(finished, stored.Finished);
+        Assert.Equal([2], stored.GamePlayers.Where(gp => gp.IsLoser).Select(gp => gp.PlayerId!.Value));
     }
 
     [Fact]
-    public async Task GetFinishedByPlayerAsync_ReadsOnlyThePlayersFinishedNotCancelledGamesUntracked()
+    public async Task GetCountedByPlayerAsync_ReadsOnlyThePlayersFinishedNotCancelledGamesUntracked()
     {
         var finished = await SeedGameAsync([1, 2]);
         await SeedGameAsync([1, 2]); // still running
@@ -135,8 +137,8 @@ public class GameRepositoryTests : IDisposable
 
         await using (var context = _database.CreateContext())
         {
-            (await context.Games.FirstAsync(g => g.Id == finished)).Finish(Start.AddHours(1));
-            (await context.Games.FirstAsync(g => g.Id == withoutPlayer)).Finish(Start.AddHours(1));
+            WithABadCard(await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == finished), 2).Finish(Start.AddHours(1));
+            WithABadCard(await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == withoutPlayer), 2).Finish(Start.AddHours(1));
             var toCancel = await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == cancelled);
             toCancel.ForgetPlayer(3, Start.AddHours(1));
             await context.SaveChangesAsync();
@@ -145,10 +147,11 @@ public class GameRepositoryTests : IDisposable
         await using var lookup = _database.CreateContext();
         var sut = new GameRepository(lookup);
 
-        var games = await sut.GetFinishedByPlayerAsync(TestAccountId, 1);
+        var games = await sut.GetCountedByPlayerAsync(TestAccountId, 1);
 
         Assert.Equal([finished], games.Select(g => g.Id));
-        Assert.Equal(2, games[0].GamePlayers.Count(gp => gp.Player is not null));
+        Assert.Equal(2, games[0].GamePlayers.Count);
+        Assert.All(games[0].GamePlayers, gp => Assert.Null(gp.Player));
         Assert.Empty(lookup.ChangeTracker.Entries());
     }
 
@@ -175,6 +178,13 @@ public class GameRepositoryTests : IDisposable
         Assert.Equal([mine], (await sut.GetAllAsync(TestAccountId)).Select(g => g.Id));
         Assert.Equal([mine], (await sut.GetByPlayerAsync(TestAccountId, 1)).Select(g => g.Id));
         Assert.Equal([theirs], (await sut.GetAllAsync(otherAccountId)).Select(g => g.Id));
+    }
+
+    private static Game WithABadCard(Game game, int playerId)
+    {
+        var question = new Question("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), 3, QuestionSource.Manual, Start);
+        game.AwardBadCard(playerId, question, null, Start.AddMinutes(1));
+        return game;
     }
 
     private async Task<int> SeedGameAsync(int[] playerIds, int accountId = TestAccountId)

@@ -374,6 +374,19 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('finished');
   });
 
+  it('has no result to count while nobody holds a bad card', async () => {
+    await startWithQuestion();
+
+    expect(store.hasResult()).toBe(false);
+  });
+
+  it('has a result to count once somebody holds a bad card', async () => {
+    const [bo, ana] = game().players;
+    await startWithQuestion([], game({ players: [{ ...bo, badPoints: 3, badCards: 1, finalBadPoints: 3 }, ana] }));
+
+    expect(store.hasResult()).toBe(true);
+  });
+
   it('deletes a game', async () => {
     await startWithQuestion();
 
