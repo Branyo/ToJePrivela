@@ -50,7 +50,7 @@ configuration — see the backend README.
    and then taps the player who takes the donkey card, which flies over to that seat. **Skip** (before or
    after the reveal) gives nobody a card. **End game** stops early.
 3. **Results** (`/games/:id/summary`): the game ends when a player reaches the card limit; the player
-   with the most bad points is the loser (card count breaks a tie). Rematch reuses players, limit and
+   with the most final bad points is the loser (a tie is a shared loss; cards never break it). Rematch reuses players, limit and
    categories.
 
 ## Structure

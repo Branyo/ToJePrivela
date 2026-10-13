@@ -38,7 +38,7 @@ export interface GamePlayer {
   finalBadPoints: number;
   /** 1-based, decided by the server; players who stand equal share it. */
   rank: number;
-  /** The server's verdict: most final bad points, ties broken by cards; several on a full tie, nobody without cards. */
+  /** The server's verdict: most final bad points, several on a tie (cards never break it), nobody without cards. */
   isLoser: boolean;
 }
 
@@ -158,4 +158,37 @@ export interface GeneratedAiQuestions {
 
 export interface DeletedAiQuestions {
   deleted: number;
+}
+
+/** The player's final bad points in one game, with the game to link to. */
+export interface GameScore {
+  gameId: number;
+  finished: string;
+  finalBadPoints: number;
+}
+
+/**
+ * A player's record over their finished, not cancelled games. Averages and `lossIndex` are `null` when there is
+ * nothing to average; `worstGame` and `bestGame` are `null` without a counted game.
+ */
+export interface PlayerStatistics {
+  player: Player;
+  gamesPlayed: number;
+  badCards: number;
+  averageBadCards: number | null;
+  finalBadPoints: number;
+  averageFinalBadPoints: number | null;
+  doubles: number;
+  averageDoubles: number | null;
+  averagePlayers: number | null;
+  losses: number;
+  sharedLosses: number;
+  /** Actual loss rate over the expected one (average of losers / players per game); 1 is an average player. */
+  lossIndex: number | null;
+  flawlessVictories: number;
+  luckyFinishes: number;
+  closestEscapes: number;
+  reversals: number;
+  worstGame: GameScore | null;
+  bestGame: GameScore | null;
 }

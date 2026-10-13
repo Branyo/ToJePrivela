@@ -1,0 +1,126 @@
+using ToJePrivela.Domain.Entities;
+
+namespace ToJePrivela.Domain.Statistics;
+
+/// <summary>One game's final bad points for a player, and the game it was scored in.</summary>
+public sealed record GameScore(int GameId, DateTime Finished, int FinalBadPoints);
+
+/// <summary>
+/// A player's record over their counted games: started, finished and not cancelled. Averages are per counted game
+/// and null when there is none.
+/// Who lost each game is the game's own verdict (<see cref="Game.Standings"/>).
+/// </summary>
+public sealed class PlayerStatistics
+{
+    private PlayerStatistics()
+    {
+    }
+
+    public int GamesPlayed { get; private init; }
+
+    public int BadCards { get; private init; }
+
+    public double? AverageBadCards { get; private init; }
+
+    public int FinalBadPoints { get; private init; }
+
+    public double? AverageFinalBadPoints { get; private init; }
+
+    public int Doubles { get; private init; }
+
+    public double? AverageDoubles { get; private init; }
+
+    /// <summary>Seats per game, unknown (deleted) players included.</summary>
+    public double? AveragePlayers { get; private init; }
+
+    /// <summary>Games the player lost, shared losses included.</summary>
+    public int Losses { get; private init; }
+
+    /// <summary>Losses the player shared with at least one other player.</summary>
+    public int SharedLosses { get; private init; }
+
+    /// <summary>
+    /// Actual loss rate over the expected one, the average of (losers / players) per game: 1 is an average player,
+    /// above 1 loses more often than chance. Null when no counted game had a loser.
+    /// </summary>
+    public double? LossIndex { get; private init; }
+
+    /// <summary>Games the player finished without a single bad card.</summary>
+    public int FlawlessVictories { get; private init; }
+
+    /// <summary>Games the player ended by reaching the bad card limit, yet somebody else lost.</summary>
+    public int LuckyFinishes { get; private init; }
+
+    /// <summary>Games the player escaped with exactly one final bad point less than the loser.</summary>
+    public int ClosestEscapes { get; private init; }
+
+    /// <summary>Games the player finished with negative final bad points.</summary>
+    public int Reversals { get; private init; }
+
+    /// <summary>Most final bad points in one game; the latest such game on a tie.</summary>
+    public GameScore? WorstGame { get; private init; }
+
+    /// <summary>Fewest final bad points in one game; the latest such game on a tie.</summary>
+    public GameScore? BestGame { get; private init; }
+
+    /// <summary>Whether the game counts: started, finished and not cancelled.</summary>
+    public static bool Counts(Game game)
+    {
+        ArgumentNullException.ThrowIfNull(game);
+
+        return game is { Started: not null, Finished: not null, IsCancelled: false };
+    }
+
+    /// <param name="games">Any games; only the counted ones the player took part in are used.</param>
+    public static PlayerStatistics For(int playerId, IEnumerable<Game> games)
+    {
+        ArgumentNullException.ThrowIfNull(games);
+
+        var played = games
+            .Where(g => Counts(g) && g.HasPlayer(playerId))
+            .Select(g => new PlayedGame(g, g.GamePlayers.Single(gp => gp.PlayerId == playerId), Losers(g)))
+            .ToList();
+
+        var count = played.Count;
+        var expectedLosses = played.Sum(p => (double)p.Losers.Count / p.Game.GamePlayers.Count);
+        var losses = played.Count(p => p.IsLoss);
+        var scores = played
+            .Select(p => new GameScore(p.Game.Id, p.Game.Finished!.Value, p.Seat.FinalBadPoints))
+            .OrderByDescending(s => s.Finished)
+            .ThenByDescending(s => s.GameId)
+            .ToList();
+
+        return new PlayerStatistics
+        {
+            GamesPlayed = count,
+            BadCards = played.Sum(p => p.Seat.BadCards),
+            AverageBadCards = Average(played.Sum(p => p.Seat.BadCards), count),
+            FinalBadPoints = played.Sum(p => p.Seat.FinalBadPoints),
+            AverageFinalBadPoints = Average(played.Sum(p => p.Seat.FinalBadPoints), count),
+            Doubles = played.Sum(p => p.Seat.Doubles),
+            AverageDoubles = Average(played.Sum(p => p.Seat.Doubles), count),
+            AveragePlayers = Average(played.Sum(p => p.Game.GamePlayers.Count), count),
+            Losses = losses,
+            SharedLosses = played.Count(p => p.IsLoss && p.Losers.Count > 1),
+            LossIndex = expectedLosses > 0 ? losses / expectedLosses : null,
+            FlawlessVictories = played.Count(p => p.Seat.BadCards == 0),
+            LuckyFinishes = played.Count(p => !p.IsLoss && p.Seat.BadCards >= p.Game.BadCardLimit),
+            ClosestEscapes = played.Count(p =>
+                !p.IsLoss && p.Losers.Count > 0 && p.Seat.FinalBadPoints == p.Losers[0].FinalBadPoints - 1),
+            Reversals = played.Count(p => p.Seat.FinalBadPoints < 0),
+            // Stable sorts over the latest-first list keep the latest game on a tie.
+            WorstGame = scores.OrderByDescending(s => s.FinalBadPoints).FirstOrDefault(),
+            BestGame = scores.OrderBy(s => s.FinalBadPoints).FirstOrDefault(),
+        };
+    }
+
+    private static IReadOnlyList<GamePlayer> Losers(Game game) =>
+        game.Standings().Where(s => s.IsLoser).Select(s => s.Player).ToList();
+
+    private static double? Average(int total, int count) => count == 0 ? null : (double)total / count;
+
+    private sealed record PlayedGame(Game Game, GamePlayer Seat, IReadOnlyList<GamePlayer> Losers)
+    {
+        public bool IsLoss => Losers.Contains(Seat);
+    }
+}

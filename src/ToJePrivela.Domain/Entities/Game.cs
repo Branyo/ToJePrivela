@@ -194,15 +194,14 @@ public class Game
 
     /// <summary>
     /// Where every player stands, worst first: most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus
-    /// doubles), a tie broken by the number of bad cards. Whoever stands first loses, several players on a full
-    /// tie; nobody loses while nobody holds a card, nor in a cancelled game. Players who tie keep their seat order
-    /// (player id, unknown players last).
+    /// doubles); the number of bad cards never breaks a tie. Everyone on the most final bad points loses, so a tie
+    /// is a shared loss; nobody loses while nobody holds a card, nor in a cancelled game. Players who tie share the
+    /// rank and keep their seat order (player id, unknown players last).
     /// </summary>
     public IReadOnlyList<GameStanding> Standings()
     {
         var ordered = _gamePlayers
             .OrderByDescending(gp => gp.FinalBadPoints)
-            .ThenByDescending(gp => gp.BadCards)
             .ThenBy(gp => gp.PlayerId ?? int.MaxValue)
             .ToList();
 
@@ -212,16 +211,15 @@ public class Game
         for (var index = 0; index < ordered.Count; index++)
         {
             var player = ordered[index];
-            var rank = index > 0 && SameStanding(ordered[index - 1], player) ? standings[index - 1].Rank : index + 1;
+            var rank = index > 0 && ordered[index - 1].FinalBadPoints == player.FinalBadPoints
+                ? standings[index - 1].Rank
+                : index + 1;
 
-            standings.Add(new GameStanding(player, rank, anyLoser && SameStanding(ordered[0], player)));
+            standings.Add(new GameStanding(player, rank, anyLoser && player.FinalBadPoints == ordered[0].FinalBadPoints));
         }
 
         return standings;
     }
-
-    private static bool SameStanding(GamePlayer a, GamePlayer b) =>
-        a.FinalBadPoints == b.FinalBadPoints && a.BadCards == b.BadCards;
 
     private GameRuleViolation? CheckRunningPlayer(int playerId) =>
         IsFinished ? GameRuleViolation.AlreadyFinished

@@ -5,7 +5,8 @@
     "language": "Language",
     "menu": "Menu",
     "signOut": "Sign out",
-    "settings": "Settings"
+    "settings": "Settings",
+    "statistics": "Statistics"
   },
   "languages": {
     "sk": "Slovenčina",
@@ -20,7 +21,8 @@
     "questions": "Questions",
     "players": "Players",
     "categories": "Categories",
-    "password": "Password"
+    "password": "Password",
+    "statistics": "Statistics"
   },
   "common": {
     "dateTime": "d MMM, HH:mm",
@@ -399,5 +401,79 @@
     "submit": "Change password",
     "saving": "Saving…",
     "changed": "The password has been changed. Other devices need to sign in with the new one."
+  },
+  "statistics": {
+    "title": "Player statistics",
+    "players": "Players",
+    "noPlayers": "No players yet. Add some in the settings.",
+    "loading": "Loading…",
+    "pick": "Pick a player to see their statistics.",
+    "back": "All players",
+    "perGame": "{{value}} per game",
+    "groups": {
+      "games": "🎲 Games",
+      "cards": "🫏 Cards & points",
+      "losses": "😵 Losses",
+      "feats": "🏅 Feats",
+      "records": "📌 Records"
+    },
+    "metrics": {
+      "gamesPlayed": {
+        "label": "Games played",
+        "hint": "Finished games the player sat in."
+      },
+      "averagePlayers": {
+        "label": "Players per game",
+        "hint": "Average number of players at the table."
+      },
+      "badCards": {
+        "label": "Bad cards",
+        "hint": "Number of donkey cards taken in all games."
+      },
+      "finalBadPoints": {
+        "label": "Final bad points",
+        "hint": "Bad points minus doubles, in all games."
+      },
+      "doubles": {
+        "label": "Doubles",
+        "hint": "Doubles that held."
+      },
+      "losses": {
+        "label": "Losses",
+        "hint": "Games ended on the most final bad points, shared ones included."
+      },
+      "sharedLosses": {
+        "label": "Shared losses",
+        "hint": "Losses tied with another player."
+      },
+      "lossIndex": {
+        "label": "Loss index",
+        "hint": "Actual loss rate over the expected one. 1 is average, above 1 loses more often than chance."
+      },
+      "flawlessVictories": {
+        "label": "Flawless victory",
+        "hint": "Games without a single bad card."
+      },
+      "luckyFinishes": {
+        "label": "Lucky finishing",
+        "hint": "Ended the game by reaching the card limit, yet somebody else lost."
+      },
+      "closestEscapes": {
+        "label": "Closest escape",
+        "hint": "Exactly one final point below the loser."
+      },
+      "reversals": {
+        "label": "Reverser",
+        "hint": "Games ended below zero final points."
+      },
+      "worstGame": {
+        "label": "Worst single game",
+        "hint": "Most final bad points in one game."
+      },
+      "bestGame": {
+        "label": "Best single game",
+        "hint": "Fewest final bad points in one game."
+      }
+    }
   }
 }

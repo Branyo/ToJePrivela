@@ -1,0 +1,120 @@
+import { registerLocaleData } from '@angular/common';
+import localeSk from '@angular/common/locales/sk';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideTranslateService } from '@ngx-translate/core';
+import { Player, PlayerStatistics } from '../../core/api/models';
+import { NONE, Statistics } from './statistics';
+
+const players: Player[] = [
+  { id: 2, name: 'Zuzka', avatar: '🦊' },
+  { id: 1, name: 'Čaba', avatar: '🐙' },
+  { id: 3, name: 'Adam', avatar: '🐸' },
+];
+
+const statistics = (overrides: Partial<PlayerStatistics> = {}): PlayerStatistics => ({
+  player: players[0],
+  gamesPlayed: 3,
+  badCards: 7,
+  averageBadCards: 7 / 3,
+  finalBadPoints: 12,
+  averageFinalBadPoints: 4,
+  doubles: 1,
+  averageDoubles: 1 / 3,
+  averagePlayers: 3.5,
+  losses: 1,
+  sharedLosses: 0,
+  lossIndex: 1.25,
+  flawlessVictories: 1,
+  luckyFinishes: 0,
+  closestEscapes: 2,
+  reversals: 0,
+  worstGame: { gameId: 9, finished: '2026-09-25T19:00:00Z', finalBadPoints: 8 },
+  bestGame: { gameId: 4, finished: '2026-09-20T19:00:00Z', finalBadPoints: 0 },
+  ...overrides,
+});
+
+// The app registers it in `app.config.ts`; dates on the page are formatted for the Slovak default.
+registerLocaleData(localeSk, 'sk-SK');
+
+describe('Statistics', () => {
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [Statistics],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideTranslateService()],
+    });
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  async function render(playerId?: number, reply?: PlayerStatistics): Promise<ComponentFixture<Statistics>> {
+    const fixture = TestBed.createComponent(Statistics);
+    if (playerId !== undefined) {
+      fixture.componentRef.setInput('playerId', String(playerId));
+    }
+    fixture.detectChanges();
+    http.expectOne('/api/players').flush(players);
+    if (playerId !== undefined && reply) {
+      http.expectOne(`/api/players/${playerId}/statistics`).flush(reply);
+    }
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const metric = (page: HTMLElement, key: string) =>
+    page.querySelector(`[data-metric="${key}"] .tile__value`)?.textContent?.trim();
+
+  it('lists the players alphabetically by the Slovak rules', async () => {
+    const page = (await render()).nativeElement as HTMLElement;
+
+    const names = Array.from(page.querySelectorAll('.roster__name')).map((el) => el.textContent?.trim());
+    expect(names).toEqual(['Adam', 'Čaba', 'Zuzka']);
+    expect(page.querySelector('.tile')).toBeNull();
+  });
+
+  it("shows the picked player's totals and averages rounded to two decimals", async () => {
+    const page = (await render(2, statistics())).nativeElement as HTMLElement;
+
+    expect(page.querySelector('.detail__head h2')?.textContent).toContain('Zuzka');
+    expect(metric(page, 'gamesPlayed')).toBe('3');
+    expect(metric(page, 'badCards')).toBe('7');
+    expect(page.querySelector('[data-metric="badCards"] .tile__average')).not.toBeNull();
+    expect(metric(page, 'averagePlayers')).toBe('3,50');
+    expect(metric(page, 'lossIndex')).toBe('1,25');
+    expect(metric(page, 'worstGame')).toBe('8');
+    expect(page.querySelector('[data-metric="worstGame"] a')?.getAttribute('href')).toBe('/games/9/summary');
+  });
+
+  it('shows a dash where there is nothing to average', async () => {
+    const empty = statistics({
+      gamesPlayed: 0,
+      averageBadCards: null,
+      averagePlayers: null,
+      lossIndex: null,
+      worstGame: null,
+      bestGame: null,
+    });
+    const page = (await render(2, empty)).nativeElement as HTMLElement;
+
+    expect(metric(page, 'averagePlayers')).toBe(NONE);
+    expect(metric(page, 'lossIndex')).toBe(NONE);
+    expect(metric(page, 'bestGame')).toBe(NONE);
+    expect(page.querySelector('[data-metric="bestGame"] a')).toBeNull();
+  });
+
+  it('shows the error for a player that cannot be found', async () => {
+    const fixture = await render(42);
+    http
+      .expectOne('/api/players/42/statistics')
+      .flush({ code: 'Player.NotFound', detail: 'Player with id 42 was not found.' }, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.error-banner')).not.toBeNull();
+  });
+});

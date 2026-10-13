@@ -1,0 +1,94 @@
+<section class="page stats" [class.stats--picked]="playerId() !== undefined">
+  <h1 class="stats__title">📊 {{ 'statistics.title' | translate }}</h1>
+
+  @if (playersError(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  <div class="stats__layout">
+    <nav class="panel roster" [attr.aria-label]="'statistics.players' | translate">
+      @if (sortedPlayers(); as players) {
+        @if (players.length === 0) {
+          <p class="muted">{{ 'statistics.noPlayers' | translate }}</p>
+        } @else {
+          <ul class="roster__list">
+            @for (player of players; track player.id) {
+              <li>
+                <a
+                  class="roster__item"
+                  [routerLink]="['/statistics', player.id]"
+                  routerLinkActive="roster__item--on"
+                  ariaCurrentWhenActive="page"
+                >
+                  <app-player-avatar [avatar]="player.avatar" />
+                  <span class="roster__name">{{ player.name }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      } @else if (!playersError()) {
+        <p class="muted">{{ 'statistics.loading' | translate }}</p>
+      }
+    </nav>
+
+    <section class="detail" aria-live="polite">
+      @if (playerId() === undefined) {
+        <p class="panel detail__hint muted">{{ 'statistics.pick' | translate }}</p>
+      } @else {
+        <a routerLink="/statistics" class="btn btn--ghost detail__back">← {{ 'statistics.back' | translate }}</a>
+
+        @if (statisticsError(); as message) {
+          <p class="error-banner" role="alert">{{ message | message }}</p>
+        } @else if (statistics(); as s) {
+          <header class="panel detail__head">
+            <app-player-avatar [avatar]="s.player.avatar" />
+            <h2>{{ s.player.name }}</h2>
+          </header>
+
+          @for (group of groups(); track group.key) {
+            <section class="group">
+              <h3 class="group__title">{{ 'statistics.groups.' + group.key | translate }}</h3>
+              <ul class="tiles">
+                @for (tile of group.tiles; track tile.key) {
+                  <li class="tile" [attr.data-metric]="tile.key">
+                    <span class="tile__icon" aria-hidden="true">{{ tile.icon }}</span>
+                    <span class="tile__label">{{ 'statistics.metrics.' + tile.key + '.label' | translate }}</span>
+                    <strong class="tile__value">{{ tile.value }}</strong>
+                    @if (tile.average !== undefined) {
+                      <span class="tile__average">{{ 'statistics.perGame' | translate: { value: tile.average } }}</span>
+                    }
+                    <span class="tile__hint muted">{{ 'statistics.metrics.' + tile.key + '.hint' | translate }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <section class="group">
+            <h3 class="group__title">{{ 'statistics.groups.records' | translate }}</h3>
+            <ul class="tiles">
+              @for (record of records(); track record.key) {
+                <li class="tile" [attr.data-metric]="record.key">
+                  <span class="tile__icon" aria-hidden="true">{{ record.icon }}</span>
+                  <span class="tile__label">{{ 'statistics.metrics.' + record.key + '.label' | translate }}</span>
+                  @if (record.score; as score) {
+                    <strong class="tile__value">{{ format(score.finalBadPoints, 0) }}</strong>
+                    <a class="tile__link" [routerLink]="['/games', score.gameId, 'summary']">
+                      {{ score.finished | date: ('common.dateTime' | translate) : undefined : i18n.locale() }} →
+                    </a>
+                  } @else {
+                    <strong class="tile__value">{{ none }}</strong>
+                  }
+                  <span class="tile__hint muted">{{ 'statistics.metrics.' + record.key + '.hint' | translate }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        } @else {
+          <p class="muted">{{ 'statistics.loading' | translate }}</p>
+        }
+      }
+    </section>
+  </div>
+</section>

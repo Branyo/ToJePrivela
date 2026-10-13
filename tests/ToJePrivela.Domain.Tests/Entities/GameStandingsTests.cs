@@ -27,15 +27,15 @@ public class GameStandingsTests
     }
 
     [Fact]
-    public void Standings_BreakAPointsTieWithTheNumberOfCards()
+    public void Standings_NeverBreakAPointsTieWithTheNumberOfCards()
     {
         Cards(Ana, 3, 3);
         Cards(Bo, 2, 2, 2);
 
         var standings = _game.Standings();
 
-        Assert.Equal(Bo, standings[0].Player.PlayerId);
-        Assert.Equal([Bo], Losers(standings));
+        Assert.Equal([1, 1, 3], standings.Select(s => s.Rank));
+        Assert.Equal([Ana, Bo], Losers(standings));
     }
 
     [Fact]

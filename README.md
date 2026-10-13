@@ -153,6 +153,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET | `/api/players` | |
 | GET/PUT/DELETE | `/api/players/{id}` | |
 | POST | `/api/players` | 409 `Player.NameTaken` when the login already has the name (case-insensitive); 409 `Player.LimitReached` at 100 players per login |
+| GET | `/api/players/{id}/statistics` | The player's record over finished, not cancelled games (see *Player statistics* below); 404 for another login's player |
 | GET | `/api/games` | |
 | GET/PUT/DELETE | `/api/games/{id}` | DELETE removes the game (finished or not) with its scores; players stay. Unlike a player deletion, which marks running games `cancelled`, nothing remains |
 | GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
@@ -265,6 +266,15 @@ a `CreatedAt` timestamp.
   goes out; the client holds the card request until every double tapped before it is saved. Each seat
   has a − / + stepper; − takes back a mis-tapped double (`DELETE /api/games/{id}/doubles/{playerId}`),
   never below zero doubles.
+
+- **Player statistics.** `GET /api/players/{id}/statistics` is worked out on every request from the
+  player's games that are finished and not cancelled (`Domain/Statistics/PlayerStatistics`); nothing is
+  stored. Who lost is the game's own verdict (`Game.Standings`): everyone on the most final bad points,
+  never a tie broken by cards, and nobody while nobody holds a card. The loss index is
+  the actual loss rate over the expected one, the average of (losers / players) per game, so a game
+  without a loser counts for nothing and a shared loss weighs as much as chance says. A closest escape is
+  exactly one final point below the loser; best and worst games pick the latest game on a tie. Averages
+  and the loss index are null without anything to average. The frontend shows it at `/statistics`.
 
 ## Frontend
 
