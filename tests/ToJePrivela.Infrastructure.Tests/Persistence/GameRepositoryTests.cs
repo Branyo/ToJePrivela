@@ -158,7 +158,7 @@ public class GameRepositoryTests : IDisposable
 
         Assert.Equal([finished], games.Select(g => g.Id));
         Assert.Equal(2, games[0].GamePlayers.Count);
-        Assert.All(games[0].GamePlayers, gp => Assert.NotNull(gp.Player));
+        Assert.All(games[0].GamePlayers, gp => Assert.Null(gp.Player));
         Assert.Empty(lookup.ChangeTracker.Entries());
     }
 
@@ -184,6 +184,60 @@ public class GameRepositoryTests : IDisposable
         await using var verification = _database.CreateContext();
         var stored = await verification.GamePlayers.SingleAsync(gp => gp.GameId == gameId && gp.PlayerId == 1);
         Assert.Equal((0, true), (stored.Doubles, stored.IsLoser));
+    }
+
+    [Fact]
+    public async Task EverySaveThatChangesTheGameOrAPlayerBumpsTheVersionOnce()
+    {
+        var gameId = await SeedGameAsync([1, 2, 3]);
+        var versions = new List<long> { await VersionAsync(gameId) };
+
+        async Task Change(Action<Game> change)
+        {
+            await using var context = _database.CreateContext();
+            change((await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!);
+            await new UnitOfWork(context).SaveChangesAsync();
+            versions.Add(await VersionAsync(gameId));
+        }
+
+        var question = TestQuestion(badPoints: 2);
+        await Change(game => game.AwardDouble(1));
+        await Change(game => game.RemoveDouble(1));
+        await Change(game => game.AwardBadCard(1, question, null, Start.AddMinutes(1)));
+        await Change(game => game.Reschedule(Start.AddMinutes(-5), null, Start.AddHours(1)));
+        await Change(game => game.Finish(Start.AddHours(1)));
+        await Change(game => game.ForgetPlayer(2, Start.AddHours(2)));
+
+        Assert.Equal(Enumerable.Range(0, versions.Count).Select(i => versions[0] + i), versions);
+    }
+
+    [Fact]
+    public async Task ACardReachingTheLimitBumpsTheVersionOnce_AndASaveWithoutChangesNotAtAll()
+    {
+        int gameId;
+
+        await using (var seeding = _database.CreateContext())
+        {
+            var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
+            seeding.Games.Add(game);
+            await seeding.SaveChangesAsync();
+            gameId = game.Id;
+        }
+
+        var before = await VersionAsync(gameId);
+
+        await using (var context = _database.CreateContext())
+        {
+            var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
+            await new UnitOfWork(context).SaveChangesAsync();
+            Assert.Equal(before, await VersionAsync(gameId));
+
+            game.AwardBadCard(1, TestQuestion(badPoints: 2), null, Start.AddMinutes(1));
+            game.AwardBadCard(1, TestQuestion(badPoints: 2), null, Start.AddMinutes(2));
+            await new UnitOfWork(context).SaveChangesAsync();
+        }
+
+        Assert.Equal(before + 1, await VersionAsync(gameId));
     }
 
     [Fact]
@@ -213,9 +267,17 @@ public class GameRepositoryTests : IDisposable
 
     private static Game WithABadCard(Game game, int playerId)
     {
-        var question = new Question("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), 3, QuestionSource.Manual, Start);
-        game.AwardBadCard(playerId, question, null, Start.AddMinutes(1));
+        game.AwardBadCard(playerId, TestQuestion(badPoints: 3), null, Start.AddMinutes(1));
         return game;
+    }
+
+    private static Question TestQuestion(int badPoints) =>
+        new("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, Start);
+
+    private async Task<long> VersionAsync(int gameId)
+    {
+        await using var context = _database.CreateContext();
+        return await context.Games.Where(g => g.Id == gameId).Select(g => g.Version).SingleAsync();
     }
 
     private async Task<int> SeedGameAsync(int[] playerIds, int accountId = TestAccountId)

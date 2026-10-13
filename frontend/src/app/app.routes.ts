@@ -1,7 +1,17 @@
-import { Routes } from '@angular/router';
+import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { adminGuard, notAdminGuard, signedInGuard, signedOutGuard } from './core/auth/auth-guards';
 
-const loadStatistics = () => import('./features/statistics/statistics').then((m) => m.Statistics);
+/**
+ * `/statistics` and `/statistics/:playerId` as one route: moving between them reuses the page (its roster and scroll
+ * position) and only the bound `playerId` input changes. Two sibling routes would rebuild it on every pick.
+ */
+export function statisticsMatcher(segments: UrlSegment[]): UrlMatchResult | null {
+  if (segments[0]?.path !== 'statistics' || segments.length > 2) {
+    return null;
+  }
+
+  return { consumed: segments, posParams: segments.length === 2 ? { playerId: segments[1] } : {} };
+}
 
 /** Titles are translation keys, see `TranslatedTitleStrategy`. Everything but signing in needs a signed-in account. */
 export const routes: Routes = [
@@ -49,12 +59,9 @@ export const routes: Routes = [
         ],
       },
       {
-        path: 'statistics',
+        matcher: statisticsMatcher,
+        loadComponent: () => import('./features/statistics/statistics').then((m) => m.Statistics),
         title: 'titles.statistics',
-        children: [
-          { path: '', loadComponent: loadStatistics },
-          { path: ':playerId', loadComponent: loadStatistics },
-        ],
       },
       { path: 'games/:id', loadComponent: () => import('./features/play/play').then((m) => m.Play), title: 'titles.play' },
       {

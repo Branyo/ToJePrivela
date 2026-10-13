@@ -483,4 +483,52 @@ public class GameServiceTests
 
         Assert.Equal(ErrorType.Conflict, result.Error.Type);
     }
+
+    [Fact]
+    public async Task AwardDoubleAsync_MakesTheChangeAgainOnTheGameAsAnotherRequestLeftIt()
+    {
+        var stale = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var fresh = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        fresh.AwardDouble(2);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(stale, fresh);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ => throw Conflict(), _ => Task.FromResult(1));
+
+        var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 1 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal([1, 1], result.Value.Players.Select(p => p.Doubles));
+        _unitOfWork.Received(1).DiscardChanges();
+        await _unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_OnAGameFinishedMeanwhileReturnsAlreadyFinished()
+    {
+        var finished = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
+        finished.Finish(Now.UtcDateTime);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime), finished);
+        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        Assert.Equal("Game.AlreadyFinished", result.Error.Code);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FinishAsync_LetsTheConflictThroughAfterTheLastAttempt()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(_ => TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        await Assert.ThrowsAsync<ConcurrencyConflictException>(() => _sut.FinishAsync(1));
+        await _unitOfWork.Received(GameService.MaxChangeAttempts).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    private static ConcurrencyConflictException Conflict() => new("A row changed since it was read.", new Exception());
 }

@@ -13,6 +13,9 @@ namespace ToJePrivela.Application.Players;
 /// </summary>
 public sealed class PlayerService : IPlayerService
 {
+    /// <summary>How often a deletion is made again when the player's games keep changing under it.</summary>
+    public const int MaxDeleteAttempts = 3;
+
     private readonly IPlayerRepository _players;
     private readonly IGameRepository _games;
     private readonly IUnitOfWork _unitOfWork;
@@ -131,23 +134,35 @@ public sealed class PlayerService : IPlayerService
     /// </summary>
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var player = await _players.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
-
-        if (player is null)
+        for (var attempt = 1; ; attempt++)
         {
-            return Result.Failure(PlayerErrors.NotFound(id));
+            var player = await _players.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
+
+            if (player is null)
+            {
+                return Result.Failure(PlayerErrors.NotFound(id));
+            }
+
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+            foreach (var game in await _games.GetByPlayerAsync(_currentAccount.Id, id, cancellationToken))
+            {
+                game.ForgetPlayer(id, now);
+            }
+
+            _players.Remove(player);
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result.Success();
+            }
+            catch (ConcurrencyConflictException) when (attempt < MaxDeleteAttempts)
+            {
+                // One of the player's games changed meanwhile (a card or a double in a running game): read them
+                // again and forget the player in the games as they are now.
+                _unitOfWork.DiscardChanges();
+            }
         }
-
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-
-        foreach (var game in await _games.GetByPlayerAsync(_currentAccount.Id, id, cancellationToken))
-        {
-            game.ForgetPlayer(id, now);
-        }
-
-        _players.Remove(player);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success();
     }
 }

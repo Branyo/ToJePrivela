@@ -67,37 +67,31 @@ public class GameTests
     }
 
     [Fact]
-    public void EveryChangeBumpsTheVersion()
+    public void HasResult_OnceSomebodyHoldsABadCard_AnUnknownPlayerIncluded()
     {
-        var game = new Game(TestAccountId, [1, 2, 3], Start);
-        var versions = new List<long> { game.Version };
+        var game = new Game(TestAccountId, [1, 2], Start);
+        game.AwardDouble(2);
 
-        game.AwardDouble(1);
-        versions.Add(game.Version);
-        game.RemoveDouble(1);
-        versions.Add(game.Version);
+        Assert.False(game.HasResult);
+
         game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(1));
-        versions.Add(game.Version);
-        game.Reschedule(Start.AddMinutes(-5), null, Now);
-        versions.Add(game.Version);
-        game.Finish(Start.AddHours(1));
-        versions.Add(game.Version);
-        game.ForgetPlayer(2, Start.AddHours(2));
-        versions.Add(game.Version);
+        game.ForgetPlayer(1, Start.AddMinutes(2));
 
-        Assert.Equal(versions.Order(), versions);
-        Assert.Equal(versions.Count, versions.Distinct().Count());
+        Assert.True(game.HasResult);
     }
 
     [Fact]
-    public void RejectedChangeKeepsTheVersion()
+    public void AwardBadCard_ReachingTheLimitBeforeTheStartEndsTheGameAtTheStart()
     {
-        var game = new Game(TestAccountId, [1, 2], Start);
-        var initial = game.Version;
+        // The start was just corrected to a time the server's clock had not reached when the card came.
+        var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
+        game.AwardBadCard(1, QuestionWorth(2), null, Start.AddMinutes(1));
+        game.Reschedule(Start.AddMinutes(10), null, Start.AddMinutes(10));
 
-        Assert.Throws<DomainException>(() => game.Finish(Start.AddHours(1)));
-        Assert.Throws<DomainException>(() => game.RemoveDouble(1));
-        Assert.Equal(initial, game.Version);
+        game.AwardBadCard(1, QuestionWorth(2), null, Start.AddMinutes(9));
+
+        Assert.Equal(Start.AddMinutes(10), game.Finished);
+        Assert.True(Assert.Single(game.GamePlayers, gp => gp.PlayerId == 1).IsLoser);
     }
 
     [Fact]

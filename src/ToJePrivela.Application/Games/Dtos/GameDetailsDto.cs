@@ -1,6 +1,10 @@
 namespace ToJePrivela.Application.Games.Dtos;
 
 /// <param name="Cancelled">Ended without a result (and without a loser) because a player was deleted.</param>
+/// <param name="HasResult">
+/// Somebody holds a bad card (<c>Game.HasResult</c>): only then can the game be finished; clients follow it instead of
+/// deciding themselves.
+/// </param>
 public sealed record GameDetailsDto(
     int Id,
     DateTime? Started,
@@ -8,6 +12,7 @@ public sealed record GameDetailsDto(
     int BadCardLimit,
     string BadPointsMode,
     bool Cancelled,
+    bool HasResult,
     IReadOnlyList<GamePlayerDto> Players);
 
 /// <summary>

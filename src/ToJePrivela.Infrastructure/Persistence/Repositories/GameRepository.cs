@@ -12,18 +12,22 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
     }
 
     public async Task<IReadOnlyList<Game>> GetByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
-        await Owned(accountId)
-            .Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId))
-            .ToListAsync(cancellationToken);
+        await ByPlayer(Owned(accountId), playerId).ToListAsync(cancellationToken);
 
+    /// <summary>
+    /// The scores are all statistics read, so the seats come without their <see cref="GamePlayer.Player"/>: loading
+    /// one per seat of every game would grow with the account's history for nothing.
+    /// </summary>
     public async Task<IReadOnlyList<Game>> GetCountedByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
-        await Owned(accountId)
+        await ByPlayer(Set.Where(g => g.AccountId == accountId).Include(g => g.GamePlayers), playerId)
             .AsNoTracking()
             .Where(PlayerStatistics.CountedGame)
-            .Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId))
             .ToListAsync(cancellationToken);
 
     /// <summary>Always whole: with the players, so the game's rules never run on half an aggregate.</summary>
     protected override IQueryable<Game> Owned(int accountId) =>
         Set.Where(g => g.AccountId == accountId).Include(g => g.GamePlayers).ThenInclude(gp => gp.Player);
+
+    private static IQueryable<Game> ByPlayer(IQueryable<Game> games, int playerId) =>
+        games.Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId));
 }

@@ -60,6 +60,8 @@ export interface GameDetails {
   badPointsMode: BadPointsMode;
   /** Ended without a result (and without a loser) because one of its players was deleted. */
   cancelled: boolean;
+  /** Somebody holds a bad card: only then can the game be finished (`Game.NoBadCardsYet` otherwise). */
+  hasResult: boolean;
   players: GamePlayer[];
 }
 

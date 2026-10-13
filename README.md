@@ -249,12 +249,15 @@ a `CreatedAt` timestamp.
   selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`.
   **For now the view counts are shared between the logins**, like the questions themselves: a question shown in one
   login's game counts as viewed for every login, so one login's games change which questions the others draw next.
-- **Optimistic concurrency on questions and games.** `Question.Version` and `Game.Version` are row versions the
-  entity bumps on every change (SQLite has no native rowversion) and EF checks as a concurrency token. A lost race
-  surfaces as `ConcurrencyConflictException`; recording a view rereads the row and retries (up to 5 attempts, then
-  409), and any other conflicting change becomes a 409 through `ConcurrencyConflictExceptionHandler`. On a game it
-  keeps the stored verdict true: a double or card saved against a game that finished meanwhile is refused instead
-  of changing the scores behind the losers.
+- **Optimistic concurrency on questions and games.** `Question.Version` and `Game.Version` are row versions (SQLite
+  has no native rowversion) that EF checks as a concurrency token. A question bumps its own on every change; a game's
+  is bumped by the `DbContext`, once per save that changes the game or any of its players, so no domain method can
+  forget it. A lost race surfaces as `ConcurrencyConflictException`; recording a view rereads the row and retries
+  (up to 5 attempts, then 409). A game change (card, double, finish, reschedule) and a player deletion reread the game
+  and make the change again on it (up to 3 attempts), so two devices tapping at once both count, and a card or double
+  for a game finished meanwhile gets the usual 409 `Game.AlreadyFinished`; only a conflict that outlasts the attempts
+  becomes a generic 409 through `ConcurrencyConflictExceptionHandler`. On a game this keeps the stored verdict true:
+  the scores never change behind the losers.
 
 - **Bad cards.** A game ends as soon as one player holds `BadCardLimit` cards. `GamePlayer` keeps the
   card count (`BadCards`) and their sum (`BadPoints`); the value of a card always comes from the stored
@@ -266,9 +269,10 @@ a `CreatedAt` timestamp.
   doubles push everyone else below them. Nobody has lost a running or cancelled game. Ending a game early
   (`POST /api/games/{id}/finish`, or `PUT` giving a running game its end) is the players' own choice, so
   its result counts as it stands even when that is not fair to everyone; only a game nobody holds a bad
-  card in cannot be finished (409 `Game.NoBadCardsYet`): it can be played on or deleted. Games finished
-  before the verdict was stored got it from the `StoreGameLosers` migration, under the rule they were
-  shown with (a tie on final bad points broken by the number of cards).
+  card in cannot be finished (409 `Game.NoBadCardsYet`): it can be played on or deleted; `GameDetailsDto.hasResult`
+  tells clients which, so they never decide it themselves. Games finished before the verdict was stored got it from
+  the `StoreGameLosers` migration under the old rule (a tie broken by the number of cards); `ShareTiedLosses` then
+  marked every tied player of those games as a loser, so all finished games follow the shared-loss rule.
 
 - **Doubles.** A player who thinks the previous estimate is too low calls "double" and at least doubles
   it. When the next player raises it again or wrongly calls "To je priveľa!", the double held and is

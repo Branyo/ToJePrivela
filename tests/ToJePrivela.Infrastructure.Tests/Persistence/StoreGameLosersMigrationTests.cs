@@ -7,12 +7,14 @@ using ToJePrivela.Infrastructure.Persistence;
 namespace ToJePrivela.Infrastructure.Tests.Persistence;
 
 /// <summary>
-/// Games finished before the verdict was stored keep the losers they were shown: most final bad points, a tie broken
-/// by the number of bad cards, nobody in a running or cancelled game or in one without a card.
+/// Games finished before the verdict was stored get their losers under the game's rule: everyone on the most final bad
+/// points (a tie is a shared loss, whatever the cards), nobody in a running or cancelled game or in one without a card.
+/// StoreGameLosers first backfilled them breaking a tie by cards; ShareTiedLosses corrects that.
 /// </summary>
 public class StoreGameLosersMigrationTests : IDisposable
 {
     private const string AddEnglishQuestionTexts = "20261008084238_AddEnglishQuestionTexts";
+    private const string StoreGameLosers = "20261013150321_StoreGameLosers";
 
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
 
@@ -43,15 +45,30 @@ public class StoreGameLosersMigrationTests : IDisposable
     }
 
     [Fact]
-    public async Task Upgrade_StoresTheLosersEveryFinishedGameWasShown()
+    public async Task Upgrade_StoresEveryLoserOfEachFinishedGame_ATieBeingASharedLoss()
     {
         await using var context = CreateContext();
         await context.Database.MigrateAsync();
 
-        var losers = await context.GamePlayers.Where(gp => gp.IsLoser).OrderBy(gp => gp.Id).Select(gp => gp.Id).ToListAsync();
-
-        Assert.Equal([11, 21, 22, 62], losers);
+        Assert.Equal([11, 12, 21, 22, 62], await LosersAsync(context));
     }
+
+    [Fact]
+    public async Task ShareTiedLosses_TurnsATieBrokenByCardsIntoASharedLoss()
+    {
+        await using var context = CreateContext();
+        var migrator = context.GetService<IMigrator>();
+        await migrator.MigrateAsync(StoreGameLosers);
+
+        Assert.Equal([11, 21, 22, 62], await LosersAsync(context));
+
+        await migrator.MigrateAsync();
+
+        Assert.Equal([11, 12, 21, 22, 62], await LosersAsync(context));
+    }
+
+    private static Task<List<int>> LosersAsync(ToJePrivelaDbContext context) =>
+        context.GamePlayers.AsNoTracking().Where(gp => gp.IsLoser).OrderBy(gp => gp.Id).Select(gp => gp.Id).ToListAsync();
 
     private ToJePrivelaDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<ToJePrivelaDbContext>().UseSqlite(_connection).Options);

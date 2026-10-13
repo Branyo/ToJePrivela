@@ -13,6 +13,7 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   badCardLimit: 3,
   badPointsMode: 'Question',
   cancelled: false,
+  hasResult: false,
   players: [
     { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
     { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
@@ -374,15 +375,15 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('finished');
   });
 
-  it('has no result to count while nobody holds a bad card', async () => {
+  it('has no result to count while the server says there is none', async () => {
     await startWithQuestion();
 
     expect(store.hasResult()).toBe(false);
   });
 
-  it('has a result to count once somebody holds a bad card', async () => {
-    const [bo, ana] = game().players;
-    await startWithQuestion([], game({ players: [{ ...bo, badPoints: 3, badCards: 1, finalBadPoints: 3 }, ana] }));
+  it('has a result to count once the server says so, whatever the seats show', async () => {
+    // Only an unknown (deleted) player holds a card: the seats show none, the server still counts a result.
+    await startWithQuestion([], game({ hasResult: true }));
 
     expect(store.hasResult()).toBe(true);
   });

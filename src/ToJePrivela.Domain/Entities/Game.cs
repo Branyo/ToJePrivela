@@ -69,10 +69,17 @@ public class Game
     public bool IsCancelled { get; private set; }
 
     /// <summary>
-    /// Row version: every change bumps it, so a change made at the same time (a double while the game is finished)
-    /// is detected instead of leaving the stored verdict on stale scores. SQLite has no native rowversion.
+    /// Row version: every save that changes the game or one of its players bumps it (the persistence layer does, so no
+    /// change can forget to), and a change made at the same time (a double while the game is finished) is detected
+    /// instead of leaving the stored verdict on stale scores. SQLite has no native rowversion.
     /// </summary>
     public long Version { get; private set; }
+
+    /// <summary>
+    /// Somebody holds a bad card, the one precondition of a result: until then the game can only be played on or
+    /// deleted, not finished (<see cref="GameRuleViolation.NoBadCardsYet"/>).
+    /// </summary>
+    public bool HasResult => CheckResult() is null;
 
     public bool HasPlayer(int playerId) => _gamePlayers.Any(gp => gp.PlayerId == playerId);
 
@@ -121,7 +128,6 @@ public class Game
         ThrowIfBroken(CheckFinish(finishedAt));
 
         Complete(finishedAt);
-        Version++;
     }
 
     /// <summary>
@@ -137,11 +143,11 @@ public class Game
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
-        Version++;
 
+        // The card itself is the result, so none of Finish's checks apply: the game simply ends now.
         if (gamePlayer.BadCards >= BadCardLimit)
         {
-            Finish(awardedAt);
+            Complete(awardedAt);
         }
 
         return gamePlayer;
@@ -158,7 +164,6 @@ public class Game
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.AddDouble();
-        Version++;
 
         return gamePlayer;
     }
@@ -171,7 +176,6 @@ public class Game
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.RemoveDouble();
-        Version++;
 
         return gamePlayer;
     }
@@ -198,7 +202,6 @@ public class Game
             Finished = UtcTime.Normalize(finished);
         }
 
-        Version++;
     }
 
     /// <summary>
@@ -219,7 +222,6 @@ public class Game
         }
 
         gamePlayer.ForgetPlayer();
-        Version++;
     }
 
     /// <summary>
@@ -258,10 +260,15 @@ public class Game
     private GameRuleViolation? CheckResult() =>
         _gamePlayers.Any(gp => gp.BadCards > 0) ? null : GameRuleViolation.NoBadCardsYet;
 
-    /// <summary>Ends a running game the rules allow to end, by <see cref="Finish"/> or <see cref="Reschedule"/>.</summary>
+    /// <summary>
+    /// Ends a running game the rules allow to end: by <see cref="Finish"/>, <see cref="Reschedule"/> or the bad card
+    /// that reaches the limit. The end never lies before the start, should the clock read earlier than a start just
+    /// corrected to now.
+    /// </summary>
     private void Complete(DateTime finishedAt)
     {
-        Finished = UtcTime.Normalize(finishedAt);
+        var end = UtcTime.Normalize(finishedAt);
+        Finished = Started > end ? Started : end;
         MarkLosers();
     }
 

@@ -60,10 +60,10 @@ export class PlayStore {
   /** While bidding and after "To je priveľa!", but before the card is handed out. */
   readonly canDouble = computed(() => this.phase() === 'asking' || this.phase() === 'revealed');
   /**
-   * Whether ending now would count a result: somebody holds a bad card. Until then the game can only be played on or
-   * deleted; the server refuses to finish it (`Game.NoBadCardsYet`).
+   * Whether ending now would count a result, as the server decides it (`hasResult`). Until then the game can only be
+   * played on or deleted; the server refuses to finish it (`Game.NoBadCardsYet`).
    */
-  readonly hasResult = computed(() => this.seats().some((player) => player.badCards > 0));
+  readonly hasResult = computed(() => this.game()?.hasResult ?? false);
   /**
    * The game may be finished or deleted: it is loaded, not over or being ended yet, and no card is on its way. A
    * question still on its way does not hold it up, so a request that never answers cannot trap the players.
