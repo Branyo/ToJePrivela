@@ -166,18 +166,18 @@ export class PlayStore {
   /**
    * Reloads the scoreboard, e.g. before the players are asked how to end, since another device may have changed the
    * game meanwhile (its first card gives it a result, or it was finished there). Nothing changes while a card or a
-   * double of this device is being saved, whose answer is newer, or once the game is being ended; on a failure the
-   * game simply stays as it was.
+   * double of this device is being saved, once the game is being ended, or when such an answer came in while the
+   * reload was on its way (it is newer than the reload); on a failure the game simply stays as it was.
    */
   async refreshGame(): Promise<void> {
-    const gameId = this.gameId;
-    if (!this.game() || !this.isRefreshable()) {
+    const shown = this.game();
+    if (!shown || !this.isRefreshable()) {
       return;
     }
 
     try {
-      const fresh = await firstValueFrom(this.gamesApi.getDetails(gameId));
-      if (this.gameId !== gameId || !this.isRefreshable()) {
+      const fresh = await firstValueFrom(this.gamesApi.getDetails(this.gameId));
+      if (this.game() !== shown || !this.isRefreshable()) {
         return;
       }
       this.game.set(fresh);

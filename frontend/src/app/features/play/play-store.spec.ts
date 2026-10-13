@@ -407,6 +407,21 @@ describe('PlayStore', () => {
     expect(store.hasResult()).toBe(true);
   });
 
+  it('drops a reload that a double saved meanwhile has overtaken', async () => {
+    await startWithQuestion();
+
+    const refreshed = store.refreshGame();
+    const doubled = store.awardDouble(1);
+    await flush();
+    const afterDouble = game({ players: game().players.map((p) => (p.playerId === 1 ? { ...p, doubles: 1, finalBadPoints: -1 } : p)) });
+    http.expectOne('/api/games/5/doubles').flush(afterDouble);
+    await doubled;
+    http.expectOne('/api/games/5/details').flush(game());
+    await refreshed;
+
+    expect(store.game()?.players.find((p) => p.playerId === 1)?.doubles).toBe(1);
+  });
+
   it('keeps the game as it was when reloading it fails', async () => {
     await startWithQuestion([], game({ hasResult: true }));
 

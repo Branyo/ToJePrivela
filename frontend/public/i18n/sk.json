@@ -64,7 +64,7 @@
       },
       "end": {
         "title": "Koniec hry",
-        "text": "Keď niekto nazbiera priveľa kariet, hra končí. Každý vydarený Double odráta jedného somára a prehráva hráč, ktorému ich zostane najviac."
+        "text": "Keď niekto nazbiera priveľa kariet, hra končí. Každý vydarený Double odráta jedného somára a prehráva hráč, ktorému ich zostane najviac. Pri rovnosti prehrávajú spolu, bez ohľadu na počet kariet."
       }
     }
   },

@@ -64,7 +64,7 @@
       },
       "end": {
         "title": "Game over",
-        "text": "When someone collects too many cards, the game ends. Every Double that held takes one donkey off, and the player left with the most donkeys loses."
+        "text": "When someone collects too many cards, the game ends. Every Double that held takes one donkey off, and the player left with the most donkeys loses. A tie is a shared loss, whatever the cards."
       }
     }
   },
