@@ -30,7 +30,7 @@ public class PlayerStatisticsServiceTests
 
         Assert.Equal(PlayerErrors.NotFound(7), result.Error);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
-        await _games.DidNotReceiveWithAnyArgs().GetByPlayerAsync(default, default, default);
+        await _games.DidNotReceiveWithAnyArgs().GetFinishedByPlayerAsync(default, default, default);
     }
 
     [Fact]
@@ -40,13 +40,13 @@ public class PlayerStatisticsServiceTests
         var game = new Game(TestAccountId, [0, 1], Start);
         game.AwardDouble(0);
         game.Finish(Start.AddHours(1));
-        _games.GetByPlayerAsync(TestAccountId, 0, Arg.Any<CancellationToken>()).Returns([game]);
+        _games.GetFinishedByPlayerAsync(TestAccountId, 0, Arg.Any<CancellationToken>()).Returns([game]);
 
         var result = await _sut.GetAsync(0);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Brano", result.Value.Player.Name);
-        Assert.Equal((1, 1, 1, 1), (result.Value.GamesPlayed, result.Value.Doubles, result.Value.FlawlessVictories, result.Value.Reversals));
+        Assert.Equal((1, 1, 0, 1), (result.Value.GamesPlayed, result.Value.Doubles, result.Value.FlawlessVictories, result.Value.Reversals));
         Assert.Equal(-1, result.Value.BestGame!.FinalBadPoints);
         Assert.Null(result.Value.LossIndex);
     }

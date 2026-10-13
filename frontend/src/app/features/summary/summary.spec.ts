@@ -97,6 +97,19 @@ describe('Summary', () => {
     expect(title?.textContent).toContain('summary.lost.tie');
   });
 
+  it('shows a tie only by its shared points, without cards or doubles', async () => {
+    const page = await render(
+      game({
+        players: [
+          seat(1, 'Ana', { badCards: 2, badPoints: 7, doubles: 1, finalBadPoints: 6, isLoser: true }),
+          seat(2, 'Bo', { badCards: 3, badPoints: 6, finalBadPoints: 6, isLoser: true }),
+        ],
+      }),
+    );
+
+    expect(page.querySelector('.spotlight__score')?.textContent?.trim()).toBe('summary.score');
+  });
+
   it('offers a rematch when every player still exists', async () => {
     const page = await render(game());
 

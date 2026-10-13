@@ -31,7 +31,7 @@ public sealed class PlayerStatisticsService : IPlayerStatisticsService
             return Result.Failure<PlayerStatisticsDto>(PlayerErrors.NotFound(playerId));
         }
 
-        var games = await _games.GetByPlayerAsync(_currentAccount.Id, playerId, cancellationToken);
+        var games = await _games.GetFinishedByPlayerAsync(_currentAccount.Id, playerId, cancellationToken);
 
         return Result.Success(PlayerStatisticsMapper.ToDto(player, PlayerStatistics.For(playerId, games)));
     }

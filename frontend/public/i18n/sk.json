@@ -215,12 +215,7 @@
       "single": "prehráva túto hru!",
       "tie": "prehrávajú túto hru!"
     },
-    "score": {
-      "one": "🫏 trestné body: {{points}} z {{count}} karty",
-      "few": "🫏 trestné body: {{points}} z {{count}} kariet",
-      "many": "🫏 trestné body: {{points}} z {{count}} karty",
-      "other": "🫏 trestné body: {{points}} z {{count}} kariet"
-    },
+    "score": "🫏 trestné body: {{points}}",
     "doublesOff": "(✌️ −{{count}})",
     "doublesLabel": "Double: {{count}}",
     "board": "📊 Počet somárov",
@@ -462,7 +457,7 @@
       },
       "flawlessVictories": {
         "label": "Čistá výhra",
-        "hint": "Hry bez jedinej trestnej karty."
+        "hint": "Hry, ktoré niekto prehral bez jedinej tvojej trestnej karty."
       },
       "luckyFinishes": {
         "label": "Šťastný koniec",

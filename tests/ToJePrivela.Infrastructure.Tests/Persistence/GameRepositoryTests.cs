@@ -126,6 +126,33 @@ public class GameRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetFinishedByPlayerAsync_ReadsOnlyThePlayersFinishedNotCancelledGamesUntracked()
+    {
+        var finished = await SeedGameAsync([1, 2]);
+        await SeedGameAsync([1, 2]); // still running
+        var cancelled = await SeedGameAsync([1, 2, 3]);
+        var withoutPlayer = await SeedGameAsync([2, 3]);
+
+        await using (var context = _database.CreateContext())
+        {
+            (await context.Games.FirstAsync(g => g.Id == finished)).Finish(Start.AddHours(1));
+            (await context.Games.FirstAsync(g => g.Id == withoutPlayer)).Finish(Start.AddHours(1));
+            var toCancel = await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == cancelled);
+            toCancel.ForgetPlayer(3, Start.AddHours(1));
+            await context.SaveChangesAsync();
+        }
+
+        await using var lookup = _database.CreateContext();
+        var sut = new GameRepository(lookup);
+
+        var games = await sut.GetFinishedByPlayerAsync(TestAccountId, 1);
+
+        Assert.Equal([finished], games.Select(g => g.Id));
+        Assert.Equal(2, games[0].GamePlayers.Count(gp => gp.Player is not null));
+        Assert.Empty(lookup.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task Reads_NeverReachTheGamesOfAnotherAccount()
     {
         int otherAccountId;

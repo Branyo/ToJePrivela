@@ -114,6 +114,18 @@ public class PlayerStatisticsTests
     }
 
     [Fact]
+    public void For_CountsNoFlawlessVictoryWhenThePlayerLostOrNobodyDid()
+    {
+        var lostWithoutCards = Finished(NewGame(Ana, Bo).Cards(Bo, 1).Doubles(Bo, 2));
+        var noCards = Finished(NewGame(Ana, Bo));
+
+        var statistics = PlayerStatistics.For(Ana, [lostWithoutCards, noCards]);
+
+        Assert.Equal(1, statistics.Losses);
+        Assert.Equal(0, statistics.FlawlessVictories);
+    }
+
+    [Fact]
     public void For_CountsALuckyFinishWhenThePlayerEndsTheGameButSomebodyElseLoses()
     {
         var lucky = NewGameWithLimit(2, Ana, Bo).Cards(Bo, 5).Cards(Ana, 1, 1);

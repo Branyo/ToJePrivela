@@ -49,7 +49,10 @@ export class Statistics {
   protected readonly none = NONE;
 
   readonly playerId = input<number | undefined, string | undefined>(undefined, {
-    transform: (value) => (value === undefined ? undefined : numberAttribute(value)),
+    transform: (value) => {
+      const id = numberAttribute(value, NaN);
+      return Number.isInteger(id) ? id : undefined;
+    },
   });
 
   private readonly players = signal<Player[] | null>(null);
@@ -147,9 +150,9 @@ export class Statistics {
   }
 
   protected format(value: number, fractionDigits: number): string {
-    return new Intl.NumberFormat(this.i18n.locale(), {
+    return this.i18n.formatNumber(value, {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-    }).format(value);
+    });
   }
 }

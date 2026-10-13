@@ -15,6 +15,13 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
             .Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Game>> GetFinishedByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
+        await Owned(accountId)
+            .AsNoTracking()
+            .Where(g => g.Started != null && g.Finished != null && !g.IsCancelled)
+            .Where(g => g.GamePlayers.Any(gp => gp.PlayerId == playerId))
+            .ToListAsync(cancellationToken);
+
     /// <summary>Always whole: with the players, so the game's rules never run on half an aggregate.</summary>
     protected override IQueryable<Game> Owned(int accountId) =>
         Set.Where(g => g.AccountId == accountId).Include(g => g.GamePlayers).ThenInclude(gp => gp.Player);

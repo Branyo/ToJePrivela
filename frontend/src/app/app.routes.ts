@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { adminGuard, notAdminGuard, signedInGuard, signedOutGuard } from './core/auth/auth-guards';
 
+const loadStatistics = () => import('./features/statistics/statistics').then((m) => m.Statistics);
+
 /** Titles are translation keys, see `TranslatedTitleStrategy`. Everything but signing in needs a signed-in account. */
 export const routes: Routes = [
   {
@@ -48,13 +50,11 @@ export const routes: Routes = [
       },
       {
         path: 'statistics',
-        loadComponent: () => import('./features/statistics/statistics').then((m) => m.Statistics),
         title: 'titles.statistics',
-      },
-      {
-        path: 'statistics/:playerId',
-        loadComponent: () => import('./features/statistics/statistics').then((m) => m.Statistics),
-        title: 'titles.statistics',
+        children: [
+          { path: '', loadComponent: loadStatistics },
+          { path: ':playerId', loadComponent: loadStatistics },
+        ],
       },
       { path: 'games/:id', loadComponent: () => import('./features/play/play').then((m) => m.Play), title: 'titles.play' },
       {

@@ -45,7 +45,7 @@ public sealed class PlayerStatistics
     /// </summary>
     public double? LossIndex { get; private init; }
 
-    /// <summary>Games the player finished without a single bad card.</summary>
+    /// <summary>Games somebody lost while the player finished without a single bad card.</summary>
     public int FlawlessVictories { get; private init; }
 
     /// <summary>Games the player ended by reaching the bad card limit, yet somebody else lost.</summary>
@@ -84,6 +84,9 @@ public sealed class PlayerStatistics
         var count = played.Count;
         var expectedLosses = played.Sum(p => (double)p.Losers.Count / p.Game.GamePlayers.Count);
         var losses = played.Count(p => p.IsLoss);
+        var badCards = played.Sum(p => p.Seat.BadCards);
+        var finalBadPoints = played.Sum(p => p.Seat.FinalBadPoints);
+        var doubles = played.Sum(p => p.Seat.Doubles);
         var scores = played
             .Select(p => new GameScore(p.Game.Id, p.Game.Finished!.Value, p.Seat.FinalBadPoints))
             .OrderByDescending(s => s.Finished)
@@ -93,17 +96,17 @@ public sealed class PlayerStatistics
         return new PlayerStatistics
         {
             GamesPlayed = count,
-            BadCards = played.Sum(p => p.Seat.BadCards),
-            AverageBadCards = Average(played.Sum(p => p.Seat.BadCards), count),
-            FinalBadPoints = played.Sum(p => p.Seat.FinalBadPoints),
-            AverageFinalBadPoints = Average(played.Sum(p => p.Seat.FinalBadPoints), count),
-            Doubles = played.Sum(p => p.Seat.Doubles),
-            AverageDoubles = Average(played.Sum(p => p.Seat.Doubles), count),
+            BadCards = badCards,
+            AverageBadCards = Average(badCards, count),
+            FinalBadPoints = finalBadPoints,
+            AverageFinalBadPoints = Average(finalBadPoints, count),
+            Doubles = doubles,
+            AverageDoubles = Average(doubles, count),
             AveragePlayers = Average(played.Sum(p => p.Game.GamePlayers.Count), count),
             Losses = losses,
             SharedLosses = played.Count(p => p.IsLoss && p.Losers.Count > 1),
             LossIndex = expectedLosses > 0 ? losses / expectedLosses : null,
-            FlawlessVictories = played.Count(p => p.Seat.BadCards == 0),
+            FlawlessVictories = played.Count(p => p.Seat.BadCards == 0 && !p.IsLoss && p.Losers.Count > 0),
             LuckyFinishes = played.Count(p => !p.IsLoss && p.Seat.BadCards >= p.Game.BadCardLimit),
             ClosestEscapes = played.Count(p =>
                 !p.IsLoss && p.Losers.Count > 0 && p.Seat.FinalBadPoints == p.Losers[0].FinalBadPoints - 1),
