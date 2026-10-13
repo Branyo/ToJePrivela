@@ -67,6 +67,40 @@ public class GameTests
     }
 
     [Fact]
+    public void EveryChangeBumpsTheVersion()
+    {
+        var game = new Game(TestAccountId, [1, 2, 3], Start);
+        var versions = new List<long> { game.Version };
+
+        game.AwardDouble(1);
+        versions.Add(game.Version);
+        game.RemoveDouble(1);
+        versions.Add(game.Version);
+        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(1));
+        versions.Add(game.Version);
+        game.Reschedule(Start.AddMinutes(-5), null, Now);
+        versions.Add(game.Version);
+        game.Finish(Start.AddHours(1));
+        versions.Add(game.Version);
+        game.ForgetPlayer(2, Start.AddHours(2));
+        versions.Add(game.Version);
+
+        Assert.Equal(versions.Order(), versions);
+        Assert.Equal(versions.Count, versions.Distinct().Count());
+    }
+
+    [Fact]
+    public void RejectedChangeKeepsTheVersion()
+    {
+        var game = new Game(TestAccountId, [1, 2], Start);
+        var initial = game.Version;
+
+        Assert.Throws<DomainException>(() => game.Finish(Start.AddHours(1)));
+        Assert.Throws<DomainException>(() => game.RemoveDouble(1));
+        Assert.Equal(initial, game.Version);
+    }
+
+    [Fact]
     public void Finish_MarksTheGameAsFinished()
     {
         var game = WithABadCard(new Game(TestAccountId, [1, 2], Start));

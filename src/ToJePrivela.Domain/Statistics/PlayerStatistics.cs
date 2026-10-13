@@ -7,18 +7,19 @@ namespace ToJePrivela.Domain.Statistics;
 public sealed record GameScore(int GameId, DateTime Finished, int FinalBadPoints);
 
 /// <summary>
-/// A player's record over their counted games: started, finished and not cancelled. Averages are per counted game
+/// A player's record over their counted games: started, finished, not cancelled and with a loser. Averages are per counted game
 /// and null when there is none.
 /// Who lost each game is the game's own verdict, stored when it finished (<see cref="GamePlayer.IsLoser"/>).
 /// </summary>
 public sealed class PlayerStatistics
 {
     /// <summary>
-    /// Which games count: started, finished and not cancelled. The one definition, shared by <see cref="Counts"/>
-    /// and the database query that loads the games.
+    /// Which games count: started, finished, not cancelled and with a result, that is a stored loser (a game ended
+    /// before anybody held a bad card, possible before <c>Game.NoBadCardsYet</c>, has none). The one definition,
+    /// shared by <see cref="For"/> and the database query that loads the games.
     /// </summary>
     public static readonly Expression<Func<Game, bool>> CountedGame =
-        g => g.Started != null && g.Finished != null && !g.IsCancelled;
+        g => g.Started != null && g.Finished != null && !g.IsCancelled && g.GamePlayers.Any(gp => gp.IsLoser);
 
     private static readonly Func<Game, bool> IsCounted = CountedGame.Compile();
 
@@ -73,21 +74,13 @@ public sealed class PlayerStatistics
     /// <summary>Fewest final bad points in one game; the latest such game on a tie.</summary>
     public GameScore? BestGame { get; private init; }
 
-    /// <summary>Whether the game counts (<see cref="CountedGame"/>).</summary>
-    public static bool Counts(Game game)
-    {
-        ArgumentNullException.ThrowIfNull(game);
-
-        return IsCounted(game);
-    }
-
     /// <param name="games">Any games; only the counted ones the player took part in are used.</param>
     public static PlayerStatistics For(int playerId, IEnumerable<Game> games)
     {
         ArgumentNullException.ThrowIfNull(games);
 
         var played = games
-            .Where(g => Counts(g) && g.HasPlayer(playerId))
+            .Where(g => IsCounted(g) && g.HasPlayer(playerId))
             .Select(g => new PlayedGame(g, g.GamePlayers.Single(gp => gp.PlayerId == playerId), Losers(g)))
             .ToList();
 

@@ -68,6 +68,12 @@ public class Game
     /// <summary>Ended without a result because one of its players was deleted; nobody lost it.</summary>
     public bool IsCancelled { get; private set; }
 
+    /// <summary>
+    /// Row version: every change bumps it, so a change made at the same time (a double while the game is finished)
+    /// is detected instead of leaving the stored verdict on stale scores. SQLite has no native rowversion.
+    /// </summary>
+    public long Version { get; private set; }
+
     public bool HasPlayer(int playerId) => _gamePlayers.Any(gp => gp.PlayerId == playerId);
 
     /// <summary>
@@ -83,8 +89,7 @@ public class Game
     public GameRuleViolation? CheckFinish(DateTime finishedAt) =>
         IsFinished ? GameRuleViolation.AlreadyFinished
         : UtcTime.Normalize(finishedAt) < Started ? GameRuleViolation.EndsBeforeStart
-        : !HasBadCards ? GameRuleViolation.NoBadCardsYet
-        : null;
+        : CheckResult();
 
     public GameRuleViolation? CheckAwardBadCard(int playerId, int? chosenBadPoints) =>
         CheckRunningPlayer(playerId)
@@ -107,7 +112,7 @@ public class Game
         IsFinished && finished is null ? GameRuleViolation.CannotReopen
         : UtcTime.Normalize(started) > UtcTime.Normalize(now) ? GameRuleViolation.StartsInFuture
         : UtcTime.Normalize(finished) < UtcTime.Normalize(started) ? GameRuleViolation.EndsBeforeStart
-        : !IsFinished && finished is not null && !HasBadCards ? GameRuleViolation.NoBadCardsYet
+        : !IsFinished && finished is not null ? CheckResult()
         : null;
 
     /// <summary>Ends the game and stores its verdict on the players (<see cref="GamePlayer.IsLoser"/>).</summary>
@@ -115,8 +120,8 @@ public class Game
     {
         ThrowIfBroken(CheckFinish(finishedAt));
 
-        Finished = UtcTime.Normalize(finishedAt);
-        MarkLosers();
+        Complete(finishedAt);
+        Version++;
     }
 
     /// <summary>
@@ -132,6 +137,7 @@ public class Game
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
+        Version++;
 
         if (gamePlayer.BadCards >= BadCardLimit)
         {
@@ -152,6 +158,7 @@ public class Game
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.AddDouble();
+        Version++;
 
         return gamePlayer;
     }
@@ -164,6 +171,7 @@ public class Game
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.RemoveDouble();
+        Version++;
 
         return gamePlayer;
     }
@@ -180,12 +188,17 @@ public class Game
         var finishesNow = !IsFinished && finished is not null;
 
         Started = UtcTime.Normalize(started);
-        Finished = UtcTime.Normalize(finished);
 
         if (finishesNow)
         {
-            MarkLosers();
+            Complete(finished!.Value);
         }
+        else
+        {
+            Finished = UtcTime.Normalize(finished);
+        }
+
+        Version++;
     }
 
     /// <summary>
@@ -206,6 +219,7 @@ public class Game
         }
 
         gamePlayer.ForgetPlayer();
+        Version++;
     }
 
     /// <summary>
@@ -237,7 +251,19 @@ public class Game
         return standings;
     }
 
-    private bool HasBadCards => _gamePlayers.Any(gp => gp.BadCards > 0);
+    /// <summary>
+    /// The one precondition of a result, shared by <see cref="CheckFinish"/> and <see cref="CheckReschedule"/>: somebody
+    /// holds a bad card. Until then the game can only be played on or deleted.
+    /// </summary>
+    private GameRuleViolation? CheckResult() =>
+        _gamePlayers.Any(gp => gp.BadCards > 0) ? null : GameRuleViolation.NoBadCardsYet;
+
+    /// <summary>Ends a running game the rules allow to end, by <see cref="Finish"/> or <see cref="Reschedule"/>.</summary>
+    private void Complete(DateTime finishedAt)
+    {
+        Finished = UtcTime.Normalize(finishedAt);
+        MarkLosers();
+    }
 
     /// <summary>
     /// The verdict, decided once when the game finishes: everyone on the most final bad points loses, whatever their

@@ -23,6 +23,11 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
         builder.Property(g => g.IsCancelled).HasDefaultValue(false);
         builder.Ignore(g => g.IsFinished);
 
+        // Updates are guarded by WHERE "Version" = <the value read>, so a lost update surfaces as a conflict.
+        builder.Property(g => g.Version)
+            .IsRequired()
+            .IsConcurrencyToken();
+
         builder.HasOne<Account>()
             .WithMany()
             .HasForeignKey(g => g.AccountId)

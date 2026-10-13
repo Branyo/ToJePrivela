@@ -153,7 +153,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET | `/api/players` | |
 | GET/PUT/DELETE | `/api/players/{id}` | |
 | POST | `/api/players` | 409 `Player.NameTaken` when the login already has the name (case-insensitive); 409 `Player.LimitReached` at 100 players per login |
-| GET | `/api/players/{id}/statistics` | The player's record over finished, not cancelled games (see *Player statistics* below); 404 for another login's player |
+| GET | `/api/players/{id}/statistics` | The player's record over finished, not cancelled games with a loser (see *Player statistics* below); 404 for another login's player |
 | GET | `/api/games` | |
 | GET/PUT/DELETE | `/api/games/{id}` | DELETE removes the game (finished or not) with its scores; players stay. Unlike a player deletion, which marks running games `cancelled`, nothing remains |
 | GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
@@ -249,10 +249,12 @@ a `CreatedAt` timestamp.
   selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`.
   **For now the view counts are shared between the logins**, like the questions themselves: a question shown in one
   login's game counts as viewed for every login, so one login's games change which questions the others draw next.
-- **Optimistic concurrency on questions.** `Question.Version` is a row version the entity bumps on every
-  change (SQLite has no native rowversion) and EF checks as a concurrency token. A lost race surfaces as
-  `ConcurrencyConflictException`; recording a view rereads the row and retries (up to 5 attempts, then
-  409), and any other conflicting change becomes a 409 through `ConcurrencyConflictExceptionHandler`.
+- **Optimistic concurrency on questions and games.** `Question.Version` and `Game.Version` are row versions the
+  entity bumps on every change (SQLite has no native rowversion) and EF checks as a concurrency token. A lost race
+  surfaces as `ConcurrencyConflictException`; recording a view rereads the row and retries (up to 5 attempts, then
+  409), and any other conflicting change becomes a 409 through `ConcurrencyConflictExceptionHandler`. On a game it
+  keeps the stored verdict true: a double or card saved against a game that finished meanwhile is refused instead
+  of changing the scores behind the losers.
 
 - **Bad cards.** A game ends as soon as one player holds `BadCardLimit` cards. `GamePlayer` keeps the
   card count (`BadCards`) and their sum (`BadPoints`); the value of a card always comes from the stored
@@ -278,12 +280,12 @@ a `CreatedAt` timestamp.
   never below zero doubles.
 
 - **Player statistics.** `GET /api/players/{id}/statistics` is worked out on every request from the
-  player's games that are started, finished and not cancelled (`PlayerStatistics.CountedGame`, the one
-  definition shared by the domain and the repository query); nothing but the verdict is stored. Who lost
+  player's games that are started, finished, not cancelled and have a loser (`PlayerStatistics.CountedGame`, the
+  one definition shared by the domain and the repository query); a game ended before anybody held a bad card,
+  possible before `Game.NoBadCardsYet`, has none and counts for nothing. Nothing but the verdict is stored. Who lost
   is the stored verdict (see *Losers*). A flawless victory is a game the player ended with 0 bad cards and
   did not lose. The loss index is
-  the actual loss rate over the expected one, the average of (losers / players) per game, so a game
-  without a loser counts for nothing and a shared loss weighs as much as chance says. A closest escape is
+  the actual loss rate over the expected one, the average of (losers / players) per game, so a shared loss weighs as much as chance says. A closest escape is
   exactly one final point below the loser; best and worst games pick the latest game on a tie. Averages
   and the loss index are null without anything to average. The frontend shows it at `/statistics`.
 

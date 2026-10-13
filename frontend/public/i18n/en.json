@@ -149,7 +149,8 @@
     "outOfQuestions": {
       "title": "Out of questions!",
       "text": "These categories have no questions. Add some on the setup screen, or wrap it up here.",
-      "results": "🏁 Show results"
+      "results": "🏁 Show results",
+      "noResult": "Nobody has a donkey card yet, so there is no result to count. Add questions on the setup screen, or delete the game."
     },
     "gameOver": {
       "first": "GAME",

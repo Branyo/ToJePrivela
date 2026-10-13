@@ -9,8 +9,8 @@ public interface IGameRepository : IAccountScopedRepository<Game>
     Task<IReadOnlyList<Game>> GetByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// The account's counted games the player took part in (<c>PlayerStatistics.CountedGame</c>), read only (never
-    /// saved) and with their seats but not the players behind them.
+    /// The account's counted games the player took part in (<c>PlayerStatistics.CountedGame</c>), whole (with
+    /// the players) but read only: never saved.
     /// </summary>
     Task<IReadOnlyList<Game>> GetCountedByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default);
 }

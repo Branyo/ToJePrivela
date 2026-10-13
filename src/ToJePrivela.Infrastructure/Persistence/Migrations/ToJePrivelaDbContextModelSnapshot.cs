@@ -92,6 +92,10 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("Started")
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");

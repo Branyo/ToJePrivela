@@ -41,8 +41,15 @@
           <span class="big-emoji" aria-hidden="true">🫙</span>
           <h2>{{ 'play.outOfQuestions.title' | translate }}</h2>
           <p class="muted">{{ 'play.outOfQuestions.text' | translate }}</p>
+          @if (!store.hasResult()) {
+            <p class="muted">{{ 'play.outOfQuestions.noResult' | translate }}</p>
+          }
           <div class="actions">
-            <button type="button" class="btn btn--fun" (click)="endGame()">{{ 'play.outOfQuestions.results' | translate }}</button>
+            @if (store.hasResult()) {
+              <button type="button" class="btn btn--fun" (click)="endGame()">{{ 'play.outOfQuestions.results' | translate }}</button>
+            } @else {
+              <button type="button" class="btn btn--danger" (click)="askDelete()">{{ 'play.confirmEnd.deleteGame' | translate }}</button>
+            }
             <a routerLink="/new" class="btn">{{ 'common.newGame' | translate }}</a>
           </div>
         </div>

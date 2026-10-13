@@ -157,7 +157,8 @@
     "outOfQuestions": {
       "title": "Došli otázky!",
       "text": "V týchto kategóriách už nie sú otázky. Pridajte nové pri príprave hry alebo hru tu ukončite.",
-      "results": "🏁 Zobraziť výsledky"
+      "results": "🏁 Zobraziť výsledky",
+      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Pridajte otázky pri príprave hry alebo hru vymažte."
     },
     "gameOver": {
       "first": "KONIEC",
