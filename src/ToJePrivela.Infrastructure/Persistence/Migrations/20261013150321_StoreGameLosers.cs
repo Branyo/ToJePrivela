@@ -17,8 +17,8 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                 nullable: false,
                 defaultValue: false);
 
-            // Games finished so far keep the verdict they were shown, under the rule of the time: most final bad
-            // points, a tie broken by the number of bad cards; nobody lost a cancelled game or one without a card.
+            // Games finished so far get their losers under the game's rule: everyone on the most final bad points, so
+            // a tie is a shared loss whatever the cards; nobody lost a cancelled game or one without a card.
             migrationBuilder.Sql(
                 """
                 UPDATE "GamePlayers" AS me SET "IsLoser" = 1
@@ -30,9 +30,7 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     AND NOT EXISTS (
                         SELECT 1 FROM "GamePlayers" AS worse
                         WHERE worse."GameId" = me."GameId"
-                            AND (worse."BadPoints" - worse."Doubles" > me."BadPoints" - me."Doubles"
-                                OR (worse."BadPoints" - worse."Doubles" = me."BadPoints" - me."Doubles"
-                                    AND worse."BadCards" > me."BadCards")));
+                            AND worse."BadPoints" - worse."Doubles" > me."BadPoints" - me."Doubles");
                 """);
         }
 

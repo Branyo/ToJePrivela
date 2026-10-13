@@ -352,9 +352,70 @@ describe('PlayStore', () => {
     http
       .expectOne((req) => req.url === '/api/questions/random')
       .flush({ code: 'Question.NoneAvailable', detail: 'No questions.' }, { status: 404, statusText: 'Not Found' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game());
     await started;
 
     expect(store.phase()).toBe('no-questions');
+  });
+
+  it('reloads the game once out of questions, so a first card from another device offers the results', async () => {
+    const started = store.start(5, []);
+    http.expectOne('/api/games/5/details').flush(game());
+    await flush();
+    http
+      .expectOne((req) => req.url === '/api/questions/random')
+      .flush({ code: 'Question.NoneAvailable', detail: 'No questions.' }, { status: 404, statusText: 'Not Found' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game({ hasResult: true }));
+    await started;
+
+    expect(store.phase()).toBe('no-questions');
+    expect(store.hasResult()).toBe(true);
+  });
+
+  it('reloads the game on request, e.g. before asking how to end it', async () => {
+    await startWithQuestion();
+
+    const refreshed = store.refreshGame();
+    http.expectOne('/api/games/5/details').flush(game({ hasResult: true }));
+    await refreshed;
+
+    expect(store.hasResult()).toBe(true);
+    expect(store.phase()).toBe('asking');
+  });
+
+  it('follows a game finished from another device when reloading it', async () => {
+    await startWithQuestion();
+
+    const refreshed = store.refreshGame();
+    http.expectOne('/api/games/5/details').flush(game({ hasResult: true, finished: '2026-09-25T19:00:00Z' }));
+    await refreshed;
+
+    expect(store.phase()).toBe('finished');
+  });
+
+  it('does not reload the game while a double of this device is being saved', async () => {
+    await startWithQuestion();
+
+    const doubled = store.awardDouble(1);
+    await store.refreshGame();
+    http.expectNone('/api/games/5/details');
+    http.expectOne('/api/games/5/doubles').flush(game({ hasResult: true }));
+    await doubled;
+
+    expect(store.hasResult()).toBe(true);
+  });
+
+  it('keeps the game as it was when reloading it fails', async () => {
+    await startWithQuestion([], game({ hasResult: true }));
+
+    const refreshed = store.refreshGame();
+    http.expectOne('/api/games/5/details').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+    await refreshed;
+
+    expect(store.hasResult()).toBe(true);
+    expect(store.error()).toBeNull();
   });
 
   it('goes straight to the results for a finished game', async () => {
@@ -518,11 +579,28 @@ describe('PlayStore', () => {
 
     const finished = store.finish();
     http.expectOne('/api/games/5/finish').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game());
     await finished;
 
     expect(store.phase()).toBe('revealed');
     expect(store.question()?.id).toBe(42);
     expect(store.error()).not.toBeNull();
+  });
+
+  it('reloads the game when finishing is refused for want of a bad card', async () => {
+    await startWithQuestion([], game({ hasResult: true }));
+
+    const finished = store.finish();
+    http
+      .expectOne('/api/games/5/finish')
+      .flush({ code: 'Game.NoBadCardsYet', detail: 'No bad cards yet.' }, { status: 409, statusText: 'Conflict' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game({ hasResult: false }));
+    await finished;
+
+    expect(store.hasResult()).toBe(false);
+    expect(store.phase()).toBe('asking');
   });
 
   it('can be ended while the next question is still on its way, which is then dropped unseen', async () => {
@@ -595,6 +673,8 @@ describe('PlayStore', () => {
     await flush();
 
     http.expectOne('/api/games/5/doubles').flush({ detail: 'Nope.' }, { status: 409, statusText: 'Conflict' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game());
     await finished;
 
     http.expectNone('/api/games/5/finish');

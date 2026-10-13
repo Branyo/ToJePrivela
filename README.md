@@ -253,8 +253,9 @@ a `CreatedAt` timestamp.
   has no native rowversion) that EF checks as a concurrency token. A question bumps its own on every change; a game's
   is bumped by the `DbContext`, once per save that changes the game or any of its players, so no domain method can
   forget it. A lost race surfaces as `ConcurrencyConflictException`; recording a view rereads the row and retries
-  (up to 5 attempts, then 409). A game change (card, double, finish, reschedule) and a player deletion reread the game
-  and make the change again on it (up to 3 attempts), so two devices tapping at once both count, and a card or double
+  (up to 5 attempts, then 409). A game change (card, double, finish, reschedule, delete) and a player deletion reread
+  the game and make the change again on it (`ConcurrencyRetry`, up to 3 attempts), so two devices tapping at once both
+  count, a game deleted while another device saves a double is still deleted, and a card or double
   for a game finished meanwhile gets the usual 409 `Game.AlreadyFinished`; only a conflict that outlasts the attempts
   becomes a generic 409 through `ConcurrencyConflictExceptionHandler`. On a game this keeps the stored verdict true:
   the scores never change behind the losers.
@@ -271,8 +272,10 @@ a `CreatedAt` timestamp.
   its result counts as it stands even when that is not fair to everyone; only a game nobody holds a bad
   card in cannot be finished (409 `Game.NoBadCardsYet`): it can be played on or deleted; `GameDetailsDto.hasResult`
   tells clients which, so they never decide it themselves. Games finished before the verdict was stored got it from
-  the `StoreGameLosers` migration under the old rule (a tie broken by the number of cards); `ShareTiedLosses` then
-  marked every tied player of those games as a loser, so all finished games follow the shared-loss rule.
+  the `StoreGameLosers` migration under the same rule, so a tie that used to be broken by the number of cards is a
+  shared loss there too: every finished game follows the shared-loss rule. A card that reaches the limit is never
+  refused over the clock: should the server's clock read earlier than a start just corrected to now, the game ends
+  at its start (finishing or rescheduling with an end before the start is still 400 `Game.EndsBeforeStart`).
 
 - **Doubles.** A player who thinks the previous estimate is too low calls "double" and at least doubles
   it. When the next player raises it again or wrongly calls "To je priveľa!", the double held and is

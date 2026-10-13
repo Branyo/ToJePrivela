@@ -144,10 +144,13 @@ public class Game
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
 
-        // The card itself is the result, so none of Finish's checks apply: the game simply ends now.
+        // The card itself is the result, so none of Finish's checks apply: the game simply ends now. A card is never
+        // refused over the clock, so should it read earlier than a start just corrected to now (the only way the end
+        // could lie before the start), the game ends at its start.
         if (gamePlayer.BadCards >= BadCardLimit)
         {
-            Complete(awardedAt);
+            var end = UtcTime.Normalize(awardedAt);
+            Complete(Started > end ? Started.Value : end);
         }
 
         return gamePlayer;
@@ -261,14 +264,12 @@ public class Game
         _gamePlayers.Any(gp => gp.BadCards > 0) ? null : GameRuleViolation.NoBadCardsYet;
 
     /// <summary>
-    /// Ends a running game the rules allow to end: by <see cref="Finish"/>, <see cref="Reschedule"/> or the bad card
-    /// that reaches the limit. The end never lies before the start, should the clock read earlier than a start just
-    /// corrected to now.
+    /// Ends a running game the rules allow to end: by <see cref="Finish"/>, <see cref="Reschedule"/> (both reject an end
+    /// before the start) or the bad card that reaches the limit (which moves such an end to the start).
     /// </summary>
     private void Complete(DateTime finishedAt)
     {
-        var end = UtcTime.Normalize(finishedAt);
-        Finished = Started > end ? Started : end;
+        Finished = UtcTime.Normalize(finishedAt);
         MarkLosers();
     }
 

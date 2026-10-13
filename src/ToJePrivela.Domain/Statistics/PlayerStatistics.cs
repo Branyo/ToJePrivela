@@ -52,7 +52,7 @@ public sealed class PlayerStatistics
 
     /// <summary>
     /// Actual loss rate over the expected one, the average of (losers / players) per game: 1 is an average player,
-    /// above 1 loses more often than chance. Null when no counted game had a loser.
+    /// above 1 loses more often than chance. Null without a counted game.
     /// </summary>
     public double? LossIndex { get; private init; }
 
@@ -108,11 +108,12 @@ public sealed class PlayerStatistics
             AveragePlayers = Average(played.Sum(p => p.Game.GamePlayers.Count), count),
             Losses = losses,
             SharedLosses = played.Count(p => p.IsLoss && p.Losers.Count > 1),
-            LossIndex = expectedLosses > 0 ? losses / expectedLosses : null,
+            // Every counted game has a loser, so the expected losses are above zero whenever there is a game.
+            LossIndex = count == 0 ? null : losses / expectedLosses,
             FlawlessVictories = played.Count(p => p.Seat.BadCards == 0 && !p.IsLoss),
             LuckyFinishes = played.Count(p => !p.IsLoss && p.Seat.BadCards >= p.Game.BadCardLimit),
-            ClosestEscapes = played.Count(p =>
-                !p.IsLoss && p.Losers.Count > 0 && p.Seat.FinalBadPoints == p.Losers[0].FinalBadPoints - 1),
+            // All losers of a game share its most final bad points, so any of them gives the losing score.
+            ClosestEscapes = played.Count(p => !p.IsLoss && p.Seat.FinalBadPoints == p.Losers[0].FinalBadPoints - 1),
             Reversals = played.Count(p => p.Seat.FinalBadPoints < 0),
             // Stable sorts over the latest-first list keep the latest game on a tie.
             WorstGame = scores.OrderByDescending(s => s.FinalBadPoints).FirstOrDefault(),
@@ -121,7 +122,7 @@ public sealed class PlayerStatistics
     }
 
     private static IReadOnlyList<GamePlayer> Losers(Game game) =>
-        game.GamePlayers.Where(gp => gp.IsLoser).OrderByDescending(gp => gp.FinalBadPoints).ToList();
+        game.GamePlayers.Where(gp => gp.IsLoser).ToList();
 
     private static double? Average(int total, int count) => count == 0 ? null : (double)total / count;
 

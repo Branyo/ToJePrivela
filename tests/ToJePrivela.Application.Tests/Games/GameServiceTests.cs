@@ -135,13 +135,12 @@ public class GameServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_RequiresTheStart()
+    public async Task UpdateAsync_RequiresTheStartBeforeReadingTheGame()
     {
-        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
-
         var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Finished = Now.UtcDateTime.AddHours(1) });
 
         Assert.Equal("Game.StartRequired", result.Error.Code);
+        await _games.DidNotReceiveWithAnyArgs().GetByIdAsync(default, default, default);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -177,7 +176,7 @@ public class GameServiceTests
     {
         _games.GetByIdAsync(TestAccountId, 7, Arg.Any<CancellationToken>()).Returns((Game?)null);
 
-        var result = await _sut.UpdateAsync(7, new UpdateGameRequest());
+        var result = await _sut.UpdateAsync(7, new UpdateGameRequest { Started = Now.UtcDateTime });
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
@@ -193,6 +192,36 @@ public class GameServiceTests
 
         Assert.True(result.IsSuccess);
         _games.Received(1).Remove(game);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DeletesAgainTheGameAsAnotherRequestLeftIt()
+    {
+        var stale = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var fresh = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        fresh.AwardDouble(2);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(stale, fresh);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ => throw Conflict(), _ => Task.FromResult(1));
+
+        var result = await _sut.DeleteAsync(1);
+
+        Assert.True(result.IsSuccess);
+        _games.Received(1).Remove(fresh);
+        _unitOfWork.Received(1).DiscardChanges();
+        await _unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ReturnsNotFoundForAGameDeletedMeanwhile()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime), (Game?)null);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        var result = await _sut.DeleteAsync(1);
+
+        Assert.Equal(ErrorType.NotFound, result.Error.Type);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -527,7 +556,7 @@ public class GameServiceTests
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
 
         await Assert.ThrowsAsync<ConcurrencyConflictException>(() => _sut.FinishAsync(1));
-        await _unitOfWork.Received(GameService.MaxChangeAttempts).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(ConcurrencyRetry.MaxAttempts).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     private static ConcurrencyConflictException Conflict() => new("A row changed since it was read.", new Exception());

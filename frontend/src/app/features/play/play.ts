@@ -71,6 +71,8 @@ export class Play implements OnInit, OnDestroy {
   protected readonly doubledPlayerId = signal<number | null>(null);
   /** Which confirmation is open: ending the game (results) or deleting it (no results). */
   protected readonly confirming = signal<'end' | 'delete' | null>(null);
+  /** Whether "No" in the delete confirmation goes back to the end one it was opened from, or just closes it. */
+  private deleteFromEnd = false;
   protected readonly formatAnswer = formatAnswer;
   private readonly rules = inject(GameRulesStore).rules;
   /** Every worth the starting player may choose, from the backend's limits. */
@@ -161,12 +163,24 @@ export class Play implements OnInit, OnDestroy {
     void this.store.removeDouble(playerId);
   }
 
+  /** Asks how to end, on the game as it is now: another device may have given it its first card meanwhile. */
   protected askEnd(): void {
     this.confirming.set('end');
+    void this.store.refreshGame();
   }
 
-  protected askDelete(): void {
+  /** @param fromEnd Opened from the end confirmation, which "No" then goes back to. */
+  protected askDelete(fromEnd: boolean): void {
+    this.deleteFromEnd = fromEnd;
     this.confirming.set('delete');
+  }
+
+  protected cancelDelete(): void {
+    if (this.deleteFromEnd) {
+      this.askEnd();
+    } else {
+      this.closeConfirm();
+    }
   }
 
   protected closeConfirm(): void {

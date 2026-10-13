@@ -13,9 +13,6 @@ namespace ToJePrivela.Application.Games;
 /// </summary>
 public sealed class GameService : IGameService
 {
-    /// <summary>How often a change is made on a freshly read game when other requests keep changing it.</summary>
-    public const int MaxChangeAttempts = 3;
-
     private readonly IGameRepository _games;
     private readonly IPlayerRepository _players;
     private readonly IQuestionRepository _questions;
@@ -99,17 +96,17 @@ public sealed class GameService : IGameService
             return Result.Failure(invalid);
         }
 
+        if (request.Started is not DateTime started)
+        {
+            return Result.Failure(GameErrors.StartRequired(id));
+        }
+
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var result = await SaveChangeAsync(
             id,
             game =>
             {
-                if (request.Started is not DateTime started)
-                {
-                    return Task.FromResult<Error?>(GameErrors.StartRequired(id));
-                }
-
                 if (game.CheckReschedule(started, request.Finished, now) is { } violation)
                 {
                     return Task.FromResult<Error?>(GameErrors.From(violation, id));
@@ -190,17 +187,18 @@ public sealed class GameService : IGameService
 
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
+        // The delete is checked against the game's row version too, so a card or double saved meanwhile is retried
+        // like any other change instead of failing the delete.
+        var result = await SaveChangeAsync(
+            id,
+            game =>
+            {
+                _games.Remove(game);
+                return Task.FromResult<Error?>(null);
+            },
+            cancellationToken);
 
-        if (game is null)
-        {
-            return Result.Failure(GameErrors.NotFound(id));
-        }
-
-        _games.Remove(game);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success();
+        return result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
     }
 
     /// <summary>
@@ -228,43 +226,30 @@ public sealed class GameService : IGameService
             cancellationToken));
 
     /// <summary>
-    /// Loads the game, lets <paramref name="change"/> check and change it (or return why it may not) and saves. When
-    /// another request changed the game in between (two devices tapping at once), the change is not lost and not
-    /// turned into a bare conflict: it is made again on the game as it is now, so a game finished meanwhile gives
-    /// <c>Game.AlreadyFinished</c> and two independent changes both stand. Gives up after
-    /// <see cref="MaxChangeAttempts"/> tries, when the conflict reaches the client.
+    /// Loads the game, lets <paramref name="change"/> check and change it (or return why it may not) and saves,
+    /// through <see cref="ConcurrencyRetry"/>: a change racing another request is made again on the game as it is now,
+    /// so a game finished meanwhile gives <c>Game.AlreadyFinished</c> and two independent changes both stand.
     /// </summary>
-    private async Task<Result<Game>> SaveChangeAsync(
+    private Task<Result<Game>> SaveChangeAsync(
         int id,
         Func<Game, Task<Error?>> change,
-        CancellationToken cancellationToken)
-    {
-        for (var attempt = 1; ; attempt++)
-        {
-            var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
+        CancellationToken cancellationToken) =>
+        ConcurrencyRetry.SaveAsync(
+            _unitOfWork,
+            async () =>
+            {
+                var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
-            if (game is null)
-            {
-                return Result.Failure<Game>(GameErrors.NotFound(id));
-            }
+                if (game is null)
+                {
+                    return Result.Failure<Game>(GameErrors.NotFound(id));
+                }
 
-            if (await change(game) is { } error)
-            {
-                return Result.Failure<Game>(error);
-            }
-
-            try
-            {
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-                return Result.Success(game);
-            }
-            catch (ConcurrencyConflictException) when (attempt < MaxChangeAttempts)
-            {
-                // Forget this attempt and read the game as the other request left it.
-                _unitOfWork.DiscardChanges();
-            }
-        }
-    }
+                return await change(game) is { } error
+                    ? Result.Failure<Game>(error)
+                    : Result.Success(game);
+            },
+            cancellationToken);
 
     private static Result<GameDetailsDto> ToDetails(Result<Game> result) =>
         result.IsSuccess

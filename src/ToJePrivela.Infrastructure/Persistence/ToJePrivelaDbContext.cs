@@ -26,13 +26,36 @@ public class ToJePrivelaDbContext : DbContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         BumpGameVersions();
-        return base.SaveChanges(acceptAllChangesOnSuccess);
+
+        // BumpGameVersions has just detected the changes; detecting them again would walk the whole graph once more.
+        var detectChanges = ChangeTracker.AutoDetectChangesEnabled;
+        ChangeTracker.AutoDetectChangesEnabled = false;
+
+        try
+        {
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+        finally
+        {
+            ChangeTracker.AutoDetectChangesEnabled = detectChanges;
+        }
     }
 
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         BumpGameVersions();
-        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+
+        var detectChanges = ChangeTracker.AutoDetectChangesEnabled;
+        ChangeTracker.AutoDetectChangesEnabled = false;
+
+        try
+        {
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+        finally
+        {
+            ChangeTracker.AutoDetectChangesEnabled = detectChanges;
+        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -58,11 +81,15 @@ public class ToJePrivelaDbContext : DbContext
     {
         ChangeTracker.DetectChanges();
 
+        var gamesWithChangedSeats = ChangeTracker.Entries<GamePlayer>()
+            .Where(seat => seat.State is EntityState.Modified or EntityState.Added or EntityState.Deleted)
+            .Select(seat => seat.Property(gp => gp.GameId).CurrentValue)
+            .ToHashSet();
+
         foreach (var game in ChangeTracker.Entries<Game>())
         {
             var changed = game.State == EntityState.Modified
-                || (game.State == EntityState.Unchanged && game.Entity.GamePlayers.Any(gp =>
-                    Entry(gp).State is EntityState.Modified or EntityState.Added or EntityState.Deleted));
+                || (game.State == EntityState.Unchanged && gamesWithChangedSeats.Contains(game.Entity.Id));
 
             if (changed)
             {
