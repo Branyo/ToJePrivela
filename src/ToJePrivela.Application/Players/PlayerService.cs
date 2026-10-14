@@ -129,25 +129,29 @@ public sealed class PlayerService : IPlayerService
     /// Deletes the player but keeps every game they played: their seat becomes an unknown player, and a game
     /// still running is cancelled, since it cannot go on without them.
     /// </summary>
-    public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
-    {
-        var player = await _players.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
+    public Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default) =>
+        // One of the player's games may change meanwhile (a card or a double in a running game): the retry reads
+        // them again and forgets the player in the games as they are now.
+        ConcurrencyRetry.SaveAsync(
+            _unitOfWork,
+            async () =>
+            {
+                var player = await _players.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
 
-        if (player is null)
-        {
-            return Result.Failure(PlayerErrors.NotFound(id));
-        }
+                if (player is null)
+                {
+                    return Result.Failure(PlayerErrors.NotFound(id));
+                }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        foreach (var game in await _games.GetByPlayerAsync(_currentAccount.Id, id, cancellationToken))
-        {
-            game.ForgetPlayer(id, now);
-        }
+                foreach (var game in await _games.GetByPlayerAsync(_currentAccount.Id, id, cancellationToken))
+                {
+                    game.ForgetPlayer(id, now);
+                }
 
-        _players.Remove(player);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success();
-    }
+                _players.Remove(player);
+                return Result.Success();
+            },
+            cancellationToken);
 }

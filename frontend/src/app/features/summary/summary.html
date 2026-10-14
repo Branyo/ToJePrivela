@@ -43,12 +43,16 @@
           {{ (losers().length === 1 ? 'summary.lost.single' : 'summary.lost.tie') | translate }}
         </h2>
         <p class="spotlight__score">
-          {{
-            i18n.pluralKey('summary.score', losers()[0].badCards)
-              | translate: { points: losers()[0].finalBadPoints, count: losers()[0].badCards }
-          }}
-          @if (losers()[0].doubles > 0) {
-            {{ 'summary.doublesOff' | translate: { count: losers()[0].doubles } }}
+          @if (losers().length === 1) {
+            {{
+              i18n.pluralKey('summary.score', losers()[0].badCards)
+                | translate: { points: losers()[0].finalBadPoints, count: losers()[0].badCards }
+            }}
+            @if (losers()[0].doubles > 0) {
+              {{ 'summary.doublesOff' | translate: { count: losers()[0].doubles } }}
+            }
+          } @else {
+            {{ 'summary.scoreTie' | translate: { points: losers()[0].finalBadPoints } }}
           }
         </p>
       }

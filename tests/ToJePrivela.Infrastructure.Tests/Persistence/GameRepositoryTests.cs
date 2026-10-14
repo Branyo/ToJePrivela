@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Domain.Entities;
+using ToJePrivela.Infrastructure.Persistence;
 using ToJePrivela.Infrastructure.Persistence.Repositories;
 
 namespace ToJePrivela.Infrastructure.Tests.Persistence;
@@ -116,13 +118,126 @@ public class GameRepositoryTests : IDisposable
 
         await using (var context = _database.CreateContext())
         {
-            var game = await context.Games.FirstAsync(g => g.Id == gameId);
-            game.Finish(finished);
+            var game = await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == gameId);
+            WithABadCard(game, 2).Finish(finished);
             await context.SaveChangesAsync();
         }
 
         await using var verification = _database.CreateContext();
-        Assert.Equal(finished, (await verification.Games.FirstAsync(g => g.Id == gameId)).Finished);
+        var stored = await verification.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == gameId);
+        Assert.Equal(finished, stored.Finished);
+        Assert.Equal([2], stored.GamePlayers.Where(gp => gp.IsLoser).Select(gp => gp.PlayerId!.Value));
+    }
+
+    [Fact]
+    public async Task GetCountedByPlayerAsync_ReadsOnlyThePlayersWholeGamesWithALoserUntracked()
+    {
+        var finished = await SeedGameAsync([1, 2]);
+        await SeedGameAsync([1, 2]); // still running
+        var withoutLoser = await SeedGameAsync([1, 2]);
+        var cancelled = await SeedGameAsync([1, 2, 3]);
+        var withoutPlayer = await SeedGameAsync([2, 3]);
+
+        await using (var context = _database.CreateContext())
+        {
+            WithABadCard(await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == finished), 2).Finish(Start.AddHours(1));
+            WithABadCard(await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == withoutPlayer), 2).Finish(Start.AddHours(1));
+            var toCancel = await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == cancelled);
+            toCancel.ForgetPlayer(3, Start.AddHours(1));
+            await context.SaveChangesAsync();
+
+            // Ended before anybody held a bad card, as games could be before Game.NoBadCardsYet: nobody lost it.
+            await context.Database.ExecuteSqlAsync(
+                $"UPDATE \"Games\" SET \"Finished\" = {Start.AddHours(1)} WHERE \"Id\" = {withoutLoser}");
+        }
+
+        await using var lookup = _database.CreateContext();
+        var sut = new GameRepository(lookup);
+
+        var games = await sut.GetCountedByPlayerAsync(TestAccountId, 1);
+
+        Assert.Equal([finished], games.Select(g => g.Id));
+        Assert.Equal(2, games[0].GamePlayers.Count);
+        Assert.All(games[0].GamePlayers, gp => Assert.Null(gp.Player));
+        Assert.Empty(lookup.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task SavingADoubleOnAGameFinishedMeanwhileIsAConcurrencyConflict()
+    {
+        var gameId = await SeedGameAsync([1, 2]);
+
+        await using var stale = _database.CreateContext();
+        var staleGame = (await new GameRepository(stale).GetByIdAsync(TestAccountId, gameId))!;
+
+        await using (var finishing = _database.CreateContext())
+        {
+            var game = (await new GameRepository(finishing).GetByIdAsync(TestAccountId, gameId))!;
+            WithABadCard(game, 1).Finish(Start.AddHours(1));
+            await new UnitOfWork(finishing).SaveChangesAsync();
+        }
+
+        // The double passed its check on the game as it was read; saved, it would leave the stored loser stale.
+        staleGame.AwardDouble(1);
+        await Assert.ThrowsAsync<ConcurrencyConflictException>(() => new UnitOfWork(stale).SaveChangesAsync());
+
+        await using var verification = _database.CreateContext();
+        var stored = await verification.GamePlayers.SingleAsync(gp => gp.GameId == gameId && gp.PlayerId == 1);
+        Assert.Equal((0, true), (stored.Doubles, stored.IsLoser));
+    }
+
+    [Fact]
+    public async Task EverySaveThatChangesTheGameOrAPlayerBumpsTheVersionOnce()
+    {
+        var gameId = await SeedGameAsync([1, 2, 3]);
+        var versions = new List<long> { await VersionAsync(gameId) };
+
+        async Task Change(Action<Game> change)
+        {
+            await using var context = _database.CreateContext();
+            change((await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!);
+            await new UnitOfWork(context).SaveChangesAsync();
+            versions.Add(await VersionAsync(gameId));
+        }
+
+        var question = TestQuestion(badPoints: 2);
+        await Change(game => game.AwardDouble(1));
+        await Change(game => game.RemoveDouble(1));
+        await Change(game => game.AwardBadCard(1, question, null, Start.AddMinutes(1)));
+        await Change(game => game.Reschedule(Start.AddMinutes(-5), null, Start.AddHours(1)));
+        await Change(game => game.Finish(Start.AddHours(1)));
+        await Change(game => game.ForgetPlayer(2, Start.AddHours(2)));
+
+        Assert.Equal(Enumerable.Range(0, versions.Count).Select(i => versions[0] + i), versions);
+    }
+
+    [Fact]
+    public async Task ACardReachingTheLimitBumpsTheVersionOnce_AndASaveWithoutChangesNotAtAll()
+    {
+        int gameId;
+
+        await using (var seeding = _database.CreateContext())
+        {
+            var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
+            seeding.Games.Add(game);
+            await seeding.SaveChangesAsync();
+            gameId = game.Id;
+        }
+
+        var before = await VersionAsync(gameId);
+
+        await using (var context = _database.CreateContext())
+        {
+            var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
+            await new UnitOfWork(context).SaveChangesAsync();
+            Assert.Equal(before, await VersionAsync(gameId));
+
+            game.AwardBadCard(1, TestQuestion(badPoints: 2), null, Start.AddMinutes(1));
+            game.AwardBadCard(1, TestQuestion(badPoints: 2), null, Start.AddMinutes(2));
+            await new UnitOfWork(context).SaveChangesAsync();
+        }
+
+        Assert.Equal(before + 1, await VersionAsync(gameId));
     }
 
     [Fact]
@@ -148,6 +263,21 @@ public class GameRepositoryTests : IDisposable
         Assert.Equal([mine], (await sut.GetAllAsync(TestAccountId)).Select(g => g.Id));
         Assert.Equal([mine], (await sut.GetByPlayerAsync(TestAccountId, 1)).Select(g => g.Id));
         Assert.Equal([theirs], (await sut.GetAllAsync(otherAccountId)).Select(g => g.Id));
+    }
+
+    private static Game WithABadCard(Game game, int playerId)
+    {
+        game.AwardBadCard(playerId, TestQuestion(badPoints: 3), null, Start.AddMinutes(1));
+        return game;
+    }
+
+    private static Question TestQuestion(int badPoints) =>
+        new("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, Start);
+
+    private async Task<long> VersionAsync(int gameId)
+    {
+        await using var context = _database.CreateContext();
+        return await context.Games.Where(g => g.Id == gameId).Select(g => g.Version).SingleAsync();
     }
 
     private async Task<int> SeedGameAsync(int[] playerIds, int accountId = TestAccountId)

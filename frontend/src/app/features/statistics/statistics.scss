@@ -1,0 +1,167 @@
+.stats__title {
+  margin: 0 0 20px;
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+}
+
+.stats__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.roster {
+  position: sticky;
+  top: 16px;
+  padding: 14px;
+}
+
+.roster__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster__item {
+  --avatar-size: 36px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 3px solid transparent;
+  border-radius: var(--radius);
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s var(--bounce);
+
+  &:hover {
+    transform: translateX(4px);
+  }
+}
+
+.roster__item--on {
+  border-color: var(--ink);
+  background: var(--sun);
+  box-shadow: var(--shadow-sm);
+}
+
+.roster__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.detail__hint {
+  margin: 0;
+  text-align: center;
+}
+
+.detail__back {
+  display: none;
+  justify-self: start;
+}
+
+.detail__head {
+  --avatar-size: 64px;
+
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+
+  h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    overflow-wrap: anywhere;
+  }
+}
+
+.group__title {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-content: start;
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 12px 14px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.tile__icon {
+  grid-row: span 2;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.tile__label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.tile__value {
+  font-size: 1.8rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile__average,
+.tile__link,
+.tile__hint {
+  grid-column: 2;
+  font-size: 0.85rem;
+}
+
+.tile__average,
+.tile__link {
+  font-weight: 600;
+}
+
+.tile__link {
+  color: var(--ink);
+}
+
+// On a phone the list and the picked player take turns.
+@media (max-width: 760px) {
+  .stats__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .roster {
+    position: static;
+  }
+
+  .stats--picked .roster,
+  .stats:not(.stats--picked) .detail {
+    display: none;
+  }
+
+  .detail__back {
+    display: inline-flex;
+  }
+}

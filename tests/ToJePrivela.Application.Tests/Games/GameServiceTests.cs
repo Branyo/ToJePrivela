@@ -98,7 +98,7 @@ public class GameServiceTests
     [Fact]
     public async Task UpdateAsync_ReschedulesTheGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 1);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
         var finished = Now.UtcDateTime.AddHours(2);
@@ -135,20 +135,19 @@ public class GameServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_RequiresTheStart()
+    public async Task UpdateAsync_RequiresTheStartBeforeReadingTheGame()
     {
-        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
-
         var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Finished = Now.UtcDateTime.AddHours(1) });
 
         Assert.Equal("Game.StartRequired", result.Error.Code);
+        await _games.DidNotReceiveWithAnyArgs().GetByIdAsync(default, default, default);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task UpdateAsync_ReturnsConflictWhenReopeningAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime.AddHours(1));
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
@@ -177,7 +176,7 @@ public class GameServiceTests
     {
         _games.GetByIdAsync(TestAccountId, 7, Arg.Any<CancellationToken>()).Returns((Game?)null);
 
-        var result = await _sut.UpdateAsync(7, new UpdateGameRequest());
+        var result = await _sut.UpdateAsync(7, new UpdateGameRequest { Started = Now.UtcDateTime });
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
@@ -193,6 +192,36 @@ public class GameServiceTests
 
         Assert.True(result.IsSuccess);
         _games.Received(1).Remove(game);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DeletesAgainTheGameAsAnotherRequestLeftIt()
+    {
+        var stale = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var fresh = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        fresh.AwardDouble(2);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(stale, fresh);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ => throw Conflict(), _ => Task.FromResult(1));
+
+        var result = await _sut.DeleteAsync(1);
+
+        Assert.True(result.IsSuccess);
+        _games.Received(1).Remove(fresh);
+        _unitOfWork.Received(1).DiscardChanges();
+        await _unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ReturnsNotFoundForAGameDeletedMeanwhile()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime), (Game?)null);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        var result = await _sut.DeleteAsync(1);
+
+        Assert.Equal(ErrorType.NotFound, result.Error.Type);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -312,7 +341,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardBadCardAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
@@ -374,7 +403,7 @@ public class GameServiceTests
     [Fact]
     public async Task AwardDoubleAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
@@ -435,7 +464,7 @@ public class GameServiceTests
     [Fact]
     public async Task RemoveDoubleAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.AwardDouble(1);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
@@ -448,18 +477,34 @@ public class GameServiceTests
     [Fact]
     public async Task FinishAsync_FinishesTheGameNow()
     {
-        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.FinishAsync(1);
 
         Assert.Equal(Now.UtcDateTime, result.Value.Finished);
+        Assert.True(Assert.Single(result.Value.Players, p => p.PlayerId == 2).IsLoser);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FinishAsync_ReturnsConflictWhileNobodyHoldsABadCard()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.FinishAsync(1);
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        Assert.Equal("Game.NoBadCardsYet", result.Error.Code);
+        Assert.False(game.IsFinished);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task FinishAsync_ReturnsConflictForAFinishedGame()
     {
-        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
@@ -467,4 +512,52 @@ public class GameServiceTests
 
         Assert.Equal(ErrorType.Conflict, result.Error.Type);
     }
+
+    [Fact]
+    public async Task AwardDoubleAsync_MakesTheChangeAgainOnTheGameAsAnotherRequestLeftIt()
+    {
+        var stale = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        var fresh = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        fresh.AwardDouble(2);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(stale, fresh);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ => throw Conflict(), _ => Task.FromResult(1));
+
+        var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 1 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal([1, 1], result.Value.Players.Select(p => p.Doubles));
+        _unitOfWork.Received(1).DiscardChanges();
+        await _unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_OnAGameFinishedMeanwhileReturnsAlreadyFinished()
+    {
+        var finished = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
+        finished.Finish(Now.UtcDateTime);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime), finished);
+        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        Assert.Equal("Game.AlreadyFinished", result.Error.Code);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FinishAsync_LetsTheConflictThroughAfterTheLastAttempt()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(_ => TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        await Assert.ThrowsAsync<ConcurrencyConflictException>(() => _sut.FinishAsync(1));
+        await _unitOfWork.Received(ConcurrencyRetry.MaxAttempts).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    private static ConcurrencyConflictException Conflict() => new("A row changed since it was read.", new Exception());
 }

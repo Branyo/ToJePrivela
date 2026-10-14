@@ -153,6 +153,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET | `/api/players` | |
 | GET/PUT/DELETE | `/api/players/{id}` | |
 | POST | `/api/players` | 409 `Player.NameTaken` when the login already has the name (case-insensitive); 409 `Player.LimitReached` at 100 players per login |
+| GET | `/api/players/{id}/statistics` | The player's record over finished, not cancelled games with a loser (see *Player statistics* below); 404 for another login's player |
 | GET | `/api/games` | |
 | GET/PUT/DELETE | `/api/games/{id}` | DELETE removes the game (finished or not) with its scores; players stay. Unlike a player deletion, which marks running games `cancelled`, nothing remains |
 | GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
@@ -160,7 +161,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/games/{id}/bad-cards` | Body `{ playerId, questionId }`; the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
 | POST | `/api/games/{id}/doubles` | Body `{ playerId }`; credits a double that held (one bad point off at the end); never finishes the game; 409 on a finished game |
 | DELETE | `/api/games/{id}/doubles/{playerId}` | Takes back one double tapped by mistake; 409 when the player has none or the game is finished |
-| POST | `/api/games/{id}/finish` | Ends a running game now; 409 when already finished |
+| POST | `/api/games/{id}/finish` | Ends a running game now, its result counted as it stands; 409 when already finished, and 409 `Game.NoBadCardsYet` while nobody holds a bad card (keep playing or delete it) |
 | GET | `/api/questions?categoryId=&source=` | Both filters optional; `source` is `Manual` or `Ai` |
 | GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none); 400 for unknown ids, 404 when they hold no questions; does not count a view |
 | POST | `/api/questions/{id}/views` | Records that the question was shown; returns it with the new `viewCount` |
@@ -248,14 +249,33 @@ a `CreatedAt` timestamp.
   selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`.
   **For now the view counts are shared between the logins**, like the questions themselves: a question shown in one
   login's game counts as viewed for every login, so one login's games change which questions the others draw next.
-- **Optimistic concurrency on questions.** `Question.Version` is a row version the entity bumps on every
-  change (SQLite has no native rowversion) and EF checks as a concurrency token. A lost race surfaces as
-  `ConcurrencyConflictException`; recording a view rereads the row and retries (up to 5 attempts, then
-  409), and any other conflicting change becomes a 409 through `ConcurrencyConflictExceptionHandler`.
+- **Optimistic concurrency on questions and games.** `Question.Version` and `Game.Version` are row versions (SQLite
+  has no native rowversion) that EF checks as a concurrency token. A question bumps its own on every change; a game's
+  is bumped by the `DbContext`, once per save that changes the game or any of its players, so no domain method can
+  forget it. A lost race surfaces as `ConcurrencyConflictException`; recording a view rereads the row and retries
+  (up to 5 attempts, then 409). A game change (card, double, finish, reschedule, delete) and a player deletion reread
+  the game and make the change again on it (`ConcurrencyRetry`, up to 3 attempts), so two devices tapping at once both
+  count, a game deleted while another device saves a double is still deleted, and a card or double
+  for a game finished meanwhile gets the usual 409 `Game.AlreadyFinished`; only a conflict that outlasts the attempts
+  becomes a generic 409 through `ConcurrencyConflictExceptionHandler`. On a game this keeps the stored verdict true:
+  the scores never change behind the losers.
 
 - **Bad cards.** A game ends as soon as one player holds `BadCardLimit` cards. `GamePlayer` keeps the
   card count (`BadCards`) and their sum (`BadPoints`); the value of a card always comes from the stored
-  question, never from the client. The loser is the player with the most bad points.
+  question, never from the client.
+
+- **Losers.** The verdict is decided once, when the game finishes, and stored on each seat
+  (`GamePlayer.IsLoser`), so a later rule change never rewrites a result. Everyone on the most final bad
+  points loses, whatever their cards: a tie is a shared loss, and a player without a card can lose when
+  doubles push everyone else below them. Nobody has lost a running or cancelled game. Ending a game early
+  (`POST /api/games/{id}/finish`, or `PUT` giving a running game its end) is the players' own choice, so
+  its result counts as it stands even when that is not fair to everyone; only a game nobody holds a bad
+  card in cannot be finished (409 `Game.NoBadCardsYet`): it can be played on or deleted; `GameDetailsDto.hasResult`
+  tells clients which, so they never decide it themselves. Games finished before the verdict was stored got it from
+  the `StoreGameLosers` migration under the same rule, so a tie that used to be broken by the number of cards is a
+  shared loss there too: every finished game follows the shared-loss rule. A card that reaches the limit is never
+  refused over the clock: should the server's clock read earlier than a start just corrected to now, the game ends
+  at its start (finishing or rescheduling with an end before the start is still 400 `Game.EndsBeforeStart`).
 
 - **Doubles.** A player who thinks the previous estimate is too low calls "double" and at least doubles
   it. When the next player raises it again or wrongly calls "To je priveľa!", the double held and is
@@ -265,6 +285,16 @@ a `CreatedAt` timestamp.
   goes out; the client holds the card request until every double tapped before it is saved. Each seat
   has a − / + stepper; − takes back a mis-tapped double (`DELETE /api/games/{id}/doubles/{playerId}`),
   never below zero doubles.
+
+- **Player statistics.** `GET /api/players/{id}/statistics` is worked out on every request from the
+  player's games that are started, finished, not cancelled and have a loser (`PlayerStatistics.CountedGame`, the
+  one definition shared by the domain and the repository query); a game ended before anybody held a bad card,
+  possible before `Game.NoBadCardsYet`, has none and counts for nothing. Nothing but the verdict is stored. Who lost
+  is the stored verdict (see *Losers*). A flawless victory is a game the player ended with 0 bad cards and
+  did not lose. The loss index is
+  the actual loss rate over the expected one, the average of (losers / players) per game, so a shared loss weighs as much as chance says. A closest escape is
+  exactly one final point below the loser; best and worst games pick the latest game on a tie. Averages
+  and the loss index are null without anything to average. The frontend shows it at `/statistics`.
 
 ## Frontend
 

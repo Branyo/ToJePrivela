@@ -218,7 +218,7 @@ public class PlayerServiceTests
     {
         var player = TestEntities.Player(1, "Brano");
         var running = TestEntities.Game(10, [1, 2], Now.UtcDateTime.AddHours(-1));
-        var finished = TestEntities.Game(11, [1, 3], Now.UtcDateTime.AddDays(-1));
+        var finished = TestEntities.WithABadCard(TestEntities.Game(11, [1, 3], Now.UtcDateTime.AddDays(-1)), 3);
         finished.Finish(Now.UtcDateTime.AddDays(-1).AddHours(1));
         _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
         _games.GetByPlayerAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns([running, finished]);
@@ -248,5 +248,25 @@ public class PlayerServiceTests
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
         _players.DidNotReceive().Remove(Arg.Any<Player>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ForgetsThePlayerAgainInGamesChangedMeanwhile()
+    {
+        var player = TestEntities.Player(1, "Brano");
+        var stale = TestEntities.Game(10, [1, 2], Now.UtcDateTime.AddHours(-1));
+        var fresh = TestEntities.Game(10, [1, 2], Now.UtcDateTime.AddHours(-1));
+        _players.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(player);
+        _games.GetByPlayerAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns([stale], [fresh]);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(_ => throw new ConcurrencyConflictException("changed", new Exception()), _ => Task.FromResult(1));
+
+        var result = await _sut.DeleteAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(fresh.IsCancelled);
+        Assert.False(fresh.HasPlayer(1));
+        _unitOfWork.Received(1).DiscardChanges();
+        await _unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

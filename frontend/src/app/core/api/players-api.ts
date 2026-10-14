@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Player } from './models';
+import { Player, PlayerStatistics } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class PlayersApi {
@@ -9,6 +9,11 @@ export class PlayersApi {
 
   getAll(): Observable<Player[]> {
     return this.http.get<Player[]>('/api/players');
+  }
+
+  /** Worked out from the player's finished, not cancelled games. */
+  getStatistics(id: number): Observable<PlayerStatistics> {
+    return this.http.get<PlayerStatistics>(`/api/players/${id}/statistics`);
   }
 
   create(name: string): Observable<Player> {

@@ -60,6 +60,12 @@ export class PlayStore {
   /** While bidding and after "To je priveľa!", but before the card is handed out. */
   readonly canDouble = computed(() => this.phase() === 'asking' || this.phase() === 'revealed');
   /**
+   * Whether ending now would count a result, as the server decides it (`hasResult`). Until then the game can only be
+   * played on or deleted; the server refuses to finish it (`Game.NoBadCardsYet`). Another device may hand out the first
+   * card, so `refreshGame` reloads it before the players are asked how to end.
+   */
+  readonly hasResult = computed(() => this.game()?.hasResult ?? false);
+  /**
    * The game may be finished or deleted: it is loaded, not over or being ended yet, and no card is on its way. A
    * question still on its way does not hold it up, so a request that never answers cannot trap the players.
    */
@@ -130,6 +136,7 @@ export class PlayStore {
       if (toProblem(error).code === 'Question.NoneAvailable') {
         this.question.set(null);
         this.phase.set('no-questions');
+        await this.refreshGame(); // Whether it offers the results or only deleting depends on the game as it is now.
         return;
       }
       this.fail(error);
@@ -153,6 +160,32 @@ export class PlayStore {
       }
     } catch {
       // Still readable in the previous language.
+    }
+  }
+
+  /**
+   * Reloads the scoreboard, e.g. before the players are asked how to end, since another device may have changed the
+   * game meanwhile (its first card gives it a result, or it was finished there). Nothing changes while a card or a
+   * double of this device is being saved, once the game is being ended, or when such an answer came in while the
+   * reload was on its way (it is newer than the reload); on a failure the game simply stays as it was.
+   */
+  async refreshGame(): Promise<void> {
+    const shown = this.game();
+    if (!shown || !this.isRefreshable()) {
+      return;
+    }
+
+    try {
+      const fresh = await firstValueFrom(this.gamesApi.getDetails(this.gameId));
+      if (this.game() !== shown || !this.isRefreshable()) {
+        return;
+      }
+      this.game.set(fresh);
+      if (fresh.finished) {
+        this.phase.set('finished');
+      }
+    } catch {
+      // The scoreboard as last seen still stands.
     }
   }
 
@@ -268,13 +301,18 @@ export class PlayStore {
     await this.nextQuestion();
   }
 
-  /** Ends the game early with its results counted. On a failure the round goes on where it was. */
+  /**
+   * Ends the game early with its results counted. On a failure the round goes on where it was, with the game reloaded
+   * (e.g. `Game.NoBadCardsYet` or a game finished from another device), so the next choice is made on the real state.
+   */
   async finish(): Promise<void> {
     const ended = await this.end(() => this.gamesApi.finish(this.gameId));
     if (ended.ok) {
       this.game.set(ended.value);
       this.phase.set('finished');
+      return;
     }
+    await this.refreshGame();
   }
 
   /**
@@ -329,6 +367,11 @@ export class PlayStore {
       goBack();
       return { ok: false };
     }
+  }
+
+  /** No card, double or end of this device is on its way, so a reloaded game is not older than what it shows. */
+  private isRefreshable(): boolean {
+    return !this.doubles && !this.isEnding() && this.phase() !== 'awarding';
   }
 
   /** The game is being ended or is over, so the round must not go on. */

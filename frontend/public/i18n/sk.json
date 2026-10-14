@@ -5,7 +5,8 @@
     "language": "Jazyk",
     "menu": "Menu",
     "signOut": "Odhlásiť",
-    "settings": "Nastavenia"
+    "settings": "Nastavenia",
+    "statistics": "Štatistiky"
   },
   "languages": {
     "sk": "Slovenčina",
@@ -20,7 +21,8 @@
     "questions": "Otázky",
     "players": "Hráči",
     "categories": "Kategórie",
-    "password": "Heslo"
+    "password": "Heslo",
+    "statistics": "Štatistiky"
   },
   "common": {
     "dateTime": "d. M. HH:mm",
@@ -62,7 +64,7 @@
       },
       "end": {
         "title": "Koniec hry",
-        "text": "Keď niekto nazbiera priveľa kariet, hra končí. Každý vydarený Double odráta jedného somára a prehráva hráč, ktorému ich zostane najviac."
+        "text": "Keď niekto nazbiera priveľa kariet, hra končí. Každý vydarený Double odráta jedného somára a prehráva hráč, ktorému ich zostane najviac. Pri rovnosti prehrávajú spolu, bez ohľadu na počet kariet."
       }
     }
   },
@@ -155,7 +157,8 @@
     "outOfQuestions": {
       "title": "Došli otázky!",
       "text": "V týchto kategóriách už nie sú otázky. Pridajte nové pri príprave hry alebo hru tu ukončite.",
-      "results": "🏁 Zobraziť výsledky"
+      "results": "🏁 Zobraziť výsledky",
+      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Pridajte otázky pri príprave hry alebo hru vymažte."
     },
     "gameOver": {
       "first": "KONIEC",
@@ -180,7 +183,8 @@
     "onTheEdge": "🔥 na hrane",
     "confirmEnd": {
       "title": "Ukončiť hru teraz?",
-      "text": "Výsledky sa spočítajú podľa aktuálneho stavu a prehráva hráč s najviac somármi po odrátaní Double.",
+      "text": "Výsledky sa spočítajú podľa aktuálneho stavu, aj keď to nemusí byť voči každému férové: prehráva ten, kto má po odrátaní Double najviac trestných bodov, pri rovnosti prehrávajú spolu.",
+      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Hrajte ďalej alebo hru vymažte.",
       "yes": "Áno, zobraziť výsledky",
       "no": "Hrať ďalej",
       "deleteGame": "Vymazať hru bez výsledkov"
@@ -219,6 +223,7 @@
       "many": "🫏 trestné body: {{points}} z {{count}} karty",
       "other": "🫏 trestné body: {{points}} z {{count}} kariet"
     },
+    "scoreTie": "🫏 trestné body: {{points}}",
     "doublesOff": "(✌️ −{{count}})",
     "doublesLabel": "Double: {{count}}",
     "board": "📊 Počet somárov",
@@ -358,7 +363,8 @@
         "PlayerNotInGame": "Tento hráč v hre nehrá.",
         "UnknownQuestion": "Táto otázka neexistuje.",
         "NoDoubleToRemove": "Tento hráč nemá žiadny Double na ubratie.",
-        "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz."
+        "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz.",
+        "NoBadCardsYet": "Nikto ešte nemá somársku kartu, takže hra nemá výsledok. Hrajte ďalej alebo ju vymažte."
       },
       "Player": {
         "NotFound": "Tento hráč neexistuje.",
@@ -409,5 +415,79 @@
     "submit": "Zmeniť heslo",
     "saving": "Ukladám…",
     "changed": "Heslo bolo zmenené. Ostatné zariadenia sa musia prihlásiť novým heslom."
+  },
+  "statistics": {
+    "title": "Štatistiky hráčov",
+    "players": "Hráči",
+    "noPlayers": "Zatiaľ tu nie sú žiadni hráči. Pridaj ich v nastaveniach.",
+    "loading": "Načítava sa…",
+    "pick": "Vyber hráča a uvidíš jeho štatistiky.",
+    "back": "Všetci hráči",
+    "perGame": "{{value}} na hru",
+    "groups": {
+      "games": "🎲 Hry",
+      "cards": "🫏 Karty a body",
+      "losses": "😵 Prehry",
+      "feats": "🏅 Kúsky",
+      "records": "📌 Rekordy"
+    },
+    "metrics": {
+      "gamesPlayed": {
+        "label": "Odohrané hry",
+        "hint": "Dohrané hry, v ktorých hráč sedel."
+      },
+      "averagePlayers": {
+        "label": "Hráčov na hru",
+        "hint": "Priemerný počet hráčov pri stole."
+      },
+      "badCards": {
+        "label": "Trestné karty",
+        "hint": "Počet somárskych kariet zo všetkých hier."
+      },
+      "finalBadPoints": {
+        "label": "Konečné trestné body",
+        "hint": "Trestné body mínus Double, zo všetkých hier."
+      },
+      "doubles": {
+        "label": "Double",
+        "hint": "Double, ktoré vyšli."
+      },
+      "losses": {
+        "label": "Prehry",
+        "hint": "Hry s najviac konečnými trestnými bodmi, aj delené."
+      },
+      "sharedLosses": {
+        "label": "Delené prehry",
+        "hint": "Prehry s rovnakým skóre ako iný hráč."
+      },
+      "lossIndex": {
+        "label": "Index prehier",
+        "hint": "Skutočný podiel prehier voči očakávanému. 1 je priemer, nad 1 prehráva častejšie, ako by mal."
+      },
+      "flawlessVictories": {
+        "label": "Čistá výhra",
+        "hint": "Hry, ktoré si skončil bez jedinej trestnej karty a neprehral si."
+      },
+      "luckyFinishes": {
+        "label": "Šťastný koniec",
+        "hint": "Hru ukončila jeho posledná karta, no prehral niekto iný."
+      },
+      "closestEscapes": {
+        "label": "Tesný únik",
+        "hint": "Presne o jeden konečný bod menej ako porazený."
+      },
+      "reversals": {
+        "label": "Do mínusu",
+        "hint": "Hry ukončené pod nulou konečných bodov."
+      },
+      "worstGame": {
+        "label": "Najhoršia hra",
+        "hint": "Najviac konečných trestných bodov v jednej hre."
+      },
+      "bestGame": {
+        "label": "Najlepšia hra",
+        "hint": "Najmenej konečných trestných bodov v jednej hre."
+      }
+    }
   }
 }

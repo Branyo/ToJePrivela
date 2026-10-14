@@ -8,6 +8,7 @@ using ToJePrivela.Application.QuestionCategories;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.Questions;
 using ToJePrivela.Application.Rules;
+using ToJePrivela.Application.Statistics;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminAccountProvisioner, AdminAccountProvisioner>();
         services.AddScoped<IPlayerService, PlayerService>();
         services.AddScoped<IGameService, GameService>();
+        services.AddScoped<IPlayerStatisticsService, PlayerStatisticsService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IQuestionCategoryService, QuestionCategoryService>();
         services.AddScoped<IQuestionGenerationService, QuestionGenerationService>();

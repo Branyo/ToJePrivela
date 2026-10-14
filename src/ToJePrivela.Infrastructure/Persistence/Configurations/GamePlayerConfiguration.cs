@@ -16,6 +16,7 @@ public sealed class GamePlayerConfiguration : IEntityTypeConfiguration<GamePlaye
         builder.Property(gp => gp.BadPoints).HasDefaultValue(0);
         builder.Property(gp => gp.BadCards).HasDefaultValue(0);
         builder.Property(gp => gp.Doubles).HasDefaultValue(0);
+        builder.Property(gp => gp.IsLoser).HasDefaultValue(false);
         builder.Ignore(gp => gp.FinalBadPoints);
         builder.Ignore(gp => gp.IsUnknownPlayer);
 

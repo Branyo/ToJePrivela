@@ -60,6 +60,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     public async Task PutGame_FinishesTheGame()
     {
         var game = await CreateGameAsync();
+        await GiveABadCardAsync(game, playerId: 2);
         var finished = DateTime.UtcNow.AddHours(1);
 
         var response = await _client.PutAsJsonAsync(
@@ -189,11 +190,13 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         var player = details.Players.Single(p => p.PlayerId == 2);
         Assert.Equal((1, 4), (player.BadCards, player.BadPoints));
         Assert.Null(details.Finished);
-        Assert.Equal((1, true), (player.Rank, player.IsLoser));
+        Assert.Equal((1, false), (player.Rank, player.IsLoser));
         Assert.Equal((2, false), details.Players.Where(p => p.PlayerId != 2).Select(p => (p.Rank, p.IsLoser)).Single());
 
         var second = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
-        Assert.NotNull((await second.Content.ReadFromJsonAsync<GameDetailsDto>())!.Finished);
+        var finished = (await second.Content.ReadFromJsonAsync<GameDetailsDto>())!;
+        Assert.NotNull(finished.Finished);
+        Assert.Equal([2], finished.Players.Where(p => p.IsLoser).Select(p => p.PlayerId));
 
         var third = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 1, questionId = question.Id });
         Assert.Equal(HttpStatusCode.Conflict, third.StatusCode);
@@ -314,15 +317,37 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task PostFinish_FinishesTheGameOnce()
+    public async Task PostFinish_FinishesTheGameOnceWithTheResultAsItStands()
+    {
+        var game = await CreateGameAsync();
+        await GiveABadCardAsync(game, playerId: 1);
+
+        var response = await _client.PostAsync($"/api/games/{game.Id}/finish", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var details = (await response.Content.ReadFromJsonAsync<GameDetailsDto>())!;
+        Assert.NotNull(details.Finished);
+        Assert.Equal([1], details.Players.Where(p => p.IsLoser).Select(p => p.PlayerId));
+        Assert.Equal(HttpStatusCode.Conflict, (await _client.PostAsync($"/api/games/{game.Id}/finish", null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task PostFinish_RefusesAGameNobodyHoldsABadCardIn()
     {
         var game = await CreateGameAsync();
 
         var response = await _client.PostAsync($"/api/games/{game.Id}/finish", null);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotNull((await response.Content.ReadFromJsonAsync<GameDetailsDto>())!.Finished);
-        Assert.Equal(HttpStatusCode.Conflict, (await _client.PostAsync($"/api/games/{game.Id}/finish", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("Game.NoBadCardsYet", await response.Content.ReadAsStringAsync());
+        Assert.Null((await _client.GetFromJsonAsync<GameDto>($"/api/games/{game.Id}"))!.Finished);
+    }
+
+    private async Task GiveABadCardAsync(GameDto game, int playerId)
+    {
+        var question = await CreateQuestionAsync(badPoints: 2);
+        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId, questionId = question.Id });
+        response.EnsureSuccessStatusCode();
     }
 
     private async Task<GameDto> CreateGameAsync(int badCardLimit = 3)

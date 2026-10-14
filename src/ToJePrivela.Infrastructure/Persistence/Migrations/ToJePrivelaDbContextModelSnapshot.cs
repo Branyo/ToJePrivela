@@ -92,6 +92,10 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("Started")
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");
@@ -122,6 +126,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("GameId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsLoser")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.Property<int?>("PlayerId")
                         .HasColumnType("INTEGER");

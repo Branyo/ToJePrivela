@@ -38,7 +38,10 @@ export interface GamePlayer {
   finalBadPoints: number;
   /** 1-based, decided by the server; players who stand equal share it. */
   rank: number;
-  /** The server's verdict: most final bad points, ties broken by cards; several on a full tie, nobody without cards. */
+  /**
+   * The server's verdict, stored when the game finished: everyone on the most final bad points loses (cards never break
+   * a tie, and a player without a card can lose too). Always false while the game runs and in a cancelled game.
+   */
   isLoser: boolean;
 }
 
@@ -57,6 +60,8 @@ export interface GameDetails {
   badPointsMode: BadPointsMode;
   /** Ended without a result (and without a loser) because one of its players was deleted. */
   cancelled: boolean;
+  /** Somebody holds a bad card: only then can the game be finished (`Game.NoBadCardsYet` otherwise). */
+  hasResult: boolean;
   players: GamePlayer[];
 }
 
@@ -158,4 +163,37 @@ export interface GeneratedAiQuestions {
 
 export interface DeletedAiQuestions {
   deleted: number;
+}
+
+/** The player's final bad points in one game, with the game to link to. */
+export interface GameScore {
+  gameId: number;
+  finished: string;
+  finalBadPoints: number;
+}
+
+/**
+ * A player's record over their finished, not cancelled games. Averages and `lossIndex` are `null` when there is
+ * nothing to average; `worstGame` and `bestGame` are `null` without a counted game.
+ */
+export interface PlayerStatistics {
+  player: Player;
+  gamesPlayed: number;
+  badCards: number;
+  averageBadCards: number | null;
+  finalBadPoints: number;
+  averageFinalBadPoints: number | null;
+  doubles: number;
+  averageDoubles: number | null;
+  averagePlayers: number | null;
+  losses: number;
+  sharedLosses: number;
+  /** Actual loss rate over the expected one (average of losers / players per game); 1 is an average player. */
+  lossIndex: number | null;
+  flawlessVictories: number;
+  luckyFinishes: number;
+  closestEscapes: number;
+  reversals: number;
+  worstGame: GameScore | null;
+  bestGame: GameScore | null;
 }

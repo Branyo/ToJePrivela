@@ -48,9 +48,15 @@ configuration — see the backend README.
 2. **Play** (`/games/:id?categories=1,2`): a question is drawn from the least viewed ones and counted as
    shown. Players estimate out loud; whoever says "to je priveľa!" taps the button to reveal the answer
    and then taps the player who takes the donkey card, which flies over to that seat. **Skip** (before or
-   after the reveal) gives nobody a card. **End game** stops early.
+   after the reveal) gives nobody a card. **End game** stops early: the result counts as it stands, fair
+   or not, since ending is the players' choice. While nobody holds a card there is no result yet, so the
+   game can only be played on or deleted — on the out-of-questions screen too, which then offers deleting the
+   game instead of its results. Another device may hand out the first card meanwhile, so the game is reloaded
+   when the end dialog or the out-of-questions screen opens (and after a refused finish) before those choices
+   are shown.
 3. **Results** (`/games/:id/summary`): the game ends when a player reaches the card limit; the player
-   with the most bad points is the loser (card count breaks a tie). Rematch reuses players, limit and
+   with the most final bad points is the loser (a tie is a shared loss; cards never break it). The server
+   stores that verdict when the game finishes and sends it as `isLoser`. Rematch reuses players, limit and
    categories.
 
 ## Structure

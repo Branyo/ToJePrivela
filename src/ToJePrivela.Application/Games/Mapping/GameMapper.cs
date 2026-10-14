@@ -24,6 +24,7 @@ public static class GameMapper
         game.BadCardLimit,
         game.BadPointsMode.ToString(),
         game.IsCancelled,
+        game.HasResult,
         game.Standings()
             .OrderBy(standing => SeatOrder(standing.Player))
             .Select(ToDto)

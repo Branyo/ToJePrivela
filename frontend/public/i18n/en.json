@@ -5,7 +5,8 @@
     "language": "Language",
     "menu": "Menu",
     "signOut": "Sign out",
-    "settings": "Settings"
+    "settings": "Settings",
+    "statistics": "Statistics"
   },
   "languages": {
     "sk": "Slovenčina",
@@ -20,7 +21,8 @@
     "questions": "Questions",
     "players": "Players",
     "categories": "Categories",
-    "password": "Password"
+    "password": "Password",
+    "statistics": "Statistics"
   },
   "common": {
     "dateTime": "d MMM, HH:mm",
@@ -62,7 +64,7 @@
       },
       "end": {
         "title": "Game over",
-        "text": "When someone collects too many cards, the game ends. Every Double that held takes one donkey off, and the player left with the most donkeys loses."
+        "text": "When someone collects too many cards, the game ends. Every Double that held takes one donkey off, and the player left with the most donkeys loses. A tie is a shared loss, whatever the cards."
       }
     }
   },
@@ -147,7 +149,8 @@
     "outOfQuestions": {
       "title": "Out of questions!",
       "text": "These categories have no questions. Add some on the setup screen, or wrap it up here.",
-      "results": "🏁 Show results"
+      "results": "🏁 Show results",
+      "noResult": "Nobody has a donkey card yet, so there is no result to count. Add questions on the setup screen, or delete the game."
     },
     "gameOver": {
       "first": "GAME",
@@ -172,7 +175,8 @@
     "onTheEdge": "🔥 on the edge",
     "confirmEnd": {
       "title": "End the game now?",
-      "text": "Results are counted as they stand, and the player with the most donkeys after Doubles loses.",
+      "text": "Results are counted as they stand, even if that is not fair to everyone: whoever has the most bad points after Doubles loses, a tie is a shared loss.",
+      "noResult": "Nobody has a donkey card yet, so there is no result to count. Keep playing, or delete the game.",
       "yes": "Yes, show results",
       "no": "Keep playing",
       "deleteGame": "Delete the game without results"
@@ -209,6 +213,7 @@
       "one": "🫏 {{points}} bad points from {{count}} card",
       "other": "🫏 {{points}} bad points from {{count}} cards"
     },
+    "scoreTie": "🫏 {{points}} bad points",
     "doublesOff": "(✌️ −{{count}})",
     "doublesLabel": "{{count}} Doubles",
     "board": "📊 Donkey count",
@@ -348,7 +353,8 @@
         "PlayerNotInGame": "This player is not in the game.",
         "UnknownQuestion": "This question does not exist.",
         "NoDoubleToRemove": "This player has no Double to take back.",
-        "StartsInFuture": "A game cannot start later than now."
+        "StartsInFuture": "A game cannot start later than now.",
+        "NoBadCardsYet": "Nobody has a donkey card yet, so the game has no result. Keep playing or delete it."
       },
       "Player": {
         "NotFound": "This player does not exist.",
@@ -399,5 +405,79 @@
     "submit": "Change password",
     "saving": "Saving…",
     "changed": "The password has been changed. Other devices need to sign in with the new one."
+  },
+  "statistics": {
+    "title": "Player statistics",
+    "players": "Players",
+    "noPlayers": "No players yet. Add some in the settings.",
+    "loading": "Loading…",
+    "pick": "Pick a player to see their statistics.",
+    "back": "All players",
+    "perGame": "{{value}} per game",
+    "groups": {
+      "games": "🎲 Games",
+      "cards": "🫏 Cards & points",
+      "losses": "😵 Losses",
+      "feats": "🏅 Feats",
+      "records": "📌 Records"
+    },
+    "metrics": {
+      "gamesPlayed": {
+        "label": "Games played",
+        "hint": "Finished games the player sat in."
+      },
+      "averagePlayers": {
+        "label": "Players per game",
+        "hint": "Average number of players at the table."
+      },
+      "badCards": {
+        "label": "Bad cards",
+        "hint": "Number of donkey cards taken in all games."
+      },
+      "finalBadPoints": {
+        "label": "Final bad points",
+        "hint": "Bad points minus doubles, in all games."
+      },
+      "doubles": {
+        "label": "Doubles",
+        "hint": "Doubles that held."
+      },
+      "losses": {
+        "label": "Losses",
+        "hint": "Games ended on the most final bad points, shared ones included."
+      },
+      "sharedLosses": {
+        "label": "Shared losses",
+        "hint": "Losses tied with another player."
+      },
+      "lossIndex": {
+        "label": "Loss index",
+        "hint": "Actual loss rate over the expected one. 1 is average, above 1 loses more often than chance."
+      },
+      "flawlessVictories": {
+        "label": "Flawless victory",
+        "hint": "Games you ended with no bad card and did not lose."
+      },
+      "luckyFinishes": {
+        "label": "Lucky finishing",
+        "hint": "Ended the game by reaching the card limit, yet somebody else lost."
+      },
+      "closestEscapes": {
+        "label": "Closest escape",
+        "hint": "Exactly one final point below the loser."
+      },
+      "reversals": {
+        "label": "Reverser",
+        "hint": "Games ended below zero final points."
+      },
+      "worstGame": {
+        "label": "Worst single game",
+        "hint": "Most final bad points in one game."
+      },
+      "bestGame": {
+        "label": "Best single game",
+        "hint": "Fewest final bad points in one game."
+      }
+    }
   }
 }

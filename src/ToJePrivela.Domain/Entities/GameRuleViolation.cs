@@ -13,7 +13,8 @@ public enum GameRuleViolation
     ChosenBadPointsNotAllowed,
     CannotReopen,
     EndsBeforeStart,
-    StartsInFuture
+    StartsInFuture,
+    NoBadCardsYet
 }
 
 internal static class GameRuleViolationMessages
@@ -30,6 +31,8 @@ internal static class GameRuleViolationMessages
         GameRuleViolation.CannotReopen => "A finished game cannot be reopened.",
         GameRuleViolation.EndsBeforeStart => "Game cannot be finished before it started.",
         GameRuleViolation.StartsInFuture => "A game cannot start later than now.",
+        GameRuleViolation.NoBadCardsYet =>
+            "Nobody holds a bad card yet, so the game has no result: keep playing or delete it.",
         _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
     };
 }

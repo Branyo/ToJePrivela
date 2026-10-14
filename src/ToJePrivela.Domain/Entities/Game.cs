@@ -68,6 +68,19 @@ public class Game
     /// <summary>Ended without a result because one of its players was deleted; nobody lost it.</summary>
     public bool IsCancelled { get; private set; }
 
+    /// <summary>
+    /// Row version: every save that changes the game or one of its players bumps it (the persistence layer does, so no
+    /// change can forget to), and a change made at the same time (a double while the game is finished) is detected
+    /// instead of leaving the stored verdict on stale scores. SQLite has no native rowversion.
+    /// </summary>
+    public long Version { get; private set; }
+
+    /// <summary>
+    /// Somebody holds a bad card, the one precondition of a result: until then the game can only be played on or
+    /// deleted, not finished (<see cref="GameRuleViolation.NoBadCardsYet"/>).
+    /// </summary>
+    public bool HasResult => CheckResult() is null;
+
     public bool HasPlayer(int playerId) => _gamePlayers.Any(gp => gp.PlayerId == playerId);
 
     /// <summary>
@@ -76,10 +89,14 @@ public class Game
     /// </summary>
     public bool RequiresChosenBadPoints => BadPointsMode == BadPointsMode.Chooser;
 
+    /// <summary>
+    /// Ending a running game is the players' own call, so its result counts as it stands, fair or not. Only a game
+    /// nobody holds a bad card in has no result yet: it can be played on or deleted, not finished.
+    /// </summary>
     public GameRuleViolation? CheckFinish(DateTime finishedAt) =>
         IsFinished ? GameRuleViolation.AlreadyFinished
         : UtcTime.Normalize(finishedAt) < Started ? GameRuleViolation.EndsBeforeStart
-        : null;
+        : CheckResult();
 
     public GameRuleViolation? CheckAwardBadCard(int playerId, int? chosenBadPoints) =>
         CheckRunningPlayer(playerId)
@@ -96,18 +113,21 @@ public class Game
         CheckRunningPlayer(playerId)
         ?? (FindPlayer(playerId)!.Doubles == 0 ? GameRuleViolation.NoDoubleToRemove : null);
 
+    /// <summary>Giving a running game its end is held to the same rule as <see cref="CheckFinish"/>.</summary>
     /// <param name="now">The current time: a game that has not started yet cannot be on record.</param>
     public GameRuleViolation? CheckReschedule(DateTime started, DateTime? finished, DateTime now) =>
         IsFinished && finished is null ? GameRuleViolation.CannotReopen
         : UtcTime.Normalize(started) > UtcTime.Normalize(now) ? GameRuleViolation.StartsInFuture
         : UtcTime.Normalize(finished) < UtcTime.Normalize(started) ? GameRuleViolation.EndsBeforeStart
+        : !IsFinished && finished is not null ? CheckResult()
         : null;
 
+    /// <summary>Ends the game and stores its verdict on the players (<see cref="GamePlayer.IsLoser"/>).</summary>
     public void Finish(DateTime finishedAt)
     {
         ThrowIfBroken(CheckFinish(finishedAt));
 
-        Finished = UtcTime.Normalize(finishedAt);
+        Complete(finishedAt);
     }
 
     /// <summary>
@@ -124,9 +144,13 @@ public class Game
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
 
+        // The card itself is the result, so none of Finish's checks apply: the game simply ends now. A card is never
+        // refused over the clock, so should it read earlier than a start just corrected to now (the only way the end
+        // could lie before the start), the game ends at its start.
         if (gamePlayer.BadCards >= BadCardLimit)
         {
-            Finish(awardedAt);
+            var end = UtcTime.Normalize(awardedAt);
+            Complete(Started > end ? Started.Value : end);
         }
 
         return gamePlayer;
@@ -168,8 +192,19 @@ public class Game
     {
         ThrowIfBroken(CheckReschedule(started, finished, now));
 
+        var finishesNow = !IsFinished && finished is not null;
+
         Started = UtcTime.Normalize(started);
-        Finished = UtcTime.Normalize(finished);
+
+        if (finishesNow)
+        {
+            Complete(finished!.Value);
+        }
+        else
+        {
+            Finished = UtcTime.Normalize(finished);
+        }
+
     }
 
     /// <summary>
@@ -193,35 +228,64 @@ public class Game
     }
 
     /// <summary>
-    /// Where every player stands, worst first: most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus
-    /// doubles), a tie broken by the number of bad cards. Whoever stands first loses, several players on a full
-    /// tie; nobody loses while nobody holds a card, nor in a cancelled game. Players who tie keep their seat order
-    /// (player id, unknown players last).
+    /// Where every player stands, worst first: the losers (<see cref="GamePlayer.IsLoser"/>, the verdict stored when
+    /// the game finished), then most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus doubles). Players with
+    /// the same verdict and final bad points share the rank and keep their seat order (player id, unknown players
+    /// last). Nobody has lost a running or cancelled game.
     /// </summary>
     public IReadOnlyList<GameStanding> Standings()
     {
         var ordered = _gamePlayers
-            .OrderByDescending(gp => gp.FinalBadPoints)
-            .ThenByDescending(gp => gp.BadCards)
+            .OrderByDescending(gp => gp.IsLoser)
+            .ThenByDescending(gp => gp.FinalBadPoints)
             .ThenBy(gp => gp.PlayerId ?? int.MaxValue)
             .ToList();
 
-        var anyLoser = !IsCancelled && ordered.Any(gp => gp.BadCards > 0);
         var standings = new List<GameStanding>(ordered.Count);
 
         for (var index = 0; index < ordered.Count; index++)
         {
             var player = ordered[index];
-            var rank = index > 0 && SameStanding(ordered[index - 1], player) ? standings[index - 1].Rank : index + 1;
+            var sharesRank = index > 0
+                && ordered[index - 1].IsLoser == player.IsLoser
+                && ordered[index - 1].FinalBadPoints == player.FinalBadPoints;
 
-            standings.Add(new GameStanding(player, rank, anyLoser && SameStanding(ordered[0], player)));
+            standings.Add(new GameStanding(player, sharesRank ? standings[index - 1].Rank : index + 1, player.IsLoser));
         }
 
         return standings;
     }
 
-    private static bool SameStanding(GamePlayer a, GamePlayer b) =>
-        a.FinalBadPoints == b.FinalBadPoints && a.BadCards == b.BadCards;
+    /// <summary>
+    /// The one precondition of a result, shared by <see cref="CheckFinish"/> and <see cref="CheckReschedule"/>: somebody
+    /// holds a bad card. Until then the game can only be played on or deleted.
+    /// </summary>
+    private GameRuleViolation? CheckResult() =>
+        _gamePlayers.Any(gp => gp.BadCards > 0) ? null : GameRuleViolation.NoBadCardsYet;
+
+    /// <summary>
+    /// Ends a running game the rules allow to end: by <see cref="Finish"/>, <see cref="Reschedule"/> (both reject an end
+    /// before the start) or the bad card that reaches the limit (which moves such an end to the start).
+    /// </summary>
+    private void Complete(DateTime finishedAt)
+    {
+        Finished = UtcTime.Normalize(finishedAt);
+        MarkLosers();
+    }
+
+    /// <summary>
+    /// The verdict, decided once when the game finishes: everyone on the most final bad points loses, whatever their
+    /// cards (a player without any included), so a tie is a shared loss. A game ended early counts as it stands.
+    /// </summary>
+    private void MarkLosers()
+    {
+        var most = _gamePlayers.Max(gp => gp.FinalBadPoints);
+
+        foreach (var loser in _gamePlayers.Where(gp => gp.FinalBadPoints == most))
+        {
+            loser.MarkLoser();
+        }
+    }
 
     private GameRuleViolation? CheckRunningPlayer(int playerId) =>
         IsFinished ? GameRuleViolation.AlreadyFinished
