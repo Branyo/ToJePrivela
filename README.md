@@ -273,8 +273,7 @@ a `CreatedAt` timestamp.
   card in cannot be finished (409 `Game.NoBadCardsYet`): it can be played on or deleted; `GameDetailsDto.hasResult`
   tells clients which, so they never decide it themselves. Games finished before the verdict was stored got it from
   the `StoreGameLosers` migration under the same rule, so a tie that used to be broken by the number of cards is a
-  shared loss there too; `ShareTiedLosses` applies the rule again for databases that ran an earlier `StoreGameLosers`,
-  which still broke ties by cards. Either way every finished game follows the shared-loss rule. A card that reaches the limit is never
+  shared loss there too: every finished game follows the shared-loss rule. A card that reaches the limit is never
   refused over the clock: should the server's clock read earlier than a start just corrected to now, the game ends
   at its start (finishing or rescheduling with an end before the start is still 400 `Game.EndsBeforeStart`).
 

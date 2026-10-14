@@ -13,7 +13,6 @@ namespace ToJePrivela.Infrastructure.Tests.Persistence;
 public class StoreGameLosersMigrationTests : IDisposable
 {
     private const string AddEnglishQuestionTexts = "20261008084238_AddEnglishQuestionTexts";
-    private const string AddGameVersion = "20261013164533_AddGameVersion";
 
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
 
@@ -48,20 +47,6 @@ public class StoreGameLosersMigrationTests : IDisposable
     {
         await using var context = CreateContext();
         await context.Database.MigrateAsync();
-
-        Assert.Equal([11, 12, 21, 22, 62], await LosersAsync(context));
-    }
-
-    [Fact]
-    public async Task ShareTiedLosses_SharesTheTiesAnEarlierStoreGameLosersBrokeByCards()
-    {
-        await using var context = CreateContext();
-        var migrator = context.GetService<IMigrator>();
-        await migrator.MigrateAsync(AddGameVersion);
-        // What the earlier StoreGameLosers left: game 1's tie (11 and 12 on 7 points) broken by cards.
-        await context.Database.ExecuteSqlRawAsync("""UPDATE "GamePlayers" SET "IsLoser" = 0 WHERE "Id" = 12""");
-
-        await migrator.MigrateAsync();
 
         Assert.Equal([11, 12, 21, 22, 62], await LosersAsync(context));
     }
