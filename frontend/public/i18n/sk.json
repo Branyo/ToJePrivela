@@ -43,7 +43,7 @@
         "text": "Odpoveďou je vždy číslo a k otázke patrí karta s {{min}} až {{max}} somármi."
       },
       "estimate": {
-        "title": "Prihadzuj odhady",
+        "title": "Prihoď vyšší odhad",
         "text": "Hráči sa striedajú jeden po druhom a každý musí povedať vyšší odhad ako hráč pred ním."
       },
       "double": {
@@ -239,7 +239,7 @@
     "password": "Heslo",
     "submit": "Prihlásiť",
     "signingIn": "Prihlasujem…",
-    "newHint": "Si tu nový? Vytvor prihlásenie pre svoju partiu.",
+    "newHint": "Si tu prvýkrát? Vytvor prihlásenie pre svoju partiu.",
     "create": {
       "start": "Vytvoriť prihlásenie",
       "title": "Vytvoriť prihlásenie",
@@ -257,7 +257,7 @@
   },
   "players": {
     "title": "👥 Tvoji hráči",
-    "text": "Vidíš ich len ty. Pravidelných hráčov pridaj tu alebo priamo pri stole.",
+    "text": "Vidno ich len pod týmto prihlásením. Pravidelných hráčov pridaj tu alebo priamo pri stole.",
     "loading": "Načítavam hráčov…",
     "empty": "Zatiaľ žiadni hráči. Pridaj prvého!",
     "confirm": "Natrvalo vymazať? Skončené hry si skóre ponechajú ako neznámy hráč; rozohratá hra sa ukončí.",
@@ -408,7 +408,7 @@
   },
   "password": {
     "title": "Zmena hesla",
-    "text": "Po zmene hesla sa odhlásiš na všetkých ostatných zariadeniach. Na tomto zariadení zostaneš prihlásený.",
+    "text": "Po zmene hesla sa toto prihlásenie odhlási na všetkých ostatných zariadeniach. Na tomto zariadení zostaneš prihlásený.",
     "current": "Súčasné heslo",
     "new": "Nové heslo",
     "repeat": "Zopakuj nové heslo",
@@ -466,7 +466,7 @@
       },
       "flawlessVictories": {
         "label": "Čistá výhra",
-        "hint": "Hry, ktoré si skončil bez jedinej trestnej karty a neprehral si."
+        "hint": "Hry, ktoré skončil bez jedinej trestnej karty a neprehral."
       },
       "luckyFinishes": {
         "label": "Šťastný koniec",
