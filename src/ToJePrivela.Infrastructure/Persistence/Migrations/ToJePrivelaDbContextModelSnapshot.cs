@@ -103,6 +103,48 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.ToTable("Games");
                 });
 
+            modelBuilder.Entity("ToJePrivela.Domain.Entities.GameCard", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AwardedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BadPoints")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CallerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GameId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("QuestionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RecipientId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CallerId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("RecipientId");
+
+                    b.ToTable("GameCards");
+                });
+
             modelBuilder.Entity("ToJePrivela.Domain.Entities.GamePlayer", b =>
                 {
                     b.Property<int>("Id")
@@ -304,6 +346,41 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ToJePrivela.Domain.Entities.GameCard", b =>
+                {
+                    b.HasOne("ToJePrivela.Domain.Entities.GamePlayer", "Caller")
+                        .WithMany()
+                        .HasForeignKey("CallerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToJePrivela.Domain.Entities.QuestionCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ToJePrivela.Domain.Entities.Game", null)
+                        .WithMany("Cards")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToJePrivela.Domain.Entities.Question", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ToJePrivela.Domain.Entities.GamePlayer", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Caller");
+
+                    b.Navigation("Recipient");
+                });
+
             modelBuilder.Entity("ToJePrivela.Domain.Entities.GamePlayer", b =>
                 {
                     b.HasOne("ToJePrivela.Domain.Entities.Game", "Game")
@@ -344,6 +421,8 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ToJePrivela.Domain.Entities.Game", b =>
                 {
+                    b.Navigation("Cards");
+
                     b.Navigation("GamePlayers");
                 });
 

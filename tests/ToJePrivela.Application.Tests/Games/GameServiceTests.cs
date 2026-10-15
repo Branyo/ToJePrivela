@@ -265,7 +265,7 @@ public class GameServiceTests
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10, BadPoints = 1 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 2, QuestionId = 10, BadPoints = 1 });
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.Players.Single(p => p.PlayerId == 2).BadPoints);
@@ -277,7 +277,7 @@ public class GameServiceTests
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badPointsMode: BadPointsMode.Chooser);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 2, QuestionId = 10 });
 
         Assert.Equal(ErrorType.Validation, result.Error.Type);
         Assert.Equal("Game.BadPointsRequired", result.Error.Code);
@@ -289,7 +289,7 @@ public class GameServiceTests
     {
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10, BadPoints = 5 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 2, QuestionId = 10, BadPoints = 5 });
 
         Assert.Equal(ErrorType.Validation, result.Error.Type);
         Assert.Equal("Game.BadPointsNotAllowed", result.Error.Code);
@@ -304,7 +304,7 @@ public class GameServiceTests
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 2, QuestionId = 10 });
 
         Assert.True(result.IsSuccess);
         var player = result.Value.Players.Single(p => p.PlayerId == 2);
@@ -315,15 +315,55 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task AwardBadCardAsync_RecordsWhoCalledTooMuch()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
+        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 1, QuestionId = 10 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal((1, 0, 0), Calls(result.Value, 1));
+        Assert.Equal((0, 0, 1), Calls(result.Value, 2));
+
+        static (int, int, int) Calls(GameDetailsDto details, int playerId) =>
+            details.Players.Single(p => p.PlayerId == playerId) is var p ? (p.TooMuchCalls, p.FalseAlarms, p.Caught) : default;
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_RejectsACallerOutsideTheGame()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 9, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.CallerNotInGame", result.Error.Code);
+        Assert.Contains("9", result.Error.Message);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardBadCardAsync_RequiresWhoCalledTooMuch()
+    {
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        await _games.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task AwardBadCardAsync_FinishesTheGameAtTheLimit()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badCardLimit: 2);
-        game.AwardBadCard(1, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 2), null, Now.UtcDateTime);
+        game.AwardBadCard(1, 1, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 2), null, Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, CalledByPlayerId = 1, QuestionId = 10 });
 
         Assert.Equal(Now.UtcDateTime, result.Value.Finished);
     }
@@ -333,7 +373,7 @@ public class GameServiceTests
     {
         _games.GetByIdAsync(TestAccountId, 7, Arg.Any<CancellationToken>()).Returns((Game?)null);
 
-        var result = await _sut.AwardBadCardAsync(7, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(7, new AwardBadCardRequest { PlayerId = 1, CalledByPlayerId = 1, QuestionId = 10 });
 
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
     }
@@ -345,7 +385,7 @@ public class GameServiceTests
         game.Finish(Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, CalledByPlayerId = 1, QuestionId = 10 });
 
         Assert.Equal(ErrorType.Conflict, result.Error.Type);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -356,7 +396,7 @@ public class GameServiceTests
     {
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 9, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 9, CalledByPlayerId = 9, QuestionId = 10 });
 
         Assert.Equal(ErrorType.Validation, result.Error.Type);
         Assert.Equal("Game.PlayerNotInGame", result.Error.Code);
@@ -368,7 +408,7 @@ public class GameServiceTests
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
         _questions.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns((Question?)null);
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, CalledByPlayerId = 1, QuestionId = 10 });
 
         Assert.Equal(ErrorType.Validation, result.Error.Type);
         Assert.Equal("Game.UnknownQuestion", result.Error.Code);
@@ -378,7 +418,7 @@ public class GameServiceTests
     public async Task AwardDoubleAsync_TakesOneBadPointOffTheFinalScore()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
-        game.AwardBadCard(2, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 4), null, Now.UtcDateTime);
+        game.AwardBadCard(2, 2, TestEntities.Question(9, "How many doors?", "5", TestEntities.Category(1, "Cars"), badPoints: 4), null, Now.UtcDateTime);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
         var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 2 });
@@ -541,7 +581,7 @@ public class GameServiceTests
             .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars")));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
 
-        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, QuestionId = 10 });
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 1, CalledByPlayerId = 1, QuestionId = 10 });
 
         Assert.Equal(ErrorType.Conflict, result.Error.Type);
         Assert.Equal("Game.AlreadyFinished", result.Error.Code);

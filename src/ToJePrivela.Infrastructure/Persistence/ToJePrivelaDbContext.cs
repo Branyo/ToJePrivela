@@ -19,6 +19,8 @@ public class ToJePrivelaDbContext : DbContext
 
     public DbSet<GamePlayer> GamePlayers => Set<GamePlayer>();
 
+    public DbSet<GameCard> GameCards => Set<GameCard>();
+
     public DbSet<Question> Questions => Set<Question>();
 
     public DbSet<QuestionCategory> QuestionCategories => Set<QuestionCategory>();
@@ -73,8 +75,8 @@ public class ToJePrivelaDbContext : DbContext
     }
 
     /// <summary>
-    /// <see cref="Game.Version"/> is bumped here, once per save, for every stored game that changed itself or in one of
-    /// its players, so no domain method can forget it. Counting from the version read keeps a retried save from
+    /// <see cref="Game.Version"/> is bumped here, once per save, for every stored game that changed itself, one of its
+    /// players or its cards, so no domain method can forget it. Counting from the version read keeps a retried save from
     /// bumping twice, and the update is still guarded by that read version.
     /// </summary>
     private void BumpGameVersions()
@@ -84,6 +86,9 @@ public class ToJePrivelaDbContext : DbContext
         var gamesWithChangedSeats = ChangeTracker.Entries<GamePlayer>()
             .Where(seat => seat.State is EntityState.Modified or EntityState.Added or EntityState.Deleted)
             .Select(seat => seat.Property(gp => gp.GameId).CurrentValue)
+            .Concat(ChangeTracker.Entries<GameCard>()
+                .Where(card => card.State is EntityState.Modified or EntityState.Added or EntityState.Deleted)
+                .Select(card => card.Property(c => c.GameId).CurrentValue))
             .ToHashSet();
 
         foreach (var game in ChangeTracker.Entries<Game>())

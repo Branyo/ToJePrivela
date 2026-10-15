@@ -16,6 +16,9 @@ const seat = (playerId: number | null, name: string | null, overrides: Partial<G
   finalBadPoints: 0,
   rank: 1,
   isLoser: false,
+  tooMuchCalls: 0,
+  falseAlarms: 0,
+  caught: 0,
   ...overrides,
 });
 
@@ -64,6 +67,29 @@ describe('Summary', () => {
     expect(page.querySelector('.spotlight__loser')).toBeNull();
     expect(page.querySelector('.btn--fun')).toBeNull();
     expect(page.querySelector('app-confetti')).toBeNull();
+  });
+
+  it('shows how every player did with "too much" calls', async () => {
+    const page = await render(
+      game({
+        players: [
+          seat(1, 'Ana', { tooMuchCalls: 3, falseAlarms: 1, caught: 0 }),
+          seat(2, 'Bo', { tooMuchCalls: 0, falseAlarms: 0, caught: 2 }),
+        ],
+      }),
+    );
+
+    const rows = [...page.querySelectorAll('.calls__row')];
+    const stat = (row: Element, name: string) => row.querySelector(`[data-stat="${name}"]`)?.textContent?.trim();
+    expect(rows.map((row) => row.querySelector('.calls__name')?.textContent?.trim())).toEqual(['Ana', 'Bo']);
+    expect(['calls', 'hits', 'falseAlarms', 'caught'].map((name) => stat(rows[0], name))).toEqual(['🤚 3', '🙈 2', '🤨 1', '🫣 0']);
+    expect(stat(rows[1], 'caught')).toBe('🫣 2');
+  });
+
+  it('leaves the "too much" calls out of a game without any recorded', async () => {
+    const page = await render(game());
+
+    expect(page.querySelector('.calls')).toBeNull();
   });
 
   it('names a player deleted since as an unknown player', async () => {

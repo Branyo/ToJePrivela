@@ -17,6 +17,9 @@ public static class GameErrors
     public static Error PlayerNotInGame(int gameId, int playerId) =>
         Error.Validation("Game.PlayerNotInGame", $"Player {playerId} does not play in game {gameId}.");
 
+    public static Error CallerNotInGame(int gameId, int playerId) =>
+        Error.Validation("Game.CallerNotInGame", $"Player {playerId}, who called \"too much\", does not play in game {gameId}.");
+
     public static Error NoDoubleToRemove(int gameId, int playerId) =>
         Error.Conflict("Game.NoDoubleToRemove", $"Player {playerId} has no double to take back in game {gameId}.");
 
@@ -52,6 +55,7 @@ public static class GameErrors
     {
         GameRuleViolation.AlreadyFinished => AlreadyFinished(gameId),
         GameRuleViolation.PlayerNotInGame => PlayerNotInGame(gameId, playerId ?? 0),
+        GameRuleViolation.CallerNotInGame => CallerNotInGame(gameId, playerId ?? 0),
         GameRuleViolation.NoDoubleToRemove => NoDoubleToRemove(gameId, playerId ?? 0),
         GameRuleViolation.ChosenBadPointsRequired => BadPointsRequired(gameId),
         GameRuleViolation.ChosenBadPointsNotAllowed => BadPointsNotAllowed(gameId),

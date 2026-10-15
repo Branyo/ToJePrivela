@@ -43,6 +43,8 @@ export class Summary implements OnInit {
   protected readonly canRematch = computed(() => this.game()?.players.every((p) => p.playerId !== null) ?? false);
   protected readonly maxPoints = computed(() => Math.max(1, ...this.ranking().map((p) => p.finalBadPoints)));
   protected readonly totalCards = computed(() => this.ranking().reduce((sum, p) => sum + p.badCards, 0));
+  /** Games played before calls were recorded have none, so their summary leaves the section out. */
+  protected readonly hasCalls = computed(() => this.ranking().some((p) => p.tooMuchCalls > 0));
 
   ngOnInit(): void {
     this.gamesApi.getDetails(this.id()).subscribe({

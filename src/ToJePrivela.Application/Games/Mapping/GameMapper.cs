@@ -27,10 +27,10 @@ public static class GameMapper
         game.HasResult,
         game.Standings()
             .OrderBy(standing => SeatOrder(standing.Player))
-            .Select(ToDto)
+            .Select(standing => ToDto(standing, game.CallsOf(standing.Player)))
             .ToList());
 
-    private static GamePlayerDto ToDto(GameStanding standing) => new(
+    private static GamePlayerDto ToDto(GameStanding standing, TooMuchCalls calls) => new(
         standing.Player.PlayerId,
         standing.Player.IsUnknownPlayer ? null : standing.Player.Player?.Name ?? string.Empty,
         standing.Player.IsUnknownPlayer ? null : standing.Player.Player?.Avatar ?? string.Empty,
@@ -39,7 +39,10 @@ public static class GameMapper
         standing.Player.Doubles,
         standing.Player.FinalBadPoints,
         standing.Rank,
-        standing.IsLoser);
+        standing.IsLoser,
+        calls.Calls,
+        calls.FalseAlarms,
+        calls.Caught);
 
     private static int SeatOrder(GamePlayer gamePlayer) => gamePlayer.PlayerId ?? int.MaxValue;
 }

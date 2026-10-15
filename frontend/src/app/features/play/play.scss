@@ -192,19 +192,22 @@
   --donkey-size: 1rem;
 }
 
-.too-much {
-  animation: pulse-ring 1.4s ease-out infinite;
-  --shadow-sm: var(--shadow);
-}
-
 .prompt {
+  flex-basis: 100%;
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
   text-align: center;
 
+  .prompt__caller {
+    display: block;
+    color: var(--tomato);
+  }
+
+  /* Angular drops the whitespace between the question and this span, so the gap is put back here. */
   .prompt__tap {
     display: inline-block;
+    margin-left: 0.35em;
     animation: float 1.2s ease-in-out infinite;
   }
 }
@@ -239,13 +242,14 @@
 }
 
 /* ---------- Seats ---------- */
+/* Room above every seat for its "To je priveľa!" bubble, kept while it is hidden so the seats never jump. */
 .seats {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 14px;
+  gap: 34px 14px;
   margin: 0;
-  padding: 0;
+  padding: 24px 0 0;
   list-style: none;
 
   li {
@@ -348,6 +352,121 @@
   font-size: 0.75rem;
   font-weight: 600;
   transform: rotate(8deg);
+}
+
+/* A comic speech bubble on top of each seat, its tail pointing at the player who calls "To je priveľa!". */
+.call {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(100% - 14px);
+  left: 50%;
+  max-width: calc(100% + 14px);
+  padding: 6px 12px;
+  border: var(--border);
+  border-radius: 18px;
+  background: var(--tomato);
+  box-shadow: var(--shadow-sm);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  translate: -50% 0;
+  transition: transform 0.15s var(--bounce);
+  animation: call-in 0.3s var(--bounce) both;
+
+  /* The tail: an ink triangle with a red one inside, so it keeps the bubble's outline. */
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    border-style: solid;
+    border-color: transparent;
+    transform: translateX(-50%);
+  }
+
+  &::before {
+    top: 100%;
+    border-width: 11px 9px 0;
+    border-top-color: var(--ink);
+  }
+
+  &::after {
+    top: calc(100% - 1px);
+    border-width: 8px 6px 0;
+    border-top-color: var(--tomato);
+  }
+}
+
+button.call {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-4px) scale(1.06);
+  }
+}
+
+/* The call that stopped the bidding stays on its player while the card is decided. */
+.call--made {
+  animation: call-in 0.3s var(--bounce) both, wobble 1.2s ease-in-out infinite;
+}
+
+/* Not the shared pop-in: that one animates transform, which would fight the bubble's hover lift. */
+@keyframes call-in {
+  0% { opacity: 0; scale: 0.3; }
+  70% { opacity: 1; scale: 1.06; }
+  100% { scale: 1; }
+}
+
+@keyframes wobble {
+  0%, 100% { rotate: -3deg; }
+  50% { rotate: 3deg; }
+}
+
+/* How the call turned out, popping over the player who took the card. */
+.verdict {
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: max-content;
+  padding: 8px 14px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--sun);
+  box-shadow: var(--shadow);
+  font-weight: 700;
+  pointer-events: none;
+  transform: translateX(-50%) rotate(-4deg);
+  animation: verdict 1.7s var(--bounce) both;
+
+  &--false {
+    background: var(--tangerine);
+    transform: translateX(-50%) rotate(4deg);
+  }
+}
+
+.verdict__emoji {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+@keyframes verdict {
+  0% { opacity: 0; scale: 0.3; }
+  15% { opacity: 1; scale: 1.15; }
+  25% { scale: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; translate: 0 -12px; }
+}
+
+.doubles-hint {
+  margin-top: 12px;
 }
 
 /* Doubles that held, tapped for the player who called them before the round's card goes out; − fixes a mis-tap. */

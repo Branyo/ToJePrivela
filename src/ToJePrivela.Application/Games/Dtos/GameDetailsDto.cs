@@ -21,6 +21,9 @@ public sealed record GameDetailsDto(
 /// clients never decide who lost.
 /// <see cref="PlayerId"/>, <see cref="Name"/> and <see cref="Avatar"/> are null for a player deleted since: an
 /// unknown player whose score stays in the game's history.
+/// <see cref="TooMuchCalls"/> counts the rounds the player called "To je priveľa!" in (each ended with a card),
+/// <see cref="FalseAlarms"/> those of them the player took the card for, and <see cref="Caught"/> the cards the player
+/// took after somebody else's call.
 /// </summary>
 public sealed record GamePlayerDto(
     int? PlayerId,
@@ -31,4 +34,7 @@ public sealed record GamePlayerDto(
     int Doubles,
     int FinalBadPoints,
     int Rank,
-    bool IsLoser);
+    bool IsLoser,
+    int TooMuchCalls,
+    int FalseAlarms,
+    int Caught);

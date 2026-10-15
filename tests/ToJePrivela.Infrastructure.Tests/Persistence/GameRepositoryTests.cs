@@ -203,7 +203,7 @@ public class GameRepositoryTests : IDisposable
         var question = TestQuestion(badPoints: 2);
         await Change(game => game.AwardDouble(1));
         await Change(game => game.RemoveDouble(1));
-        await Change(game => game.AwardBadCard(1, question, null, Start.AddMinutes(1)));
+        await Change(game => game.AwardBadCard(1, 1, question, null, Start.AddMinutes(1)));
         await Change(game => game.Reschedule(Start.AddMinutes(-5), null, Start.AddHours(1)));
         await Change(game => game.Finish(Start.AddHours(1)));
         await Change(game => game.ForgetPlayer(2, Start.AddHours(2)));
@@ -232,12 +232,71 @@ public class GameRepositoryTests : IDisposable
             await new UnitOfWork(context).SaveChangesAsync();
             Assert.Equal(before, await VersionAsync(gameId));
 
-            game.AwardBadCard(1, TestQuestion(badPoints: 2), null, Start.AddMinutes(1));
-            game.AwardBadCard(1, TestQuestion(badPoints: 2), null, Start.AddMinutes(2));
+            game.AwardBadCard(1, 1, TestQuestion(badPoints: 2), null, Start.AddMinutes(1));
+            game.AwardBadCard(1, 1, TestQuestion(badPoints: 2), null, Start.AddMinutes(2));
             await new UnitOfWork(context).SaveChangesAsync();
         }
 
         Assert.Equal(before + 1, await VersionAsync(gameId));
+    }
+
+    [Fact]
+    public async Task Cards_AreStoredWithTheirCallerAndLoadedWithTheGame()
+    {
+        var gameId = await SeedGameAsync([1, 2, 3]);
+        var question = TestQuestion(badPoints: 4);
+
+        await using (var context = _database.CreateContext())
+        {
+            var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
+            game.AwardBadCard(2, 1, question, null, Start.AddMinutes(1));
+            game.AwardBadCard(3, 3, question, null, Start.AddMinutes(2));
+            await new UnitOfWork(context).SaveChangesAsync();
+        }
+
+        await using (var context = _database.CreateContext())
+        {
+            var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
+
+            Assert.Equal(
+                [(2, 1, false), (3, 3, true)],
+                game.Cards.OrderBy(c => c.Id).Select(c => (c.Recipient.PlayerId!.Value, c.Caller.PlayerId!.Value, c.IsFalseAlarm)));
+            Assert.All(game.Cards, card => Assert.Equal((question.Id, question.CategoryId, 4), (card.QuestionId!.Value, card.CategoryId!.Value, card.BadPoints)));
+            var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
+            Assert.Equal(new TooMuchCalls(1, 0, 0), game.CallsOf(seats[1]));
+            Assert.Equal(new TooMuchCalls(0, 0, 1), game.CallsOf(seats[2]));
+            Assert.Equal(new TooMuchCalls(1, 1, 0), game.CallsOf(seats[3]));
+        }
+    }
+
+    [Fact]
+    public async Task Cards_OutliveTheirQuestionsCategory_AndGoWithTheirGame()
+    {
+        var gameId = await SeedGameAsync([1, 2]);
+        var question = TestQuestion(badPoints: 2);
+
+        await using (var context = _database.CreateContext())
+        {
+            var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
+            game.AwardBadCard(2, 1, question, null, Start.AddMinutes(1));
+            await new UnitOfWork(context).SaveChangesAsync();
+        }
+
+        await using (var context = _database.CreateContext())
+        {
+            await context.QuestionCategories.Where(c => c.Id == question.CategoryId).ExecuteDeleteAsync();
+
+            var card = await context.GameCards.SingleAsync();
+            Assert.Equal((null, null), (card.QuestionId, card.CategoryId));
+        }
+
+        await using (var context = _database.CreateContext())
+        {
+            context.Games.Remove((await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!);
+            await context.SaveChangesAsync();
+
+            Assert.Empty(await context.GameCards.ToListAsync());
+        }
     }
 
     [Fact]
@@ -265,14 +324,23 @@ public class GameRepositoryTests : IDisposable
         Assert.Equal([theirs], (await sut.GetAllAsync(otherAccountId)).Select(g => g.Id));
     }
 
-    private static Game WithABadCard(Game game, int playerId)
+    private Game WithABadCard(Game game, int playerId)
     {
-        game.AwardBadCard(playerId, TestQuestion(badPoints: 3), null, Start.AddMinutes(1));
+        game.AwardBadCard(playerId, playerId, TestQuestion(badPoints: 3), null, Start.AddMinutes(1));
         return game;
     }
 
-    private static Question TestQuestion(int badPoints) =>
-        new("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, Start);
+    /// <summary>A stored question (a card refers to it), all of them in one stored category.</summary>
+    private Question TestQuestion(int badPoints)
+    {
+        using var context = _database.CreateContext();
+        var category = context.QuestionCategories.FirstOrDefault() ?? new QuestionCategory("Autá", "Cars");
+        var question = new Question(
+            "Koľko kolies má auto?", "How many wheels does a car have?", "4", category, badPoints, QuestionSource.Manual, Start);
+        context.Questions.Add(question);
+        context.SaveChanges();
+        return question;
+    }
 
     private async Task<long> VersionAsync(int gameId)
     {

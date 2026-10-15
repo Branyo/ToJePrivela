@@ -25,8 +25,12 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
             .Where(PlayerStatistics.CountedGame)
             .ToListAsync(cancellationToken);
 
-    /// <summary>Always whole: with the players, so the game's rules never run on half an aggregate.</summary>
-    protected override IQueryable<Game> Owned(int accountId) => WithSeats(accountId).ThenInclude(gp => gp.Player);
+    /// <summary>
+    /// Always whole: with the players and cards, so the game's rules never run on half an aggregate. One query, so the
+    /// seats and cards are read in the same snapshot as the game's row version.
+    /// </summary>
+    protected override IQueryable<Game> Owned(int accountId) =>
+        WithSeats(accountId).ThenInclude(gp => gp.Player).Include(g => g.Cards).AsSingleQuery();
 
     /// <summary>
     /// The account's games (scoped by the base <see cref="AccountScopedRepository{TEntity}.Owned"/>, like every other

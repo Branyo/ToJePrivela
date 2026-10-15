@@ -158,7 +158,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET/PUT/DELETE | `/api/games/{id}` | DELETE removes the game (finished or not) with its scores; players stay. Unlike a player deletion, which marks running games `cancelled`, nothing remains |
 | GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
 | POST | `/api/games` | 2–12 known, distinct players; optional `badCardLimit` (2–10, default 3) |
-| POST | `/api/games/{id}/bad-cards` | Body `{ playerId, questionId }`; the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
+| POST | `/api/games/{id}/bad-cards` | Body `{ playerId, calledByPlayerId, questionId }`; `calledByPlayerId` is who called "To je priveľa!" (the taker included: a false alarm), stored per card in `GameCards`; the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
 | POST | `/api/games/{id}/doubles` | Body `{ playerId }`; credits a double that held (one bad point off at the end); never finishes the game; 409 on a finished game |
 | DELETE | `/api/games/{id}/doubles/{playerId}` | Takes back one double tapped by mistake; 409 when the player has none or the game is finished |
 | POST | `/api/games/{id}/finish` | Ends a running game now, its result counted as it stands; 409 when already finished, and 409 `Game.NoBadCardsYet` while nobody holds a bad card (keep playing or delete it) |

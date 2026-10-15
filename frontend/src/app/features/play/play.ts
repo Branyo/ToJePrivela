@@ -27,6 +27,10 @@ import { PlayStore } from './play-store';
 
 const GAME_OVER_PAUSE_MS = 1800;
 const HIT_EFFECT_MS = 900;
+const VERDICT_MS = 1700;
+
+/** How a round's call turned out: the caller took the card themselves, or caught somebody overdoing it. */
+export type Verdict = 'false-alarm' | 'too-much';
 
 /** `"1,2,3"` from the query string; anything unparsable is dropped. */
 export function parseCategoryIds(value: string | undefined): number[] {
@@ -69,6 +73,8 @@ export class Play implements OnInit, OnDestroy {
 
   protected readonly hitPlayerId = signal<number | null>(null);
   protected readonly doubledPlayerId = signal<number | null>(null);
+  /** Shown for a moment once the card lands, with the player who took it. */
+  protected readonly verdict = signal<{ kind: Verdict; playerId: number } | null>(null);
   /** Which confirmation is open: ending the game (results) or deleting it (no results). */
   protected readonly confirming = signal<'end' | 'delete' | null>(null);
   /** Whether "No" in the delete confirmation goes back to the end one it was opened from, or just closes it. */
@@ -142,11 +148,15 @@ export class Play implements OnInit, OnDestroy {
     const from = this.cardSource()?.nativeElement as HTMLElement | undefined;
     const to = this.seatButtons()[seat]?.nativeElement;
     const points = this.store.badPoints();
+    const kind: Verdict = playerId === this.store.callerId() ? 'false-alarm' : 'too-much';
 
     const landing = from && to ? flyCard(from, to, points) : Promise.resolve();
     void landing.then(() => {
       this.hitPlayerId.set(playerId);
       this.later(() => this.hitPlayerId.set(null), HIT_EFFECT_MS);
+      const shown = { kind, playerId };
+      this.verdict.set(shown);
+      this.later(() => this.verdict.update((current) => (current === shown ? null : current)), VERDICT_MS);
     });
 
     void this.store.award(playerId, landing);

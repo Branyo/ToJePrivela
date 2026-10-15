@@ -44,6 +44,8 @@ export class PlayStore {
   readonly questionNumber = signal(0);
   /** What the starting player set for the current question in a `Chooser` game; `null` until then. */
   readonly chosenBadPoints = signal<number | null>(null);
+  /** Who called "To je priveľa!" on the current question; `null` until somebody did. */
+  readonly callerId = signal<number | null>(null);
 
   /**
    * The players to play with. Deleting a player cancels their running games, so a game played here only ever
@@ -57,6 +59,11 @@ export class PlayStore {
   readonly badPoints = computed(() =>
     this.choosesBadPoints() ? (this.chosenBadPoints() ?? 0) : (this.question()?.badPoints ?? 0),
   );
+  /** The player who called "To je priveľa!" on the current question, while it is being decided who takes the card. */
+  readonly caller = computed(() => {
+    const id = this.callerId();
+    return id === null ? null : (this.seats().find((p) => p.playerId === id) ?? null);
+  });
   /** While bidding and after "To je priveľa!", but before the card is handed out. */
   readonly canDouble = computed(() => this.phase() === 'asking' || this.phase() === 'revealed');
   /**
@@ -127,6 +134,7 @@ export class PlayStore {
       }
       this.question.set(drawn);
       this.chosenBadPoints.set(null);
+      this.callerId.set(null);
       this.questionNumber.update((n) => n + 1);
       this.phase.set(this.choosesBadPoints() ? 'choosing' : 'asking');
     } catch (error) {
@@ -200,10 +208,19 @@ export class PlayStore {
     this.phase.set('asking');
   }
 
-  /** "To je priveľa!" – someone stopped the bidding. */
-  reveal(): void {
-    if (this.phase() === 'asking') {
+  /** "To je priveľa!" – the player stopped the bidding; the answer is shown. */
+  reveal(callerId: number): void {
+    if (this.phase() === 'asking' && this.seats().some((p) => p.playerId === callerId)) {
+      this.callerId.set(callerId);
       this.phase.set('revealed');
+    }
+  }
+
+  /** The wrong bubble was tapped: the bidding goes on and the caller is picked again. */
+  back(): void {
+    if (this.phase() === 'revealed') {
+      this.callerId.set(null);
+      this.phase.set('asking');
     }
   }
 
@@ -256,12 +273,14 @@ export class PlayStore {
   }
 
   /**
-   * Gives the current question's card to the player once every double tapped before it is saved. The scoreboard updates only once `landing`
-   * resolves, so the numbers change when the flying card arrives.
+   * Gives the current question's card to the player once every double tapped before it is saved, together with who
+   * called "To je priveľa!" (the player taking it themselves was a false alarm). The scoreboard updates only once
+   * `landing` resolves, so the numbers change when the flying card arrives.
    */
   async award(playerId: number, landing: Promise<void> = Promise.resolve()): Promise<void> {
     const question = this.question();
-    if (this.phase() !== 'revealed' || !question) {
+    const callerId = this.callerId();
+    if (this.phase() !== 'revealed' || !question || callerId === null) {
       return;
     }
 
@@ -276,6 +295,7 @@ export class PlayStore {
           this.gamesApi.awardBadCard(
             this.gameId,
             playerId,
+            callerId,
             question.id,
             this.choosesBadPoints() ? this.badPoints() : undefined,
           ),
