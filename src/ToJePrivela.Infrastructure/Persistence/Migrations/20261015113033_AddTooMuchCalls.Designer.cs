@@ -11,7 +11,7 @@ using ToJePrivela.Infrastructure.Persistence;
 namespace ToJePrivela.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ToJePrivelaDbContext))]
-    [Migration("20261015110809_AddTooMuchCalls")]
+    [Migration("20261015113033_AddTooMuchCalls")]
     partial class AddTooMuchCalls
     {
         /// <inheritdoc />
@@ -118,6 +118,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .HasDefaultValue(0);
 
                     b.Property<int>("BadPoints")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("Caught")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0);

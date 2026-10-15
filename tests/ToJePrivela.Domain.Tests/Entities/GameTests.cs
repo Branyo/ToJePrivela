@@ -520,9 +520,9 @@ public class GameTests
         game.AwardBadCard(2, 1, QuestionWorth(4), null, Start.AddMinutes(5));
 
         var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
-        Assert.Equal((1, 0), (seats[1].TooMuchCalls, seats[1].FalseAlarms));
-        Assert.Equal((0, 0, 4), (seats[2].TooMuchCalls, seats[2].FalseAlarms, seats[2].BadPoints));
-        Assert.Equal((0, 0), (seats[3].TooMuchCalls, seats[3].FalseAlarms));
+        Assert.Equal((1, 0, 0), (seats[1].TooMuchCalls, seats[1].FalseAlarms, seats[1].Caught));
+        Assert.Equal((0, 0, 1, 4), (seats[2].TooMuchCalls, seats[2].FalseAlarms, seats[2].Caught, seats[2].BadPoints));
+        Assert.Equal((0, 0, 0), (seats[3].TooMuchCalls, seats[3].FalseAlarms, seats[3].Caught));
     }
 
     [Fact]
@@ -533,7 +533,7 @@ public class GameTests
         game.AwardBadCard(1, 1, QuestionWorth(4), 2, Start.AddMinutes(5));
 
         var caller = game.GamePlayers.Single(gp => gp.PlayerId == 1);
-        Assert.Equal((1, 1, 2), (caller.TooMuchCalls, caller.FalseAlarms, caller.BadPoints));
+        Assert.Equal((1, 1, 0, 2), (caller.TooMuchCalls, caller.FalseAlarms, caller.Caught, caller.BadPoints));
     }
 
     [Fact]
@@ -542,11 +542,11 @@ public class GameTests
         var game = new Game(TestAccountId, [1, 2], Start);
 
         Assert.Throws<DomainException>(() => game.AwardBadCard(1, 9, QuestionWorth(3), null, Start.AddMinutes(5)));
-        Assert.All(game.GamePlayers, gp => Assert.Equal((0, 0, 0), (gp.BadCards, gp.TooMuchCalls, gp.FalseAlarms)));
+        Assert.All(game.GamePlayers, gp => Assert.Equal((0, 0, 0, 0), (gp.BadCards, gp.TooMuchCalls, gp.FalseAlarms, gp.Caught)));
     }
 
     [Fact]
-    public void AwardBadCard_CountsEveryCallAndFalseAlarm()
+    public void AwardBadCard_CountsEveryCallFalseAlarmAndCaughtCard()
     {
         var game = new Game(TestAccountId, [1, 2, 3], Start, badCardLimit: 10);
         game.AwardBadCard(2, 1, QuestionWorth(1), null, Start.AddMinutes(1)); // 1 was right
@@ -555,7 +555,7 @@ public class GameTests
         game.AwardBadCard(3, 3, QuestionWorth(1), null, Start.AddMinutes(4)); // 3 was wrong
 
         Assert.Equal(
-            [(1, 2, 1), (2, 0, 0), (3, 2, 1)],
-            game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms)));
+            [(1, 2, 1, 0), (2, 0, 0, 2), (3, 2, 1, 0)],
+            game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms, gp.Caught)));
     }
 }

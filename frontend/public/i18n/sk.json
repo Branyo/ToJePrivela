@@ -240,9 +240,10 @@
     "calls": {
       "title": "🤚 To je priveľa!",
       "calls": "Volania „To je priveľa!“: {{count}}",
-      "hits": "Bolo to priveľa: {{count}}",
+      "hits": "Správne odhalenia, že to bolo priveľa: {{count}}",
       "falseAlarms": "Falošné obvinenia: {{count}}",
-      "legend": "🤚 volania · 🙈 bolo to priveľa · 🤨 falošné obvinenia"
+      "caught": "Prichytenia pri prehnanom odhade: {{count}}",
+      "legend": "🤚 volania · 🙈 správne odhalenia · 🤨 falošné obvinenia · 🫣 prichytenia pri prehnanom odhade"
     },
     "rematch": "🔁 Odveta s rovnakými hráčmi",
     "back": "▶️ Späť do hry",

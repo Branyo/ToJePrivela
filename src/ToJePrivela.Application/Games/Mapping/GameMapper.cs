@@ -41,7 +41,8 @@ public static class GameMapper
         standing.Rank,
         standing.IsLoser,
         standing.Player.TooMuchCalls,
-        standing.Player.FalseAlarms);
+        standing.Player.FalseAlarms,
+        standing.Player.Caught);
 
     private static int SeatOrder(GamePlayer gamePlayer) => gamePlayer.PlayerId ?? int.MaxValue;
 }

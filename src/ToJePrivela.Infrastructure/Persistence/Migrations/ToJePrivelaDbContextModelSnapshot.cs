@@ -119,6 +119,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0);
 
+                    b.Property<int>("Caught")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("Doubles")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")

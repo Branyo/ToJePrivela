@@ -46,11 +46,16 @@ public class GamePlayer
     /// </summary>
     public int FalseAlarms { get; private set; }
 
+    /// <summary>Cards the player took after somebody else called "To je priveľa!": caught overdoing it.</summary>
+    public int Caught { get; private set; }
+
     /// <summary>
     /// The game's verdict, stored when it finished (see <see cref="Game.Standings"/>), so a later change of the rule
     /// never rewrites a result. Always false while the game runs and in a cancelled game.
     /// </summary>
     public bool IsLoser { get; private set; }
+
+    internal void AddCaught() => Caught++;
 
     internal void AddBadCard(int badPoints)
     {

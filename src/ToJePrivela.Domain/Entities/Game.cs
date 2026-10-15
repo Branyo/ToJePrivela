@@ -137,7 +137,8 @@ public class Game
     /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game.
     /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. <paramref name="callerId"/>, who
     /// called "To je priveľa!" in that round, is credited with the call (<see cref="GamePlayer.TooMuchCalls"/>); taking
-    /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>).
+    /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>), anyone else taking it was
+    /// caught overdoing it (<see cref="GamePlayer.Caught"/>).
     /// </summary>
     public GamePlayer AwardBadCard(int playerId, int callerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {
@@ -148,6 +149,10 @@ public class Game
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
         FindPlayer(callerId)!.AddTooMuchCall(falseAlarm: callerId == playerId);
+        if (callerId != playerId)
+        {
+            gamePlayer.AddCaught();
+        }
 
         // The card itself is the result, so none of Finish's checks apply: the game simply ends now. A card is never
         // refused over the clock, so should it read earlier than a start just corrected to now (the only way the end

@@ -13,6 +13,7 @@ const player = (playerId: number, name: string, rank: number, isLoser = false): 
   isLoser,
   tooMuchCalls: 0,
   falseAlarms: 0,
+  caught: 0,
 });
 
 describe('seatPlayers', () => {

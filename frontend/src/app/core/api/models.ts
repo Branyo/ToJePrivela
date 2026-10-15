@@ -47,6 +47,8 @@ export interface GamePlayer {
   tooMuchCalls: number;
   /** Of those, the ones this player took the card for: the estimate was not too much after all. */
   falseAlarms: number;
+  /** Cards this player took after somebody else called "To je priveľa!": caught overdoing it. */
+  caught: number;
 }
 
 /** A player who still exists; every player of a running game is one. */

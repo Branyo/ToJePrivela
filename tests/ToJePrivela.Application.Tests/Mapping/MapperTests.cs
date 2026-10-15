@@ -75,8 +75,8 @@ public class MapperTests
         var details = GameMapper.ToDetailsDto(game);
 
         Assert.Equal(
-            [(5, 2, 1), (6, 0, 0)],
-            details.Players.Select(p => (p.PlayerId!.Value, p.TooMuchCalls, p.FalseAlarms)));
+            [(5, 2, 1, 0), (6, 0, 0, 1)],
+            details.Players.Select(p => (p.PlayerId!.Value, p.TooMuchCalls, p.FalseAlarms, p.Caught)));
     }
 
     [Fact]

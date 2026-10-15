@@ -11,6 +11,13 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(
+                name: "Caught",
+                table: "GamePlayers",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: 0);
+
+            migrationBuilder.AddColumn<int>(
                 name: "FalseAlarms",
                 table: "GamePlayers",
                 type: "INTEGER",
@@ -28,6 +35,10 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropColumn(
+                name: "Caught",
+                table: "GamePlayers");
+
             migrationBuilder.DropColumn(
                 name: "FalseAlarms",
                 table: "GamePlayers");

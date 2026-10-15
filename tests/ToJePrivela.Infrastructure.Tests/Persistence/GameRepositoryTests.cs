@@ -259,8 +259,8 @@ public class GameRepositoryTests : IDisposable
             var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
 
             Assert.Equal(
-                [(1, 1, 0), (2, 0, 0), (3, 1, 1)],
-                game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms)));
+                [(1, 1, 0, 0), (2, 0, 0, 1), (3, 1, 1, 0)],
+                game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms, gp.Caught)));
         }
     }
 
