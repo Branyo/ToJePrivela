@@ -43,7 +43,7 @@
         "text": "Odpoveďou je vždy číslo a k otázke patrí karta s {{min}} až {{max}} somármi."
       },
       "estimate": {
-        "title": "Prihadzujte odhady",
+        "title": "Prihoď vyšší odhad",
         "text": "Hráči sa striedajú jeden po druhom a každý musí povedať vyšší odhad ako hráč pred ním."
       },
       "double": {
@@ -75,7 +75,7 @@
       "namePlaceholder": "Meno hráča…",
       "name": "Meno hráča",
       "add": "➕ Pridať",
-      "empty": "Pri stole zatiaľ nikto nesedí. Pridajte mená alebo ťuknite na stálych hráčov nižšie.",
+      "empty": "Pri stole zatiaľ nikto nesedí. Pridaj mená alebo ťukni na stálych hráčov nižšie.",
       "remove": "Odobrať hráča {{name}}",
       "regulars": "Stáli hráči"
     },
@@ -103,7 +103,7 @@
     },
     "categories": {
       "title": "Otázky z kategórií",
-      "empty": "Zatiaľ tu nie sú žiadne kategórie. Vytvorte prvú nižšie.",
+      "empty": "Zatiaľ tu nie sú žiadne kategórie. Vytvor prvú nižšie.",
       "all": "Nič nevybraté znamená všetky kategórie: {{questions}}.",
       "chosen": "V hre: {{questions}}.",
       "questions": {
@@ -128,17 +128,17 @@
     "starting": "Miešam… 🃏",
     "errors": {
       "missingPlayers": {
-        "one": "Pridajte ešte aspoň {{count}} hráča.",
-        "few": "Pridajte ešte aspoň {{count}} hráčov.",
-        "many": "Pridajte ešte aspoň {{count}} hráča.",
-        "other": "Pridajte ešte aspoň {{count}} hráčov."
+        "one": "Pridaj ešte aspoň {{count}} hráča.",
+        "few": "Pridaj ešte aspoň {{count}} hráčov.",
+        "many": "Pridaj ešte aspoň {{count}} hráča.",
+        "other": "Pridaj ešte aspoň {{count}} hráčov."
       },
-      "noQuestions": "Zatiaľ nie sú žiadne otázky. Požiadajte správcu, aby nejaké pridal.",
+      "noQuestions": "Zatiaľ nie sú žiadne otázky. Požiadaj správcu, aby nejaké pridal.",
       "nameLength": "Meno musí mať {{min}} až {{max}} znakov.",
       "tableFull": "Stôl je plný: najviac {{max}} hráčov.",
       "categoryNameLength": "Názov kategórie musí mať {{min}} až {{max}} znakov.",
-      "questionCount": "Zadajte {{min}} až {{max}} otázok.",
-      "noQuestionsAdmin": "Zatiaľ nie sú žiadne otázky. Najprv vytvorte kategóriu s AI otázkami."
+      "questionCount": "Zadaj {{min}} až {{max}} otázok.",
+      "noQuestionsAdmin": "Zatiaľ nie sú žiadne otázky. Najprv vytvor kategóriu s AI otázkami."
     }
   },
   "play": {
@@ -156,9 +156,9 @@
     "retry": "🔄 Skúsiť znova",
     "outOfQuestions": {
       "title": "Došli otázky!",
-      "text": "V týchto kategóriách už nie sú otázky. Pridajte nové pri príprave hry alebo hru tu ukončite.",
+      "text": "V týchto kategóriách už nie sú otázky. Pridaj nové pri príprave hry alebo hru tu ukonči.",
       "results": "🏁 Zobraziť výsledky",
-      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Pridajte otázky pri príprave hry alebo hru vymažte."
+      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Pridaj otázky pri príprave hry alebo hru vymaž."
     },
     "gameOver": {
       "first": "KONIEC",
@@ -167,12 +167,12 @@
     "answer": "Správna odpoveď je",
     "reveal": "✋ To je priveľa! Ukázať odpoveď",
     "skip": "😴 Priľahké, preskočiť (bez somárov)",
-    "doubleRule": "Vyšiel niekomu Double? Ďalší hráč prihodil, tak ťuknite na + pri ✌️ u hráča, ktorý ho vyhlásil – na konci hry mu odráta jedného somára. Omyl opravíte tlačidlom −.",
+    "doubleRule": "Vyšiel niekomu Double? Ďalší hráč prihodil, tak ťukni na + pri ✌️ u hráča, ktorý ho vyhlásil – na konci hry mu odráta jedného somára. Omyl opravíš tlačidlom −.",
     "whoTakes": "Kto berie kartu <strong>🫏 ×{{points}}</strong>?",
-    "tapPlayer": "Ťuknite na hráča 👇",
+    "tapPlayer": "Ťukni na hráča 👇",
     "nobody": "🙅 Nikto, ďalšia otázka",
     "cardRule": "Bol posledný odhad vyšší ako odpoveď? Kartu berie ten, kto ho povedal. Ak nie, berie ju ten, kto zvolal „To je priveľa!“.",
-    "doublesFirst": "Najprv pridajte (+) každý Double ✌️, ktorý vyšiel, a až potom priraďte kartu.",
+    "doublesFirst": "Najprv pridaj (+) každý Double ✌️, ktorý vyšiel, a až potom priraď kartu.",
     "double": {
       "group": "Double hráča {{name}}",
       "label": "Double vyšiel: {{name}} (−1 somár)",
@@ -184,7 +184,7 @@
     "confirmEnd": {
       "title": "Ukončiť hru teraz?",
       "text": "Výsledky sa spočítajú podľa aktuálneho stavu, aj keď to nemusí byť voči každému férové: prehráva ten, kto má po odrátaní Double najviac trestných bodov, pri rovnosti prehrávajú spolu.",
-      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Hrajte ďalej alebo hru vymažte.",
+      "noResult": "Nikto ešte nemá somársku kartu, takže nie je čo spočítať. Hraj ďalej alebo hru vymaž.",
       "yes": "Áno, zobraziť výsledky",
       "no": "Hrať ďalej",
       "deleteGame": "Vymazať hru bez výsledkov"
@@ -202,7 +202,7 @@
     "choose": {
       "title": "Začínajúci hráč: koľko somárov bude stáť táto otázka?",
       "group": "Trestné body za túto otázku",
-      "hint": "Zatiaľ je známa iba kategória. Ťuknite na kartu a ukáže sa otázka."
+      "hint": "Zatiaľ je známa iba kategória. Ťukni na kartu a ukáže sa otázka."
     }
   },
   "summary": {
@@ -233,17 +233,17 @@
     "loading": "Počítam somáre… 🫏🫏🫏"
   },
   "signIn": {
-    "title": "Prihláste sa a hrajte",
+    "title": "Prihlás sa a hraj",
     "text": "Prihlásenie je spoločné pre celú partiu, nie pre jedného človeka. Ktokoľvek ho môže vytvoriť a pridať pod neho hráčov, ktorí spolu hrávajú.",
     "name": "Prihlasovacie meno",
     "password": "Heslo",
     "submit": "Prihlásiť",
     "signingIn": "Prihlasujem…",
-    "newHint": "Ste tu nový? Vytvorte prihlásenie pre vašu partiu.",
+    "newHint": "Si tu prvýkrát? Vytvor prihlásenie pre svoju partiu.",
     "create": {
       "start": "Vytvoriť prihlásenie",
       "title": "Vytvoriť prihlásenie",
-      "repeat": "Zopakujte heslo",
+      "repeat": "Zopakuj heslo",
       "passwordHelp": "{{min}} až {{max}} znakov.",
       "submit": "Vytvoriť a prihlásiť",
       "creating": "Vytváram…",
@@ -256,16 +256,16 @@
     }
   },
   "players": {
-    "title": "👥 Vaši hráči",
-    "text": "Vidíte ich len vy. Pravidelných hráčov pridajte tu alebo priamo pri stole.",
+    "title": "👥 Tvoji hráči",
+    "text": "Vidno ich len pod týmto prihlásením. Pravidelných hráčov pridaj tu alebo priamo pri stole.",
     "loading": "Načítavam hráčov…",
-    "empty": "Zatiaľ žiadni hráči. Pridajte prvého!",
+    "empty": "Zatiaľ žiadni hráči. Pridaj prvého!",
     "confirm": "Natrvalo vymazať? Skončené hry si skóre ponechajú ako neznámy hráč; rozohratá hra sa ukončí.",
     "delete": "Vymazať",
     "keep": "Ponechať",
     "deleteName": "Vymazať hráča {{name}}",
     "count": "{{count}} / {{max}}",
-    "full": "Máte {{max}} hráčov, viac jedno prihlásenie mať nemôže. Ak chcete pridať ďalšieho, jedného vymažte."
+    "full": "Máš {{max}} hráčov, viac jedno prihlásenie mať nemôže. Ak chceš pridať ďalšieho, jedného vymaž."
   },
   "settings": {
     "title": "⚙️ Nastavenia",
@@ -348,13 +348,13 @@
     }
   },
   "errors": {
-    "generic": "Niečo sa pokazilo. Skúste to znova.",
+    "generic": "Niečo sa pokazilo. Skús to znova.",
     "unreachable": "Herný server je nedostupný. Beží API?",
-    "rulesUnavailable": "Pravidlá hry sa nepodarilo načítať zo servera. Skontrolujte, či beží, a skúste to znova.",
-    "rateLimited": "Príliš veľa pokusov za krátky čas. Chvíľu počkajte a skúste to znova.",
+    "rulesUnavailable": "Pravidlá hry sa nepodarilo načítať zo servera. Skontroluj, či beží, a skús to znova.",
+    "rateLimited": "Príliš veľa pokusov za krátky čas. Chvíľu počkaj a skús to znova.",
     "api": {
       "Concurrency": {
-        "Conflict": "Medzitým to zmenil niekto iný. Načítajte stránku znova a skúste to ešte raz."
+        "Conflict": "Medzitým to zmenil niekto iný. Načítaj stránku znova a skús to ešte raz."
       },
       "Game": {
         "NotFound": "Táto hra neexistuje.",
@@ -364,22 +364,22 @@
         "UnknownQuestion": "Táto otázka neexistuje.",
         "NoDoubleToRemove": "Tento hráč nemá žiadny Double na ubratie.",
         "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz.",
-        "NoBadCardsYet": "Nikto ešte nemá somársku kartu, takže hra nemá výsledok. Hrajte ďalej alebo ju vymažte."
+        "NoBadCardsYet": "Nikto ešte nemá somársku kartu, takže hra nemá výsledok. Hraj ďalej alebo ju vymaž."
       },
       "Player": {
         "NotFound": "Tento hráč neexistuje.",
-        "NameTaken": "Hráča s týmto menom už máte.",
-        "LimitReached": "Dosiahli ste najväčší počet hráčov na jedno prihlásenie. Najprv jedného vymažte."
+        "NameTaken": "Hráča s týmto menom už máš.",
+        "LimitReached": "Už máš najväčší počet hráčov na jedno prihlásenie. Najprv jedného vymaž."
       },
       "QuestionCategory": {
         "NotFound": "Táto kategória neexistuje.",
         "NameTaken": "Kategória s týmto názvom už existuje.",
-        "TranslationNameTaken": "Preklad tohto názvu už existuje ako kategória. Skúste iný názov.",
-        "TranslationUnavailable": "AI prekladač teraz nie je dostupný. Skúste to neskôr.",
-        "TranslationFailed": "Názov sa nepodarilo preložiť. Skúste to znova."
+        "TranslationNameTaken": "Preklad tohto názvu už existuje ako kategória. Skús iný názov.",
+        "TranslationUnavailable": "AI prekladač teraz nie je dostupný. Skús to neskôr.",
+        "TranslationFailed": "Názov sa nepodarilo preložiť. Skús to znova."
       },
       "QuestionGeneration": {
-        "Failed": "Nepodarilo sa vygenerovať žiadne otázky. Skúste to znova."
+        "Failed": "Nepodarilo sa vygenerovať žiadne otázky. Skús to znova."
       },
       "Question": {
         "NotFound": "Táto otázka neexistuje.",
@@ -387,12 +387,12 @@
         "InvalidCategoryIds": "Neplatný výber kategórií.",
         "UnknownCategories": "Niektoré vybraté kategórie neexistujú.",
         "NoneAvailable": "Vo vybratých kategóriách nie sú žiadne otázky.",
-        "ViewConflict": "Otázku sa nepodarilo zaznamenať. Skúste to znova."
+        "ViewConflict": "Otázku sa nepodarilo zaznamenať. Skús to znova."
       },
       "Auth": {
-        "Unauthenticated": "Prihláste sa, prosím, znova.",
-        "UnknownAccount": "Vaše prihlásenie už neexistuje. Prihláste sa, prosím, znova.",
-        "SignedOut": "Vaše prihlásenie skončilo, pretože sa prihlasovací účet zmenil. Prihláste sa, prosím, znova.",
+        "Unauthenticated": "Prihlás sa, prosím, znova.",
+        "UnknownAccount": "Tvoje prihlásenie už neexistuje. Prihlás sa, prosím, znova.",
+        "SignedOut": "Tvoje prihlásenie skončilo, pretože sa prihlasovací účet zmenil. Prihlás sa, prosím, znova.",
         "Forbidden": "Toto môže urobiť len správca.",
         "WrongPassword": "Heslo nie je správne.",
         "UnknownLogin": "Prihlásenie s týmto menom neexistuje.",
@@ -402,16 +402,16 @@
         "AdminPasswordFromConfig": "Heslo správcu sa nastavuje v konfigurácii servera."
       },
       "RateLimit": {
-        "Exceeded": "Príliš veľa pokusov za krátky čas. Skúste to znova o {{seconds}} s."
+        "Exceeded": "Príliš veľa pokusov za krátky čas. Skús to znova o {{seconds}} s."
       }
     }
   },
   "password": {
     "title": "Zmena hesla",
-    "text": "Po zmene hesla budete odhlásení na všetkých ostatných zariadeniach. Na tomto zariadení zostanete prihlásení.",
+    "text": "Po zmene hesla sa toto prihlásenie odhlási na všetkých ostatných zariadeniach. Na tomto zariadení zostaneš prihlásený.",
     "current": "Súčasné heslo",
     "new": "Nové heslo",
-    "repeat": "Zopakujte nové heslo",
+    "repeat": "Zopakuj nové heslo",
     "submit": "Zmeniť heslo",
     "saving": "Ukladám…",
     "changed": "Heslo bolo zmenené. Ostatné zariadenia sa musia prihlásiť novým heslom."
@@ -466,7 +466,7 @@
       },
       "flawlessVictories": {
         "label": "Čistá výhra",
-        "hint": "Hry, ktoré si skončil bez jedinej trestnej karty a neprehral si."
+        "hint": "Hry, ktoré skončil bez jedinej trestnej karty a neprehral."
       },
       "luckyFinishes": {
         "label": "Šťastný koniec",
