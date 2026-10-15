@@ -162,7 +162,7 @@
         @if (verdict(); as shown) {
           @if (shown.playerId === player.playerId) {
             <span class="verdict" [class.verdict--false]="shown.kind === 'false-alarm'" role="status">
-              <span class="verdict__emoji" aria-hidden="true">{{ shown.kind === 'false-alarm' ? '🤨' : '🙈' }}</span>
+              <span class="verdict__emoji" aria-hidden="true">{{ shown.kind === 'false-alarm' ? '🤨' : '🫣' }}</span>
               {{ (shown.kind === 'false-alarm' ? 'play.verdict.falseAlarm' : 'play.verdict.tooMuch') | translate }}
             </span>
           }
