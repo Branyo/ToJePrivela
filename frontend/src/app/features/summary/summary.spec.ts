@@ -82,8 +82,8 @@ describe('Summary', () => {
     const rows = [...page.querySelectorAll('.calls__row')];
     const stat = (row: Element, name: string) => row.querySelector(`[data-stat="${name}"]`)?.textContent?.trim();
     expect(rows.map((row) => row.querySelector('.calls__name')?.textContent?.trim())).toEqual(['Ana', 'Bo']);
-    expect(['calls', 'hits', 'falseAlarms', 'caught'].map((name) => stat(rows[0], name))).toEqual(['🤚 3', '🙈 2', '🤨 1', '🫣 0']);
-    expect(stat(rows[1], 'hits')).toBe('🙈 0');
+    expect(['calls', 'hits', 'falseAlarms', 'caught'].map((name) => stat(rows[0], name))).toEqual(['🤚 3', '⚖️ 2', '🤨 1', '🫣 0']);
+    expect(stat(rows[1], 'hits')).toBe('⚖️ 0');
     expect(stat(rows[1], 'caught')).toBe('🫣 2');
   });
 
