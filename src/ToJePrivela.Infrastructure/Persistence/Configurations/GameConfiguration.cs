@@ -36,9 +36,5 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
         builder.Metadata
             .FindNavigation(nameof(Game.GamePlayers))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
-
-        builder.Metadata
-            .FindNavigation(nameof(Game.Cards))!
-            .SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

@@ -18,7 +18,6 @@ const seat = (playerId: number | null, name: string | null, overrides: Partial<G
   isLoser: false,
   tooMuchCalls: 0,
   falseAlarms: 0,
-  caught: 0,
   ...overrides,
 });
 
@@ -73,8 +72,8 @@ describe('Summary', () => {
     const page = await render(
       game({
         players: [
-          seat(1, 'Ana', { tooMuchCalls: 3, falseAlarms: 1, caught: 0 }),
-          seat(2, 'Bo', { tooMuchCalls: 0, falseAlarms: 0, caught: 2 }),
+          seat(1, 'Ana', { tooMuchCalls: 3, falseAlarms: 1 }),
+          seat(2, 'Bo', { tooMuchCalls: 1, falseAlarms: 1 }),
         ],
       }),
     );
@@ -82,8 +81,9 @@ describe('Summary', () => {
     const rows = [...page.querySelectorAll('.calls__row')];
     const stat = (row: Element, name: string) => row.querySelector(`[data-stat="${name}"]`)?.textContent?.trim();
     expect(rows.map((row) => row.querySelector('.calls__name')?.textContent?.trim())).toEqual(['Ana', 'Bo']);
-    expect(['calls', 'hits', 'falseAlarms', 'caught'].map((name) => stat(rows[0], name))).toEqual(['🤚 3', '🙈 2', '🤨 1', '🫣 0']);
-    expect(stat(rows[1], 'caught')).toBe('🫣 2');
+    expect(['calls', 'hits', 'falseAlarms'].map((name) => stat(rows[0], name))).toEqual(['🤚 3', '🙈 2', '🤨 1']);
+    expect(rows[1].querySelector('[data-stat="caught"]')).toBeNull();
+    expect(stat(rows[1], 'hits')).toBe('🙈 0');
   });
 
   it('leaves the "too much" calls out of a game without any recorded', async () => {

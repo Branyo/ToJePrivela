@@ -241,7 +241,7 @@ public class GameRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task Cards_AreStoredWithTheirCallerAndLoadedWithTheGame()
+    public async Task TooMuchCalls_AreStoredOnTheSeats()
     {
         var gameId = await SeedGameAsync([1, 2, 3]);
         var question = TestQuestion(badPoints: 4);
@@ -259,43 +259,8 @@ public class GameRepositoryTests : IDisposable
             var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
 
             Assert.Equal(
-                [(2, 1, false), (3, 3, true)],
-                game.Cards.OrderBy(c => c.Id).Select(c => (c.Recipient.PlayerId!.Value, c.Caller.PlayerId!.Value, c.IsFalseAlarm)));
-            Assert.All(game.Cards, card => Assert.Equal((question.Id, question.CategoryId, 4), (card.QuestionId!.Value, card.CategoryId!.Value, card.BadPoints)));
-            var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
-            Assert.Equal(new TooMuchCalls(1, 0, 0), game.CallsOf(seats[1]));
-            Assert.Equal(new TooMuchCalls(0, 0, 1), game.CallsOf(seats[2]));
-            Assert.Equal(new TooMuchCalls(1, 1, 0), game.CallsOf(seats[3]));
-        }
-    }
-
-    [Fact]
-    public async Task Cards_OutliveTheirQuestionsCategory_AndGoWithTheirGame()
-    {
-        var gameId = await SeedGameAsync([1, 2]);
-        var question = TestQuestion(badPoints: 2);
-
-        await using (var context = _database.CreateContext())
-        {
-            var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
-            game.AwardBadCard(2, 1, question, null, Start.AddMinutes(1));
-            await new UnitOfWork(context).SaveChangesAsync();
-        }
-
-        await using (var context = _database.CreateContext())
-        {
-            await context.QuestionCategories.Where(c => c.Id == question.CategoryId).ExecuteDeleteAsync();
-
-            var card = await context.GameCards.SingleAsync();
-            Assert.Equal((null, null), (card.QuestionId, card.CategoryId));
-        }
-
-        await using (var context = _database.CreateContext())
-        {
-            context.Games.Remove((await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!);
-            await context.SaveChangesAsync();
-
-            Assert.Empty(await context.GameCards.ToListAsync());
+                [(1, 1, 0), (2, 0, 0), (3, 1, 1)],
+                game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms)));
         }
     }
 

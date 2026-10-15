@@ -513,19 +513,16 @@ public class GameTests
     }
 
     [Fact]
-    public void AwardBadCard_RecordsTheCardWithWhoCalledTooMuch()
+    public void AwardBadCard_CreditsTheCallerWithTheCall()
     {
         var game = new Game(TestAccountId, [1, 2, 3], Start);
-        var question = QuestionWorth(4);
 
-        game.AwardBadCard(2, 1, question, null, Start.AddMinutes(5));
+        game.AwardBadCard(2, 1, QuestionWorth(4), null, Start.AddMinutes(5));
 
-        var card = Assert.Single(game.Cards);
-        Assert.Equal(2, card.Recipient.PlayerId);
-        Assert.Equal(1, card.Caller.PlayerId);
-        Assert.Equal(4, card.BadPoints);
-        Assert.Equal(Start.AddMinutes(5), card.AwardedAt);
-        Assert.False(card.IsFalseAlarm);
+        var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
+        Assert.Equal((1, 0), (seats[1].TooMuchCalls, seats[1].FalseAlarms));
+        Assert.Equal((0, 0, 4), (seats[2].TooMuchCalls, seats[2].FalseAlarms, seats[2].BadPoints));
+        Assert.Equal((0, 0), (seats[3].TooMuchCalls, seats[3].FalseAlarms));
     }
 
     [Fact]
@@ -535,9 +532,8 @@ public class GameTests
 
         game.AwardBadCard(1, 1, QuestionWorth(4), 2, Start.AddMinutes(5));
 
-        var card = Assert.Single(game.Cards);
-        Assert.True(card.IsFalseAlarm);
-        Assert.Equal(2, card.BadPoints);
+        var caller = game.GamePlayers.Single(gp => gp.PlayerId == 1);
+        Assert.Equal((1, 1, 2), (caller.TooMuchCalls, caller.FalseAlarms, caller.BadPoints));
     }
 
     [Fact]
@@ -546,23 +542,20 @@ public class GameTests
         var game = new Game(TestAccountId, [1, 2], Start);
 
         Assert.Throws<DomainException>(() => game.AwardBadCard(1, 9, QuestionWorth(3), null, Start.AddMinutes(5)));
-        Assert.Empty(game.Cards);
-        Assert.All(game.GamePlayers, gp => Assert.Equal(0, gp.BadCards));
+        Assert.All(game.GamePlayers, gp => Assert.Equal((0, 0, 0), (gp.BadCards, gp.TooMuchCalls, gp.FalseAlarms)));
     }
 
     [Fact]
-    public void CallsOf_CountsCallsFalseAlarmsAndCaughtCards()
+    public void AwardBadCard_CountsEveryCallAndFalseAlarm()
     {
         var game = new Game(TestAccountId, [1, 2, 3], Start, badCardLimit: 10);
-        game.AwardBadCard(2, 1, QuestionWorth(1), null, Start.AddMinutes(1)); // 1 caught 2
+        game.AwardBadCard(2, 1, QuestionWorth(1), null, Start.AddMinutes(1)); // 1 was right
         game.AwardBadCard(1, 1, QuestionWorth(1), null, Start.AddMinutes(2)); // 1 was wrong
-        game.AwardBadCard(2, 3, QuestionWorth(1), null, Start.AddMinutes(3)); // 3 caught 2
+        game.AwardBadCard(2, 3, QuestionWorth(1), null, Start.AddMinutes(3)); // 3 was right
         game.AwardBadCard(3, 3, QuestionWorth(1), null, Start.AddMinutes(4)); // 3 was wrong
 
-        var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
-
-        Assert.Equal(new TooMuchCalls(2, 1, 0), game.CallsOf(seats[1]));
-        Assert.Equal(new TooMuchCalls(0, 0, 2), game.CallsOf(seats[2]));
-        Assert.Equal(new TooMuchCalls(2, 1, 0), game.CallsOf(seats[3]));
+        Assert.Equal(
+            [(1, 2, 1), (2, 0, 0), (3, 2, 1)],
+            game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms)));
     }
 }

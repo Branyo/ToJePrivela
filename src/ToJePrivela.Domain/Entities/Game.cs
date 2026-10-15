@@ -11,7 +11,6 @@ public class Game
     public const int DefaultBadCardLimit = 3;
 
     private readonly List<GamePlayer> _gamePlayers = [];
-    private readonly List<GameCard> _cards = [];
 
     private Game()
     {
@@ -63,9 +62,6 @@ public class Game
     public BadPointsMode BadPointsMode { get; private set; }
 
     public IReadOnlyCollection<GamePlayer> GamePlayers => _gamePlayers.AsReadOnly();
-
-    /// <summary>Every bad card handed out, with who called "To je priveľa!" in its round.</summary>
-    public IReadOnlyCollection<GameCard> Cards => _cards.AsReadOnly();
 
     public bool IsFinished => Finished is not null;
 
@@ -139,8 +135,9 @@ public class Game
     /// <summary>
     /// Gives the player a bad card for <paramref name="question"/>, worth what <see cref="BadPointsMode"/>
     /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game.
-    /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. The card is recorded in
-    /// <see cref="Cards"/> with <paramref name="callerId"/>, who called "To je priveľa!" in that round.
+    /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. <paramref name="callerId"/>, who
+    /// called "To je priveľa!" in that round, is credited with the call (<see cref="GamePlayer.TooMuchCalls"/>); taking
+    /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>).
     /// </summary>
     public GamePlayer AwardBadCard(int playerId, int callerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {
@@ -148,10 +145,9 @@ public class Game
         ThrowIfBroken(CheckAwardBadCard(playerId, callerId, chosenBadPoints));
 
         var gamePlayer = FindPlayer(playerId)!;
-        var badPoints = chosenBadPoints ?? question.BadPoints;
 
-        gamePlayer.AddBadCard(badPoints);
-        _cards.Add(new GameCard(gamePlayer, FindPlayer(callerId)!, question, badPoints, awardedAt));
+        gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
+        FindPlayer(callerId)!.AddTooMuchCall(falseAlarm: callerId == playerId);
 
         // The card itself is the result, so none of Finish's checks apply: the game simply ends now. A card is never
         // refused over the clock, so should it read earlier than a start just corrected to now (the only way the end
@@ -263,22 +259,6 @@ public class Game
         }
 
         return standings;
-    }
-
-    /// <summary>
-    /// How the seat did with "To je priveľa!": calls made, how many of them were false alarms (the caller took the
-    /// card) and how often someone else's call caught the seat overdoing it.
-    /// </summary>
-    public TooMuchCalls CallsOf(GamePlayer gamePlayer)
-    {
-        ArgumentNullException.ThrowIfNull(gamePlayer);
-
-        var calls = _cards.Where(card => ReferenceEquals(card.Caller, gamePlayer)).ToList();
-
-        return new TooMuchCalls(
-            calls.Count,
-            calls.Count(card => card.IsFalseAlarm),
-            _cards.Count(card => ReferenceEquals(card.Recipient, gamePlayer) && !card.IsFalseAlarm));
     }
 
     /// <summary>

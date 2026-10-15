@@ -325,11 +325,11 @@ public class GameServiceTests
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 1, QuestionId = 10 });
 
         Assert.True(result.IsSuccess);
-        Assert.Equal((1, 0, 0), Calls(result.Value, 1));
-        Assert.Equal((0, 0, 1), Calls(result.Value, 2));
+        Assert.Equal((1, 0), Calls(result.Value, 1));
+        Assert.Equal((0, 0), Calls(result.Value, 2));
 
-        static (int, int, int) Calls(GameDetailsDto details, int playerId) =>
-            details.Players.Single(p => p.PlayerId == playerId) is var p ? (p.TooMuchCalls, p.FalseAlarms, p.Caught) : default;
+        static (int, int) Calls(GameDetailsDto details, int playerId) =>
+            details.Players.Single(p => p.PlayerId == playerId) is var p ? (p.TooMuchCalls, p.FalseAlarms) : default;
     }
 
     [Fact]

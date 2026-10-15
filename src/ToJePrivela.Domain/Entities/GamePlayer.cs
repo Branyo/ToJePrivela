@@ -38,6 +38,14 @@ public class GamePlayer
     /// <summary>What counts at the end of the game: <see cref="BadPoints"/> minus one per double.</summary>
     public int FinalBadPoints => BadPoints - Doubles;
 
+    /// <summary>Rounds the player called "To je priveľa!" in that ended with a card (skipped rounds never count).</summary>
+    public int TooMuchCalls { get; private set; }
+
+    /// <summary>
+    /// Of <see cref="TooMuchCalls"/>, those the player took the card for: the estimate was not too much after all.
+    /// </summary>
+    public int FalseAlarms { get; private set; }
+
     /// <summary>
     /// The game's verdict, stored when it finished (see <see cref="Game.Standings"/>), so a later change of the rule
     /// never rewrites a result. Always false while the game runs and in a cancelled game.
@@ -51,6 +59,15 @@ public class GamePlayer
     }
 
     internal void AddDouble() => Doubles++;
+
+    internal void AddTooMuchCall(bool falseAlarm)
+    {
+        TooMuchCalls++;
+        if (falseAlarm)
+        {
+            FalseAlarms++;
+        }
+    }
 
     internal void MarkLoser() => IsLoser = true;
 

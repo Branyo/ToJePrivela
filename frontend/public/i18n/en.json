@@ -232,8 +232,7 @@
       "calls": "\"That's too much!\" calls: {{count}}",
       "hits": "It was too much: {{count}}",
       "falseAlarms": "False alarms: {{count}}",
-      "caught": "Caught overdoing it: {{count}}",
-      "legend": "🤚 calls · 🙈 it was too much · 🤨 false alarms · 🫣 caught overdoing it"
+      "legend": "🤚 calls · 🙈 it was too much · 🤨 false alarms"
     },
     "rematch": "🔁 Rematch, same players",
     "back": "▶️ Back to the game",
