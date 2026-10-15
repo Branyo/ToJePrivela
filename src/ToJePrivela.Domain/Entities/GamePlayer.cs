@@ -46,6 +46,9 @@ public class GamePlayer
     /// </summary>
     public int FalseAlarms { get; private set; }
 
+    /// <summary>The other <see cref="TooMuchCalls"/>: somebody else took the card, so the call was right.</summary>
+    public int CorrectCalls => TooMuchCalls - FalseAlarms;
+
     /// <summary>Cards the player took after somebody else called "To je priveľa!": caught overdoing it.</summary>
     public int Caught { get; private set; }
 

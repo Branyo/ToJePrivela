@@ -17,6 +17,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { GameDetails } from '../../core/api/models';
 import { DEFAULT_LANGUAGE, LanguageService, localeOf } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
@@ -44,6 +45,11 @@ export function parseCategoryIds(value: string | undefined): number[] {
 export function formatAnswer(answer: string, locale: string = localeOf(DEFAULT_LANGUAGE)): string {
   const value = Number(answer);
   return Number.isFinite(value) ? value.toLocaleString(locale, { maximumFractionDigits: 10 }) : answer;
+}
+
+/** The caller's false alarms as the server counted them; comparing two games tells whether a card made one. */
+function falseAlarmsOf(game: GameDetails | null, callerId: number | null): number {
+  return game?.players.find((p) => p.playerId === callerId)?.falseAlarms ?? 0;
 }
 
 @Component({
@@ -148,18 +154,19 @@ export class Play implements OnInit, OnDestroy {
     const from = this.cardSource()?.nativeElement as HTMLElement | undefined;
     const to = this.seatButtons()[seat]?.nativeElement;
     const points = this.store.badPoints();
-    const kind: Verdict = playerId === this.store.callerId() ? 'false-alarm' : 'too-much';
+    const callerId = this.store.callerId();
+    const falseAlarmsBefore = falseAlarmsOf(this.store.game(), callerId);
 
     const landing = from && to ? flyCard(from, to, points) : Promise.resolve();
-    void landing.then(() => {
+    // Only a card the server counted gets its effect and verdict; whether the call was a false alarm is its decision.
+    void this.store.award(playerId, landing, (saved) => {
+      const kind: Verdict = falseAlarmsOf(saved, callerId) > falseAlarmsBefore ? 'false-alarm' : 'too-much';
       this.hitPlayerId.set(playerId);
       this.later(() => this.hitPlayerId.set(null), HIT_EFFECT_MS);
       const shown = { kind, playerId };
       this.verdict.set(shown);
       this.later(() => this.verdict.update((current) => (current === shown ? null : current)), VERDICT_MS);
     });
-
-    void this.store.award(playerId, landing);
   }
 
   protected double(playerId: number): void {

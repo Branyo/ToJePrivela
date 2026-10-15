@@ -93,8 +93,8 @@
                 <span data-stat="calls" [attr.aria-label]="'summary.calls.calls' | translate: { count: player.tooMuchCalls }"
                   >🤚 {{ player.tooMuchCalls }}</span
                 >
-                <span data-stat="hits" [attr.aria-label]="'summary.calls.hits' | translate: { count: player.tooMuchCalls - player.falseAlarms }"
-                  >🧑‍⚖️ {{ player.tooMuchCalls - player.falseAlarms }}</span
+                <span data-stat="hits" [attr.aria-label]="'summary.calls.hits' | translate: { count: player.correctCalls }"
+                  >🧑‍⚖️ {{ player.correctCalls }}</span
                 >
                 <span data-stat="falseAlarms" [attr.aria-label]="'summary.calls.falseAlarms' | translate: { count: player.falseAlarms }"
                   >🤨 {{ player.falseAlarms }}</span

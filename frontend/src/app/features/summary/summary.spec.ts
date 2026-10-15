@@ -18,6 +18,7 @@ const seat = (playerId: number | null, name: string | null, overrides: Partial<G
   isLoser: false,
   tooMuchCalls: 0,
   falseAlarms: 0,
+  correctCalls: 0,
   caught: 0,
   ...overrides,
 });
@@ -73,8 +74,8 @@ describe('Summary', () => {
     const page = await render(
       game({
         players: [
-          seat(1, 'Ana', { tooMuchCalls: 3, falseAlarms: 1, caught: 0 }),
-          seat(2, 'Bo', { tooMuchCalls: 1, falseAlarms: 1, caught: 2 }),
+          seat(1, 'Ana', { tooMuchCalls: 3, falseAlarms: 1, correctCalls: 2, caught: 0 }),
+          seat(2, 'Bo', { tooMuchCalls: 1, falseAlarms: 1, correctCalls: 0, caught: 2 }),
         ],
       }),
     );

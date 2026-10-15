@@ -138,10 +138,7 @@ public sealed class GameService : IGameService
             {
                 if (game.CheckAwardBadCard(request.PlayerId, request.CalledByPlayerId, request.BadPoints) is { } violation)
                 {
-                    return GameErrors.From(
-                        violation,
-                        id,
-                        violation == GameRuleViolation.CallerNotInGame ? request.CalledByPlayerId : request.PlayerId);
+                    return GameErrors.From(violation, id, request.PlayerId, request.CalledByPlayerId);
                 }
 
                 var question = await _questions.GetByIdAsync(request.QuestionId, cancellationToken);

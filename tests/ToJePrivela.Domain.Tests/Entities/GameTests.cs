@@ -520,7 +520,7 @@ public class GameTests
         game.AwardBadCard(2, 1, QuestionWorth(4), null, Start.AddMinutes(5));
 
         var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
-        Assert.Equal((1, 0, 0), (seats[1].TooMuchCalls, seats[1].FalseAlarms, seats[1].Caught));
+        Assert.Equal((1, 0, 1, 0), (seats[1].TooMuchCalls, seats[1].FalseAlarms, seats[1].CorrectCalls, seats[1].Caught));
         Assert.Equal((0, 0, 1, 4), (seats[2].TooMuchCalls, seats[2].FalseAlarms, seats[2].Caught, seats[2].BadPoints));
         Assert.Equal((0, 0, 0), (seats[3].TooMuchCalls, seats[3].FalseAlarms, seats[3].Caught));
     }
@@ -533,7 +533,7 @@ public class GameTests
         game.AwardBadCard(1, 1, QuestionWorth(4), 2, Start.AddMinutes(5));
 
         var caller = game.GamePlayers.Single(gp => gp.PlayerId == 1);
-        Assert.Equal((1, 1, 0, 2), (caller.TooMuchCalls, caller.FalseAlarms, caller.Caught, caller.BadPoints));
+        Assert.Equal((1, 1, 0, 0, 2), (caller.TooMuchCalls, caller.FalseAlarms, caller.CorrectCalls, caller.Caught, caller.BadPoints));
     }
 
     [Fact]

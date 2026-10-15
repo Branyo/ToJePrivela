@@ -51,20 +51,21 @@ public static class GameErrors
             $"Nobody holds a bad card in game {gameId} yet, so it has no result: keep playing or delete it.");
 
     /// <summary>The error for a rule the domain reported; the rule itself lives in <see cref="Game"/>.</summary>
-    public static Error From(GameRuleViolation violation, int gameId, int? playerId = null) => violation switch
-    {
-        GameRuleViolation.AlreadyFinished => AlreadyFinished(gameId),
-        GameRuleViolation.PlayerNotInGame => PlayerNotInGame(gameId, playerId ?? 0),
-        GameRuleViolation.CallerNotInGame => CallerNotInGame(gameId, playerId ?? 0),
-        GameRuleViolation.NoDoubleToRemove => NoDoubleToRemove(gameId, playerId ?? 0),
-        GameRuleViolation.ChosenBadPointsRequired => BadPointsRequired(gameId),
-        GameRuleViolation.ChosenBadPointsNotAllowed => BadPointsNotAllowed(gameId),
-        GameRuleViolation.CannotReopen => CannotReopen(gameId),
-        GameRuleViolation.EndsBeforeStart => EndsBeforeStart(gameId),
-        GameRuleViolation.StartsInFuture => StartsInFuture(gameId),
-        GameRuleViolation.NoBadCardsYet => NoBadCardsYet(gameId),
-        _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
-    };
+    public static Error From(GameRuleViolation violation, int gameId, int? playerId = null, int? callerId = null) =>
+        violation switch
+        {
+            GameRuleViolation.AlreadyFinished => AlreadyFinished(gameId),
+            GameRuleViolation.PlayerNotInGame => PlayerNotInGame(gameId, playerId ?? 0),
+            GameRuleViolation.CallerNotInGame => CallerNotInGame(gameId, callerId ?? 0),
+            GameRuleViolation.NoDoubleToRemove => NoDoubleToRemove(gameId, playerId ?? 0),
+            GameRuleViolation.ChosenBadPointsRequired => BadPointsRequired(gameId),
+            GameRuleViolation.ChosenBadPointsNotAllowed => BadPointsNotAllowed(gameId),
+            GameRuleViolation.CannotReopen => CannotReopen(gameId),
+            GameRuleViolation.EndsBeforeStart => EndsBeforeStart(gameId),
+            GameRuleViolation.StartsInFuture => StartsInFuture(gameId),
+            GameRuleViolation.NoBadCardsYet => NoBadCardsYet(gameId),
+            _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
+        };
 
     public static Error UnknownQuestion(int questionId) =>
         Error.Validation("Game.UnknownQuestion", $"Question with id {questionId} does not exist.");

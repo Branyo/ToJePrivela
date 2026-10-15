@@ -275,9 +275,14 @@ export class PlayStore {
   /**
    * Gives the current question's card to the player once every double tapped before it is saved, together with who
    * called "To je priveľa!" (the player taking it themselves was a false alarm). The scoreboard updates only once
-   * `landing` resolves, so the numbers change when the flying card arrives.
+   * `landing` resolves, so the numbers change when the flying card arrives; `onSaved` then gets the saved game, and is
+   * never called for a card the server refused.
    */
-  async award(playerId: number, landing: Promise<void> = Promise.resolve()): Promise<void> {
+  async award(
+    playerId: number,
+    landing: Promise<void> = Promise.resolve(),
+    onSaved?: (saved: GameDetails) => void,
+  ): Promise<void> {
     const question = this.question();
     const callerId = this.callerId();
     if (this.phase() !== 'revealed' || !question || callerId === null) {
@@ -303,6 +308,7 @@ export class PlayStore {
         landing,
       ]);
       this.game.set(game);
+      onSaved?.(game);
     } catch (error) {
       // e.g. the game was finished from another device: reload the real state instead of guessing.
       const message = toProblem(error).message;
