@@ -43,7 +43,7 @@ public class Game
         BadCardLimit = Guard.AgainstOutOfRange(badCardLimit, nameof(badCardLimit), MinBadCardLimit, MaxBadCardLimit);
         BadPointsMode = badPointsMode;
         Started = UtcTime.Normalize(startedAt);
-        _gamePlayers.AddRange(distinctIds.Select(id => new GamePlayer(id)));
+        _gamePlayers.AddRange(distinctIds.Select((id, seat) => new GamePlayer(id, seat)));
     }
 
     public int Id { get; private set; }
@@ -98,10 +98,27 @@ public class Game
         : UtcTime.Normalize(finishedAt) < Started ? GameRuleViolation.EndsBeforeStart
         : CheckResult();
 
-    /// <param name="callerId">Who called "To je priveľa!" in the round; any player of the game, the taker included.</param>
+    /// <summary>
+    /// The player before <paramref name="playerId"/> in the order of play (<see cref="GamePlayer.Seat"/>, going round):
+    /// whose bid that player called "To je priveľa!" on. Null for a player not in the game.
+    /// </summary>
+    public int? PreviousPlayerOf(int playerId)
+    {
+        var seats = _gamePlayers.OrderBy(gp => gp.Seat).ThenBy(gp => gp.Id).ToList();
+        var index = seats.FindIndex(gp => gp.PlayerId == playerId);
+        return index < 0 ? null : seats[(index - 1 + seats.Count) % seats.Count].PlayerId;
+    }
+
+    /// <param name="callerId">
+    /// Who called "To je priveľa!" in the round. Only they (a false alarm) or the player before them, whose bid they
+    /// called (<see cref="PreviousPlayerOf"/>), can take the card.
+    /// </param>
     public GameRuleViolation? CheckAwardBadCard(int playerId, int callerId, int? chosenBadPoints) =>
         CheckRunningPlayer(playerId)
         ?? (HasPlayer(callerId) ? null : (GameRuleViolation?)GameRuleViolation.CallerNotInGame)
+        ?? (playerId == callerId || playerId == PreviousPlayerOf(callerId)
+            ? null
+            : (GameRuleViolation?)GameRuleViolation.TakerNotCallerOrBidder)
         ?? (RequiresChosenBadPoints, chosenBadPoints.HasValue) switch
         {
             (true, false) => GameRuleViolation.ChosenBadPointsRequired,
@@ -137,8 +154,8 @@ public class Game
     /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game.
     /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. <paramref name="callerId"/>, who
     /// called "To je priveľa!" in that round, is credited with the call (<see cref="GamePlayer.TooMuchCalls"/>); taking
-    /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>), anyone else taking it was
-    /// caught overdoing it (<see cref="GamePlayer.Caught"/>).
+    /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>), otherwise the player before
+    /// them, whose bid it was, takes it and was caught overdoing it (<see cref="GamePlayer.Caught"/>).
     /// </summary>
     public GamePlayer AwardBadCard(int playerId, int callerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {

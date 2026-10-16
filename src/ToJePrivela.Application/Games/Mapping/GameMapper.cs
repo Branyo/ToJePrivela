@@ -12,11 +12,11 @@ public static class GameMapper
         game.BadCardLimit,
         game.BadPointsMode.ToString(),
         game.IsCancelled,
-        game.GamePlayers.OrderBy(SeatOrder).Select(gp => gp.PlayerId).ToList());
+        game.GamePlayers.OrderBy(gp => gp.Seat).ThenBy(gp => gp.Id).Select(gp => gp.PlayerId).ToList());
 
     public static IReadOnlyList<GameDto> ToDtos(IEnumerable<Game> games) => games.Select(ToDto).ToList();
 
-    /// <summary>Players stay in seat order (player id, unknown players last); each carries the rank the game gives them.</summary>
+    /// <summary>Players stay in the order of play (<c>GamePlayer.Seat</c>); each carries the rank the game gives them.</summary>
     public static GameDetailsDto ToDetailsDto(Game game) => new(
         game.Id,
         game.Started,
@@ -26,7 +26,8 @@ public static class GameMapper
         game.IsCancelled,
         game.HasResult,
         game.Standings()
-            .OrderBy(standing => SeatOrder(standing.Player))
+            .OrderBy(standing => standing.Player.Seat)
+            .ThenBy(standing => standing.Player.Id)
             .Select(ToDto)
             .ToList());
 
@@ -44,6 +45,4 @@ public static class GameMapper
         standing.Player.FalseAlarms,
         standing.Player.CorrectCalls,
         standing.Player.Caught);
-
-    private static int SeatOrder(GamePlayer gamePlayer) => gamePlayer.PlayerId ?? int.MaxValue;
 }

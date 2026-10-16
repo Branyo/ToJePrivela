@@ -517,11 +517,11 @@ public class GameTests
     {
         var game = new Game(TestAccountId, [1, 2, 3], Start);
 
-        game.AwardBadCard(2, 1, QuestionWorth(4), null, Start.AddMinutes(5));
+        game.AwardBadCard(1, 2, QuestionWorth(4), null, Start.AddMinutes(5));
 
         var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
-        Assert.Equal((1, 0, 1, 0), (seats[1].TooMuchCalls, seats[1].FalseAlarms, seats[1].CorrectCalls, seats[1].Caught));
-        Assert.Equal((0, 0, 1, 4), (seats[2].TooMuchCalls, seats[2].FalseAlarms, seats[2].Caught, seats[2].BadPoints));
+        Assert.Equal((1, 0, 1, 0), (seats[2].TooMuchCalls, seats[2].FalseAlarms, seats[2].CorrectCalls, seats[2].Caught));
+        Assert.Equal((0, 0, 1, 4), (seats[1].TooMuchCalls, seats[1].FalseAlarms, seats[1].Caught, seats[1].BadPoints));
         Assert.Equal((0, 0, 0), (seats[3].TooMuchCalls, seats[3].FalseAlarms, seats[3].Caught));
     }
 
@@ -549,13 +549,44 @@ public class GameTests
     public void AwardBadCard_CountsEveryCallFalseAlarmAndCaughtCard()
     {
         var game = new Game(TestAccountId, [1, 2, 3], Start, badCardLimit: 10);
-        game.AwardBadCard(2, 1, QuestionWorth(1), null, Start.AddMinutes(1)); // 1 was right
-        game.AwardBadCard(1, 1, QuestionWorth(1), null, Start.AddMinutes(2)); // 1 was wrong
+        game.AwardBadCard(1, 2, QuestionWorth(1), null, Start.AddMinutes(1)); // 2 was right
+        game.AwardBadCard(2, 2, QuestionWorth(1), null, Start.AddMinutes(2)); // 2 was wrong
         game.AwardBadCard(2, 3, QuestionWorth(1), null, Start.AddMinutes(3)); // 3 was right
         game.AwardBadCard(3, 3, QuestionWorth(1), null, Start.AddMinutes(4)); // 3 was wrong
 
         Assert.Equal(
-            [(1, 2, 1, 0), (2, 0, 0, 2), (3, 2, 1, 0)],
+            [(1, 0, 0, 1), (2, 2, 1, 1), (3, 2, 1, 0)],
             game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms, gp.Caught)));
+    }
+
+    [Fact]
+    public void Constructor_SeatsThePlayersInTheOrderTheyWereAdded()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start);
+
+        Assert.Equal([(3, 0), (1, 1), (2, 2)], game.GamePlayers.Select(gp => (gp.PlayerId!.Value, gp.Seat)));
+    }
+
+    [Fact]
+    public void PreviousPlayerOf_GoesRoundTheOrderOfPlay()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start);
+
+        Assert.Equal(3, game.PreviousPlayerOf(1));
+        Assert.Equal(1, game.PreviousPlayerOf(2));
+        Assert.Equal(2, game.PreviousPlayerOf(3));
+        Assert.Null(game.PreviousPlayerOf(9));
+    }
+
+    [Fact]
+    public void AwardBadCard_LetsOnlyTheCallerOrThePlayerBeforeThemTakeTheCard()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start, badCardLimit: 10);
+
+        Assert.Null(game.CheckAwardBadCard(1, 1, null));
+        Assert.Null(game.CheckAwardBadCard(3, 1, null));
+        Assert.Equal(GameRuleViolation.TakerNotCallerOrBidder, game.CheckAwardBadCard(2, 1, null));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(2, 1, QuestionWorth(3), null, Start.AddMinutes(5)));
+        Assert.All(game.GamePlayers, gp => Assert.Equal((0, 0, 0), (gp.BadCards, gp.TooMuchCalls, gp.Caught)));
     }
 }

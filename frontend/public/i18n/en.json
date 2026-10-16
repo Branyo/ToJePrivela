@@ -75,6 +75,7 @@
       "namePlaceholder": "Player name…",
       "name": "Player name",
       "add": "➕ Add",
+      "orderHint": "Add players in the order they will play, one after another round the table.",
       "empty": "Nobody at the table yet. Add names or tap regulars below.",
       "remove": "Remove {{name}}",
       "regulars": "Regulars"

@@ -24,7 +24,8 @@ public sealed record GameDetailsDto(
 /// <see cref="TooMuchCalls"/> counts the rounds the player called "To je priveľa!" in (each ended with a card) and
 /// <see cref="FalseAlarms"/> those of them the player took the card for (the estimate was not too much after all),
 /// <see cref="CorrectCalls"/> the rest;
-/// <see cref="Caught"/> counts the cards the player took after somebody else's call.
+/// <see cref="Caught"/> counts the cards the player took after the next player called "To je priveľa!" on their bid.
+/// Players come in the order of play, the order they were added to the game.
 /// </summary>
 public sealed record GamePlayerDto(
     int? PlayerId,

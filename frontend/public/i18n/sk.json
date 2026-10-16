@@ -75,6 +75,7 @@
       "namePlaceholder": "Meno hráča…",
       "name": "Meno hráča",
       "add": "➕ Pridať",
+      "orderHint": "Pridávaj hráčov v poradí, v akom budú hrať, jeden po druhom okolo stola.",
       "empty": "Pri stole zatiaľ nikto nesedí. Pridaj mená alebo ťukni na stálych hráčov nižšie.",
       "remove": "Odobrať hráča {{name}}",
       "regulars": "Stáli hráči"

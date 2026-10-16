@@ -8,7 +8,7 @@ import { LanguageService, Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { Confetti } from '../../shared/confetti';
 import { PlayerAvatar } from '../../shared/player-avatar';
-import { rankPlayers, seatPlayers } from '../../shared/ranking';
+import { rankPlayers } from '../../shared/ranking';
 
 @Component({
   selector: 'app-summary',
@@ -30,7 +30,7 @@ export class Summary implements OnInit {
   protected readonly error = signal<Message | null>(null);
   protected readonly rematching = signal(false);
 
-  protected readonly ranking = computed(() => rankPlayers(seatPlayers(this.game()?.players ?? []), this.i18n.locale()));
+  protected readonly ranking = computed(() => rankPlayers(this.game()?.players ?? [], this.i18n.locale()));
   protected readonly losers = computed(() => this.ranking().filter((player) => player.isLoser));
   protected readonly loserNames = computed(() =>
     this.losers()

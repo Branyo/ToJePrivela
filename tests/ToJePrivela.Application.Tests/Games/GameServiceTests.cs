@@ -346,6 +346,19 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task AwardBadCardAsync_RejectsATakerOtherThanTheCallerOrThePlayerBeforeThem()
+    {
+        var game = TestEntities.Game(1, [1, 2, 3], Now.UtcDateTime);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 3, CalledByPlayerId = 2, QuestionId = 10 });
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Game.TakerNotCallerOrBidder", result.Error.Code);
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+    }
+
+    [Fact]
     public async Task AwardBadCardAsync_RequiresWhoCalledTooMuch()
     {
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, QuestionId = 10 });

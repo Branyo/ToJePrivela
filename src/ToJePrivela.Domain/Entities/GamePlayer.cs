@@ -8,9 +8,11 @@ public class GamePlayer
     {
     }
 
-    public GamePlayer(int playerId, int badPoints = 0)
+    /// <param name="seat">Where the player sits in the order of play, from 0: the order they were added to the game.</param>
+    public GamePlayer(int playerId, int seat, int badPoints = 0)
     {
         PlayerId = playerId;
+        Seat = Guard.AgainstNegative(seat, nameof(seat));
         BadPoints = Guard.AgainstNegative(badPoints, nameof(badPoints));
     }
 
@@ -26,6 +28,12 @@ public class GamePlayer
     public Player? Player { get; private set; }
 
     public bool IsUnknownPlayer => PlayerId is null;
+
+    /// <summary>
+    /// Position in the order of play, from 0 (the order the players were added in): the bidding goes round in it, so
+    /// the seat before a caller's is the player whose bid was called "To je priveľa!".
+    /// </summary>
+    public int Seat { get; private set; }
 
     public int BadPoints { get; private set; }
 
@@ -49,7 +57,9 @@ public class GamePlayer
     /// <summary>The other <see cref="TooMuchCalls"/>: somebody else took the card, so the call was right.</summary>
     public int CorrectCalls => TooMuchCalls - FalseAlarms;
 
-    /// <summary>Cards the player took after somebody else called "To je priveľa!": caught overdoing it.</summary>
+    /// <summary>
+    /// Cards the player took after the next player called "To je priveľa!" on their bid: caught overdoing it.
+    /// </summary>
     public int Caught { get; private set; }
 
     /// <summary>

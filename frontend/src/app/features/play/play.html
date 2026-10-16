@@ -125,8 +125,7 @@
                   @if (store.caller(); as caller) {
                     <span class="prompt__caller">{{ 'play.calledBy' | translate: { name: caller.name } }}</span>
                   }
-                  <span class="prompt__question" [innerHTML]="'play.whoTakes' | translate: { points: store.badPoints() }"></span>
-                  <span class="prompt__tap">{{ 'play.tapPlayer' | translate }}</span>
+                  <span class="prompt__question" [innerHTML]="'play.whoTakes' | translate: { points: store.badPoints() }"></span>{{ ' ' }}<span class="prompt__tap">{{ 'play.tapPlayer' | translate }}</span>
                 </p>
                 <button type="button" class="btn btn--ghost" (click)="store.back()">{{ 'play.back' | translate }}</button>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">{{ 'play.nobody' | translate }}</button>
@@ -150,7 +149,7 @@
             type="button"
             class="call"
             [attr.aria-label]="'play.call.label' | translate: { name: player.name }"
-            (click)="store.reveal(player.playerId)"
+            (click)="call(player.playerId)"
           >
             {{ 'play.call.text' | translate }}
           </button>
@@ -174,7 +173,7 @@
           [class.seat--hit]="hitPlayerId() === player.playerId"
           [class.seat--edge]="store.isOnTheEdge(player)"
           [class.seat--out]="player.badCards >= store.badCardLimit()"
-          [disabled]="store.phase() !== 'revealed'"
+          [disabled]="!store.canTake(player.playerId)"
           [attr.aria-label]="'play.seat' | translate: { name: player.name, cards: player.badCards, points: player.finalBadPoints, doubles: player.doubles }"
           (click)="award(player.playerId, seat)"
         >

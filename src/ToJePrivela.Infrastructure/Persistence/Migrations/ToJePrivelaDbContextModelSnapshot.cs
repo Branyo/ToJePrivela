@@ -145,6 +145,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Property<int?>("PlayerId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Seat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("TooMuchCalls")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")

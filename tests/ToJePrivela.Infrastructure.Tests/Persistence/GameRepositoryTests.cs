@@ -249,7 +249,7 @@ public class GameRepositoryTests : IDisposable
         await using (var context = _database.CreateContext())
         {
             var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
-            game.AwardBadCard(2, 1, question, null, Start.AddMinutes(1));
+            game.AwardBadCard(3, 1, question, null, Start.AddMinutes(1)); // 1 called on 3, the player before them
             game.AwardBadCard(3, 3, question, null, Start.AddMinutes(2));
             await new UnitOfWork(context).SaveChangesAsync();
         }
@@ -259,7 +259,7 @@ public class GameRepositoryTests : IDisposable
             var game = (await new GameRepository(context).GetByIdAsync(TestAccountId, gameId))!;
 
             Assert.Equal(
-                [(1, 1, 0, 0), (2, 0, 0, 1), (3, 1, 1, 0)],
+                [(1, 1, 0, 0), (2, 0, 0, 0), (3, 1, 1, 1)],
                 game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms, gp.Caught)));
         }
     }

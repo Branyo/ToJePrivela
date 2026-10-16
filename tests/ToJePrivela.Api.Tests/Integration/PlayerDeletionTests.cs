@@ -87,7 +87,7 @@ public class PlayerDeletionTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/players/{second.Id}")).StatusCode);
 
         var summary = (await _client.GetFromJsonAsync<GameDto>($"/api/games/{game.Id}"))!;
-        Assert.Equal([third.Id, null, null], summary.PlayerIds);
+        Assert.Equal([null, null, third.Id], summary.PlayerIds);
         Assert.True(summary.Cancelled);
     }
 

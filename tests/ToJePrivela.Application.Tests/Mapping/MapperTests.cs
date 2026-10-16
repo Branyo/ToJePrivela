@@ -51,7 +51,7 @@ public class MapperTests
     }
 
     [Fact]
-    public void GameMapper_ToDetailsDto_CarriesTheGamesVerdictInSeatOrder()
+    public void GameMapper_ToDetailsDto_CarriesTheGamesVerdictInTheOrderOfPlay()
     {
         var game = TestEntities.Game(3, [6, 5], Start);
         var question = TestEntities.Question(1, "How many wheels does a car have?", "4", TestEntities.Category(1, "Cars"), badPoints: 2);
@@ -60,8 +60,8 @@ public class MapperTests
 
         var details = GameMapper.ToDetailsDto(game);
 
-        Assert.Equal([5, 6], details.Players.Select(p => p.PlayerId));
-        Assert.Equal([(2, false), (1, true)], details.Players.Select(p => (p.Rank, p.IsLoser)));
+        Assert.Equal([6, 5], details.Players.Select(p => p.PlayerId));
+        Assert.Equal([(1, true), (2, false)], details.Players.Select(p => (p.Rank, p.IsLoser)));
     }
 
     [Fact]

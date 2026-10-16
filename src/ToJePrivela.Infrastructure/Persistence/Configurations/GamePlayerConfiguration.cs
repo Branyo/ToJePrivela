@@ -13,6 +13,7 @@ public sealed class GamePlayerConfiguration : IEntityTypeConfiguration<GamePlaye
         builder.HasKey(gp => gp.Id);
         builder.HasIndex(gp => new { gp.GameId, gp.PlayerId }).IsUnique();
 
+        builder.Property(gp => gp.Seat).HasDefaultValue(0);
         builder.Property(gp => gp.BadPoints).HasDefaultValue(0);
         builder.Property(gp => gp.BadCards).HasDefaultValue(0);
         builder.Property(gp => gp.Doubles).HasDefaultValue(0);

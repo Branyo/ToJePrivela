@@ -204,10 +204,8 @@
     color: var(--tomato);
   }
 
-  /* Angular drops the whitespace between the question and this span, so the gap is put back here. */
   .prompt__tap {
     display: inline-block;
-    margin-left: 0.35em;
     animation: float 1.2s ease-in-out infinite;
   }
 }
@@ -290,7 +288,12 @@
   }
 }
 
-.seats--picking .seat {
+/* Only the caller and the player before them can take the card; the others step back. */
+.seats--picking .seat:disabled {
+  opacity: 0.45;
+}
+
+.seats--picking .seat:enabled {
   cursor: pointer;
   animation: pulse-ring 1.5s ease-out infinite;
 
@@ -411,6 +414,8 @@ button.call {
 
 /* The call that stopped the bidding stays on its player while the card is decided. */
 .call--made {
+  /* Taps go through to the caller's seat underneath, which may take the card. */
+  pointer-events: none;
   animation: call-in 0.3s var(--bounce) both, wobble 1.2s ease-in-out infinite;
 }
 

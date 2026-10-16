@@ -70,7 +70,7 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('asking');
     expect(store.question()?.id).toBe(42);
     expect(store.questionNumber()).toBe(1);
-    expect(store.seats().map((p) => p.playerId)).toEqual([1, 2]);
+    expect(store.seats().map((p) => p.playerId)).toEqual([2, 1]); // the order of play the server sent
   });
 
   it('fetches the current question again in place, keeping the round where it is', async () => {
@@ -223,6 +223,23 @@ describe('PlayStore', () => {
 
     store.reveal(1);
     expect(store.caller()?.name).toBe('Ana');
+  });
+
+  it('lets only the caller or the player before them, whose bid was called, take the card', async () => {
+    const seat = (playerId: number, name: string) => ({ ...game().players[0], playerId, name });
+    await startWithQuestion([], game({ players: [seat(3, 'Cy'), seat(1, 'Ana'), seat(2, 'Bo')] }));
+
+    store.reveal(3);
+    expect(store.takerIds()).toEqual([3, 2]); // round the table: Bo sits before Cy
+    expect([1, 2, 3].map((id) => store.canTake(id))).toEqual([false, true, true]);
+
+    await store.award(1);
+    http.expectNone('/api/games/5/bad-cards');
+    expect(store.phase()).toBe('revealed');
+
+    store.back();
+    store.reveal(1);
+    expect(store.takerIds()).toEqual([1, 3]);
   });
 
   it('sends the caller with the card, also when the caller takes it (a false alarm), and forgets them for the next question', async () => {

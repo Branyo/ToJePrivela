@@ -1,5 +1,5 @@
 import { GamePlayer } from '../core/api/models';
-import { rankPlayers, seatPlayers } from './ranking';
+import { rankPlayers } from './ranking';
 
 const player = (playerId: number, name: string, rank: number, isLoser = false): GamePlayer => ({
   playerId,
@@ -15,20 +15,6 @@ const player = (playerId: number, name: string, rank: number, isLoser = false): 
   falseAlarms: 0,
   correctCalls: 0,
   caught: 0,
-});
-
-describe('seatPlayers', () => {
-  it('seats players by id', () => {
-    const seated = seatPlayers([player(7, 'C', 1), player(2, 'A', 1), player(5, 'B', 1)]);
-
-    expect(seated.map((p) => p.playerId)).toEqual([2, 5, 7]);
-  });
-
-  it('seats players deleted since last', () => {
-    const seated = seatPlayers([{ ...player(7, 'C', 1), playerId: null }, player(5, 'B', 1), player(2, 'A', 1)]);
-
-    expect(seated.map((p) => p.playerId)).toEqual([2, 5, null]);
-  });
 });
 
 describe('rankPlayers', () => {
