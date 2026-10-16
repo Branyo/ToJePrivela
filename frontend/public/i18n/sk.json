@@ -244,7 +244,7 @@
       "hits": "Správne odhalenia, že to bolo priveľa: {{count}}",
       "falseAlarms": "Falošné obvinenia: {{count}}",
       "caught": "Prichytenia pri prehnanom odhade: {{count}}",
-      "legend": "🤚 volania · 🧑‍⚖️ správne odhalenia · 🤨 falošné obvinenia · 🫣 prichytenia pri prehnanom odhade"
+      "legend": "🤚 volania · 🧑‍⚖️ správne odhalenia · 🤨 falošné obvinenia · 🫣 prichytený/á pri prehnanom odhade"
     },
     "rematch": "🔁 Odveta s rovnakými hráčmi",
     "back": "▶️ Späť do hry",
