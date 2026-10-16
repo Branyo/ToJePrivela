@@ -157,20 +157,30 @@
       "second": "OVER!"
     },
     "answer": "The answer is",
-    "reveal": "✋ That's too much! Show the answer",
+    "callHint": "Who called \"That's too much!\"? Tap their bubble.",
+    "call": {
+      "text": "🤚 That's too much!",
+      "label": "{{name}}: That's too much! Show the answer",
+      "made": "{{name}}: That's too much!"
+    },
     "skip": "😴 Too easy, skip it (no donkeys)",
-    "doubleRule": "Did a Double hold? The next player raised it, so tap + by the ✌️ of whoever called it – it takes one donkey off their score at the end. Fix a mis-tap with −.",
+    "calledBy": "🤚 {{name}}: \"That's too much!\"",
     "whoTakes": "Who takes the <strong>🫏 ×{{points}}</strong> card?",
     "tapPlayer": "Tap a player 👇",
     "nobody": "🙅 Nobody, next question",
+    "back": "↩️ Back, someone else called it",
     "cardRule": "Was the last estimate over the answer? Whoever said it takes the card. If not, the one who called \"That's too much!\" takes it.",
-    "doublesFirst": "Add (+) every Double ✌️ that held first, and only then hand out the card.",
+    "doublesFirst": "First add a ✌️ Double if one held.",
     "double": {
       "group": "{{name}}'s Doubles",
       "label": "Double held: {{name}} (−1 donkey)",
       "remove": "Take back a Double: {{name}}"
     },
     "incoming": "Incoming donkeys! 🫏💨",
+    "verdict": {
+      "falseAlarm": "False alarm!",
+      "tooMuch": "It was too much!"
+    },
     "seat": "{{name}}, {{cards}} cards, {{doubles}} Doubles, {{points}} final bad points",
     "onTheEdge": "🔥 on the edge",
     "confirmEnd": {
@@ -217,6 +227,14 @@
     "doublesOff": "(✌️ −{{count}})",
     "doublesLabel": "{{count}} Doubles",
     "board": "📊 Donkey count",
+    "calls": {
+      "title": "🤚 That's too much!",
+      "calls": "\"That's too much!\" calls: {{count}}",
+      "hits": "Correctly spotted it was too much: {{count}}",
+      "falseAlarms": "False alarms: {{count}}",
+      "caught": "Caught overdoing it: {{count}}",
+      "legend": "🤚 calls · 🧑‍⚖️ correct calls · 🤨 false alarms · 🫣 caught overdoing it"
+    },
     "rematch": "🔁 Rematch, same players",
     "back": "▶️ Back to the game",
     "home": "🏠 Home",

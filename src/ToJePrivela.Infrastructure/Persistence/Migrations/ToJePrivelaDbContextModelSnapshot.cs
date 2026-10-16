@@ -119,7 +119,17 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0);
 
+                    b.Property<int>("Caught")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("Doubles")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("FalseAlarms")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0);
@@ -134,6 +144,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("PlayerId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("TooMuchCalls")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
 
                     b.HasKey("Id");
 

@@ -43,6 +43,14 @@ export interface GamePlayer {
    * a tie, and a player without a card can lose too). Always false while the game runs and in a cancelled game.
    */
   isLoser: boolean;
+  /** Rounds this player called "To je priveľa!" in that ended with a card. */
+  tooMuchCalls: number;
+  /** Of those, the ones this player took the card for: the estimate was not too much after all. */
+  falseAlarms: number;
+  /** The other ones: somebody else took the card, the call was right. */
+  correctCalls: number;
+  /** Cards this player took after somebody else called "To je priveľa!": caught overdoing it. */
+  caught: number;
 }
 
 /** A player who still exists; every player of a running game is one. */

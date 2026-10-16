@@ -136,9 +136,9 @@ public sealed class GameService : IGameService
             id,
             async game =>
             {
-                if (game.CheckAwardBadCard(request.PlayerId, request.BadPoints) is { } violation)
+                if (game.CheckAwardBadCard(request.PlayerId, request.CalledByPlayerId, request.BadPoints) is { } violation)
                 {
-                    return GameErrors.From(violation, id, request.PlayerId);
+                    return GameErrors.From(violation, id, request.PlayerId, request.CalledByPlayerId);
                 }
 
                 var question = await _questions.GetByIdAsync(request.QuestionId, cancellationToken);
@@ -148,7 +148,7 @@ public sealed class GameService : IGameService
                     return GameErrors.UnknownQuestion(request.QuestionId);
                 }
 
-                game.AwardBadCard(request.PlayerId, question, request.BadPoints, now);
+                game.AwardBadCard(request.PlayerId, request.CalledByPlayerId, question, request.BadPoints, now);
                 return null;
             },
             cancellationToken));

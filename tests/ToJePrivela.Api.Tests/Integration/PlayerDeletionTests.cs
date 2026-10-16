@@ -23,7 +23,7 @@ public class PlayerDeletionTests : IClassFixture<ApiFactory>
         var staying = await CreatePlayerAsync();
         var game = await CreateGameAsync(leaving.Id, staying.Id);
         var question = await CreateQuestionAsync();
-        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = leaving.Id, questionId = question.Id });
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = leaving.Id, calledByPlayerId = leaving.Id, questionId = question.Id });
 
         var response = await _client.DeleteAsync($"/api/players/{leaving.Id}");
 
@@ -49,7 +49,7 @@ public class PlayerDeletionTests : IClassFixture<ApiFactory>
 
         await _client.DeleteAsync($"/api/players/{leaving.Id}");
 
-        var card = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = staying.Id, questionId = question.Id });
+        var card = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = staying.Id, calledByPlayerId = staying.Id, questionId = question.Id });
         var reopen = await _client.PutAsJsonAsync($"/api/games/{game.Id}", new { started = game.Started });
         Assert.Equal(HttpStatusCode.Conflict, card.StatusCode);
         Assert.Equal("Game.AlreadyFinished", await ProblemResponse.CodeOf(card));
@@ -63,7 +63,7 @@ public class PlayerDeletionTests : IClassFixture<ApiFactory>
         var staying = await CreatePlayerAsync();
         var game = await CreateGameAsync(leaving.Id, staying.Id);
         var question = await CreateQuestionAsync();
-        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = leaving.Id, questionId = question.Id });
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = leaving.Id, calledByPlayerId = leaving.Id, questionId = question.Id });
         var finished = (await (await _client.PostAsync($"/api/games/{game.Id}/finish", null))
             .Content.ReadFromJsonAsync<GameDetailsDto>())!.Finished;
 

@@ -8,6 +8,7 @@ public enum GameRuleViolation
 {
     AlreadyFinished,
     PlayerNotInGame,
+    CallerNotInGame,
     NoDoubleToRemove,
     ChosenBadPointsRequired,
     ChosenBadPointsNotAllowed,
@@ -23,6 +24,7 @@ internal static class GameRuleViolationMessages
     {
         GameRuleViolation.AlreadyFinished => "Game is already finished.",
         GameRuleViolation.PlayerNotInGame => "Player does not play in this game.",
+        GameRuleViolation.CallerNotInGame => "Who called \"too much\" does not play in this game.",
         GameRuleViolation.NoDoubleToRemove => "Player has no double to take back.",
         GameRuleViolation.ChosenBadPointsRequired =>
             "This game has its bad points chosen before each question, so the card needs them.",

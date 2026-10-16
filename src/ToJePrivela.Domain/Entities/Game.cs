@@ -98,8 +98,10 @@ public class Game
         : UtcTime.Normalize(finishedAt) < Started ? GameRuleViolation.EndsBeforeStart
         : CheckResult();
 
-    public GameRuleViolation? CheckAwardBadCard(int playerId, int? chosenBadPoints) =>
+    /// <param name="callerId">Who called "To je priveľa!" in the round; any player of the game, the taker included.</param>
+    public GameRuleViolation? CheckAwardBadCard(int playerId, int callerId, int? chosenBadPoints) =>
         CheckRunningPlayer(playerId)
+        ?? (HasPlayer(callerId) ? null : (GameRuleViolation?)GameRuleViolation.CallerNotInGame)
         ?? (RequiresChosenBadPoints, chosenBadPoints.HasValue) switch
         {
             (true, false) => GameRuleViolation.ChosenBadPointsRequired,
@@ -133,16 +135,24 @@ public class Game
     /// <summary>
     /// Gives the player a bad card for <paramref name="question"/>, worth what <see cref="BadPointsMode"/>
     /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game.
-    /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards.
+    /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. <paramref name="callerId"/>, who
+    /// called "To je priveľa!" in that round, is credited with the call (<see cref="GamePlayer.TooMuchCalls"/>); taking
+    /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>), anyone else taking it was
+    /// caught overdoing it (<see cref="GamePlayer.Caught"/>).
     /// </summary>
-    public GamePlayer AwardBadCard(int playerId, Question question, int? chosenBadPoints, DateTime awardedAt)
+    public GamePlayer AwardBadCard(int playerId, int callerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {
         ArgumentNullException.ThrowIfNull(question);
-        ThrowIfBroken(CheckAwardBadCard(playerId, chosenBadPoints));
+        ThrowIfBroken(CheckAwardBadCard(playerId, callerId, chosenBadPoints));
 
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
+        FindPlayer(callerId)!.AddTooMuchCall(falseAlarm: callerId == playerId);
+        if (callerId != playerId)
+        {
+            gamePlayer.AddCaught();
+        }
 
         // The card itself is the result, so none of Finish's checks apply: the game simply ends now. A card is never
         // refused over the clock, so should it read earlier than a start just corrected to now (the only way the end

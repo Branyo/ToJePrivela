@@ -39,7 +39,11 @@ public static class GameMapper
         standing.Player.Doubles,
         standing.Player.FinalBadPoints,
         standing.Rank,
-        standing.IsLoser);
+        standing.IsLoser,
+        standing.Player.TooMuchCalls,
+        standing.Player.FalseAlarms,
+        standing.Player.CorrectCalls,
+        standing.Player.Caught);
 
     private static int SeatOrder(GamePlayer gamePlayer) => gamePlayer.PlayerId ?? int.MaxValue;
 }

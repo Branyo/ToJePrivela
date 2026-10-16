@@ -79,6 +79,37 @@
       </ol>
     </section>
 
+    @if (hasCalls()) {
+      <section class="panel calls">
+        <h2 class="panel__title">{{ 'summary.calls.title' | translate }}</h2>
+        <ul class="calls__list">
+          @for (player of ranking(); track $index) {
+            <li class="calls__row">
+              <app-player-avatar [avatar]="player.avatar" />
+              <span class="calls__name" [class.calls__name--unknown]="player.playerId === null">{{
+                player.name ?? ('common.unknownPlayer' | translate)
+              }}</span>
+              <span class="calls__stats">
+                <span data-stat="calls" [attr.aria-label]="'summary.calls.calls' | translate: { count: player.tooMuchCalls }"
+                  >🤚 {{ player.tooMuchCalls }}</span
+                >
+                <span data-stat="hits" [attr.aria-label]="'summary.calls.hits' | translate: { count: player.correctCalls }"
+                  >🧑‍⚖️ {{ player.correctCalls }}</span
+                >
+                <span data-stat="falseAlarms" [attr.aria-label]="'summary.calls.falseAlarms' | translate: { count: player.falseAlarms }"
+                  >🤨 {{ player.falseAlarms }}</span
+                >
+                <span data-stat="caught" [attr.aria-label]="'summary.calls.caught' | translate: { count: player.caught }"
+                  >🫣 {{ player.caught }}</span
+                >
+              </span>
+            </li>
+          }
+        </ul>
+        <p class="muted calls__legend">{{ 'summary.calls.legend' | translate }}</p>
+      </section>
+    }
+
     <div class="actions">
       @if (g.finished) {
         @if (canRematch()) {

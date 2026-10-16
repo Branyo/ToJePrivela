@@ -21,12 +21,21 @@ export class GamesApi {
 
   /**
    * In a `Question` game the card is worth the question's stored bad points and `badPoints` must be left out; in a
-   * `Chooser` game it is required. The server finishes the game at the limit.
+   * `Chooser` game it is required. `calledByPlayerId` is who called "To je priveľa!" in the round (the taker included,
+   * a false alarm). The server finishes the game at the limit.
    */
-  awardBadCard(id: number, playerId: number, questionId: number, badPoints?: number): Observable<GameDetails> {
+  awardBadCard(
+    id: number,
+    playerId: number,
+    calledByPlayerId: number,
+    questionId: number,
+    badPoints?: number,
+  ): Observable<GameDetails> {
     return this.http.post<GameDetails>(
       `/api/games/${id}/bad-cards`,
-      badPoints === undefined ? { playerId, questionId } : { playerId, questionId, badPoints },
+      badPoints === undefined
+        ? { playerId, calledByPlayerId, questionId }
+        : { playerId, calledByPlayerId, questionId, badPoints },
     );
   }
 

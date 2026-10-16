@@ -11,6 +11,10 @@ const player = (playerId: number, name: string, rank: number, isLoser = false): 
   finalBadPoints: 0,
   rank,
   isLoser,
+  tooMuchCalls: 0,
+  falseAlarms: 0,
+  correctCalls: 0,
+  caught: 0,
 });
 
 describe('seatPlayers', () => {
