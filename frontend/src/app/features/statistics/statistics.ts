@@ -4,7 +4,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { EMPTY, catchError, switchMap, tap } from 'rxjs';
-import { GameScore, Player, PlayerStatistics } from '../../core/api/models';
+import { Player, PlayerStatistics } from '../../core/api/models';
 import { PlayersApi } from '../../core/api/players-api';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
@@ -24,12 +24,15 @@ interface TileGroup {
   /** Title under `statistics.groups.<key>`. */
   key: string;
   tiles: Tile[];
+  /** Number of games the group is counted from, when that is not all of them (`statistics.fromGamesWithCalls`). */
+  fromGames?: number;
 }
 
-interface ScoreRecord {
-  key: 'worstGame' | 'bestGame';
+/** One game standing out, with its value and the game to link to. */
+interface GameRecord {
+  key: 'worstGame' | 'bestGame' | 'mostCorrectCalls';
   icon: string;
-  score: GameScore | null;
+  game: { gameId: number; finished: string; value: number } | null;
 }
 
 /** Shown for an average (or the loss index) with nothing to average. */
@@ -79,6 +82,8 @@ export class Statistics {
 
     const count = (value: number) => this.format(value, 0);
     const average = (value: number | null) => (value === null ? NONE : this.format(value, 2));
+    const share = (value: number | null) =>
+      value === null ? NONE : this.i18n.formatNumber(value, { style: 'percent', maximumFractionDigits: 0 });
 
     return [
       {
@@ -105,23 +110,47 @@ export class Statistics {
         ],
       },
       {
+        key: 'calls',
+        fromGames: s.gamesWithCalls,
+        tiles: [
+          { key: 'tooMuchCalls', icon: '🤚', value: count(s.tooMuchCalls), average: average(s.averageTooMuchCalls) },
+          { key: 'correctCalls', icon: '🧑‍⚖️', value: count(s.correctCalls) },
+          { key: 'falseAlarms', icon: '🤨', value: count(s.falseAlarms) },
+          { key: 'callAccuracy', icon: '🔍', value: share(s.callAccuracy) },
+        ],
+      },
+      {
+        key: 'calledOn',
+        fromGames: s.gamesWithCalls,
+        tiles: [
+          { key: 'caught', icon: '🫣', value: count(s.caught), average: average(s.averageCaught) },
+          { key: 'calledOn', icon: '👉', value: count(s.calledOn), average: average(s.averageCalledOn) },
+          { key: 'caughtCardShare', icon: '📈', value: share(s.caughtCardShare) },
+          { key: 'falseAlarmCardShare', icon: '📢', value: share(s.falseAlarmCardShare) },
+        ],
+      },
+      {
         key: 'feats',
         tiles: [
           { key: 'flawlessVictories', icon: '✨', value: count(s.flawlessVictories) },
           { key: 'luckyFinishes', icon: '🍀', value: count(s.luckyFinishes) },
           { key: 'closestEscapes', icon: '😅', value: count(s.closestEscapes) },
           { key: 'reversals', icon: '🔄', value: count(s.reversals) },
+          { key: 'criedWolfLosses', icon: '🚨', value: count(s.criedWolfLosses) },
         ],
       },
     ];
   });
 
-  protected readonly records = computed<ScoreRecord[]>(() => {
+  protected readonly records = computed<GameRecord[]>(() => {
     const s = this.statistics();
+    const score = (g: PlayerStatistics['worstGame']) => g && { gameId: g.gameId, finished: g.finished, value: g.finalBadPoints };
+    const tally = (g: PlayerStatistics['mostCorrectCalls']) => g && { gameId: g.gameId, finished: g.finished, value: g.count };
     return s
       ? [
-          { key: 'worstGame', icon: '💀', score: s.worstGame },
-          { key: 'bestGame', icon: '🏆', score: s.bestGame },
+          { key: 'worstGame', icon: '💀', game: score(s.worstGame) },
+          { key: 'bestGame', icon: '🏆', game: score(s.bestGame) },
+          { key: 'mostCorrectCalls', icon: '🦅', game: tally(s.mostCorrectCalls) },
         ]
       : [];
   });

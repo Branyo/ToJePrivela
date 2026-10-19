@@ -49,6 +49,9 @@
           @for (group of groups(); track group.key) {
             <section class="group">
               <h3 class="group__title">{{ 'statistics.groups.' + group.key | translate }}</h3>
+              @if (group.fromGames !== undefined) {
+                <p class="group__note muted">{{ i18n.pluralKey('statistics.fromGamesWithCalls', group.fromGames) | translate: { count: group.fromGames } }}</p>
+              }
               <ul class="tiles">
                 @for (tile of group.tiles; track tile.key) {
                   <li class="tile" [attr.data-metric]="tile.key">
@@ -72,10 +75,10 @@
                 <li class="tile" [attr.data-metric]="record.key">
                   <span class="tile__icon" aria-hidden="true">{{ record.icon }}</span>
                   <span class="tile__label">{{ 'statistics.metrics.' + record.key + '.label' | translate }}</span>
-                  @if (record.score; as score) {
-                    <strong class="tile__value">{{ format(score.finalBadPoints, 0) }}</strong>
-                    <a class="tile__link" [routerLink]="['/games', score.gameId, 'summary']">
-                      {{ score.finished | date: ('common.dateTime' | translate) : undefined : i18n.locale() }} →
+                  @if (record.game; as game) {
+                    <strong class="tile__value">{{ format(game.value, 0) }}</strong>
+                    <a class="tile__link" [routerLink]="['/games', game.gameId, 'summary']">
+                      {{ game.finished | date: ('common.dateTime' | translate) : undefined : i18n.locale() }} →
                     </a>
                   } @else {
                     <strong class="tile__value">{{ none }}</strong>

@@ -25,8 +25,25 @@ public static class PlayerStatisticsMapper
         statistics.ClosestEscapes,
         statistics.Reversals,
         ToDto(statistics.WorstGame),
-        ToDto(statistics.BestGame));
+        ToDto(statistics.BestGame),
+        statistics.GamesWithCalls,
+        statistics.TooMuchCalls,
+        statistics.AverageTooMuchCalls,
+        statistics.CorrectCalls,
+        statistics.FalseAlarms,
+        statistics.CallAccuracy,
+        statistics.Caught,
+        statistics.AverageCaught,
+        statistics.CalledOn,
+        statistics.AverageCalledOn,
+        statistics.CaughtCardShare,
+        statistics.FalseAlarmCardShare,
+        statistics.CriedWolfLosses,
+        ToDto(statistics.MostCorrectCalls));
 
     private static GameScoreDto? ToDto(GameScore? score) =>
         score is null ? null : new(score.GameId, score.Finished, score.FinalBadPoints);
+
+    private static GameTallyDto? ToDto(GameTally? tally) =>
+        tally is null ? null : new(tally.GameId, tally.Finished, tally.Count);
 }

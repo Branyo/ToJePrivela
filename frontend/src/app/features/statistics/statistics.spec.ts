@@ -33,6 +33,20 @@ const statistics = (overrides: Partial<PlayerStatistics> = {}): PlayerStatistics
   reversals: 0,
   worstGame: { gameId: 9, finished: '2026-09-25T19:00:00Z', finalBadPoints: 8 },
   bestGame: { gameId: 4, finished: '2026-09-20T19:00:00Z', finalBadPoints: 0 },
+  gamesWithCalls: 2,
+  tooMuchCalls: 6,
+  averageTooMuchCalls: 3,
+  correctCalls: 4,
+  falseAlarms: 2,
+  callAccuracy: 2 / 3,
+  caught: 3,
+  averageCaught: 1.5,
+  calledOn: 5,
+  averageCalledOn: 2.5,
+  caughtCardShare: 0.6,
+  falseAlarmCardShare: 0.4,
+  criedWolfLosses: 1,
+  mostCorrectCalls: { gameId: 7, finished: '2026-09-24T19:00:00Z', count: 3 },
   ...overrides,
 });
 
@@ -91,6 +105,22 @@ describe('Statistics', () => {
     expect(page.querySelector('[data-metric="worstGame"] a')?.getAttribute('href')).toBe('/games/9/summary');
   });
 
+  it('shows the call figures as counts and percentages, from the games with calls', async () => {
+    const page = (await render(2, statistics())).nativeElement as HTMLElement;
+
+    expect(metric(page, 'tooMuchCalls')).toBe('6');
+    expect(metric(page, 'correctCalls')).toBe('4');
+    expect(metric(page, 'falseAlarms')).toBe('2');
+    expect(metric(page, 'callAccuracy')?.replace(/\s/g, ' ')).toBe('67 %');
+    expect(metric(page, 'caught')).toBe('3');
+    expect(metric(page, 'calledOn')).toBe('5');
+    expect(metric(page, 'caughtCardShare')?.replace(/\s/g, ' ')).toBe('60 %');
+    expect(metric(page, 'criedWolfLosses')).toBe('1');
+    expect(metric(page, 'mostCorrectCalls')).toBe('3');
+    expect(page.querySelector('[data-metric="mostCorrectCalls"] a')?.getAttribute('href')).toBe('/games/7/summary');
+    expect(page.querySelectorAll('.group__note')).toHaveLength(2);
+  });
+
   it('shows a dash where there is nothing to average', async () => {
     const empty = statistics({
       gamesPlayed: 0,
@@ -99,6 +129,10 @@ describe('Statistics', () => {
       lossIndex: null,
       worstGame: null,
       bestGame: null,
+      gamesWithCalls: 0,
+      callAccuracy: null,
+      caughtCardShare: null,
+      mostCorrectCalls: null,
     });
     const page = (await render(2, empty)).nativeElement as HTMLElement;
 
@@ -106,6 +140,9 @@ describe('Statistics', () => {
     expect(metric(page, 'lossIndex')).toBe(NONE);
     expect(metric(page, 'bestGame')).toBe(NONE);
     expect(page.querySelector('[data-metric="bestGame"] a')).toBeNull();
+    expect(metric(page, 'callAccuracy')).toBe(NONE);
+    expect(metric(page, 'caughtCardShare')).toBe(NONE);
+    expect(metric(page, 'mostCorrectCalls')).toBe(NONE);
   });
 
   it('shows the error for a player that cannot be found', async () => {

@@ -185,6 +185,13 @@ export interface GameScore {
   finalBadPoints: number;
 }
 
+/** How many times something happened to the player in one game, with the game to link to. */
+export interface GameTally {
+  gameId: number;
+  finished: string;
+  count: number;
+}
+
 /**
  * A player's record over their finished, not cancelled games. Averages and `lossIndex` are `null` when there is
  * nothing to average; `worstGame` and `bestGame` are `null` without a counted game.
@@ -209,4 +216,24 @@ export interface PlayerStatistics {
   reversals: number;
   worstGame: GameScore | null;
   bestGame: GameScore | null;
+  /** Games with "To je priveľa!" calls recorded; the call figures and their averages come only from these. */
+  gamesWithCalls: number;
+  tooMuchCalls: number;
+  averageTooMuchCalls: number | null;
+  correctCalls: number;
+  falseAlarms: number;
+  /** Correct calls out of all calls, 0–1. */
+  callAccuracy: number | null;
+  caught: number;
+  averageCaught: number | null;
+  /** Times the next player called the player's bid too much, rightly (caught) or not. */
+  calledOn: number;
+  averageCalledOn: number | null;
+  /** Share of the cards (0–1) taken for being caught overbidding; the rest were false alarms. */
+  caughtCardShare: number | null;
+  falseAlarmCardShare: number | null;
+  /** Losses with more false-alarm cards than cards for being caught. */
+  criedWolfLosses: number;
+  /** Most correct calls in one game. */
+  mostCorrectCalls: GameTally | null;
 }
