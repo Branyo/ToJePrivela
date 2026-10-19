@@ -11,8 +11,8 @@ using ToJePrivela.Infrastructure.Persistence;
 namespace ToJePrivela.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ToJePrivelaDbContext))]
-    [Migration("20261015113033_AddTooMuchCalls")]
-    partial class AddTooMuchCalls
+    [Migration("20261019074757_AddTooMuchCallsAndSeats")]
+    partial class AddTooMuchCallsAndSeats
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -148,6 +148,11 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Property<int?>("PlayerId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Seat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("TooMuchCalls")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -158,6 +163,9 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.HasIndex("PlayerId");
 
                     b.HasIndex("GameId", "PlayerId")
+                        .IsUnique();
+
+                    b.HasIndex("GameId", "Seat")
                         .IsUnique();
 
                     b.ToTable("GamePlayers");

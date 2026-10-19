@@ -10,18 +10,18 @@ namespace ToJePrivela.Infrastructure.Tests.Persistence;
 /// Seats stored before the order of play existed get it from the order they were inserted in (their ids), which is the
 /// order the players were added to the game; each game counts from 0.
 /// </summary>
-public class AddGamePlayerSeatsMigrationTests : IDisposable
+public class AddTooMuchCallsAndSeatsMigrationTests : IDisposable
 {
-    private const string AddTooMuchCalls = "20261015113033_AddTooMuchCalls";
+    private const string AddGameVersion = "20261013164533_AddGameVersion";
 
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
 
-    public AddGamePlayerSeatsMigrationTests()
+    public AddTooMuchCallsAndSeatsMigrationTests()
     {
         _connection.Open();
 
         using var context = CreateContext();
-        context.GetService<IMigrator>().Migrate(AddTooMuchCalls);
+        context.GetService<IMigrator>().Migrate(AddGameVersion);
 
         // Seats of deleted players (no PlayerId), so no players are needed.
         context.Database.ExecuteSqlRaw("""
