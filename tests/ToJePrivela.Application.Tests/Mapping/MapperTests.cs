@@ -65,6 +65,14 @@ public class MapperTests
     }
 
     [Fact]
+    public void GameMapper_ToDetailsDto_GivesEachPlayerThePlayerBeforeThem()
+    {
+        var details = GameMapper.ToDetailsDto(TestEntities.Game(3, [7, 5, 6], Start));
+
+        Assert.Equal([(7, 6), (5, 7), (6, 5)], details.Players.Select(p => (p.PlayerId!.Value, p.PreviousPlayerId!.Value)));
+    }
+
+    [Fact]
     public void GameMapper_ToDetailsDto_CarriesEachPlayersTooMuchCalls()
     {
         var game = TestEntities.Game(3, [5, 6], Start, badCardLimit: 5);

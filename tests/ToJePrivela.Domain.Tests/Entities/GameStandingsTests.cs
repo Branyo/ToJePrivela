@@ -52,6 +52,14 @@ public class GameStandingsTests
     }
 
     [Fact]
+    public void Standings_KeepTheOrderOfPlayAmongPlayersWhoStandEqual()
+    {
+        var game = new Game(TestAccountId, [Cy, Ana, Bo], Start, badCardLimit: Game.MaxBadCardLimit);
+
+        Assert.Equal([Cy, Ana, Bo], game.Standings().Select(s => s.Player.PlayerId));
+    }
+
+    [Fact]
     public void Standings_HaveNoLoserWhileTheGameRuns()
     {
         Cards(Ana, 3);

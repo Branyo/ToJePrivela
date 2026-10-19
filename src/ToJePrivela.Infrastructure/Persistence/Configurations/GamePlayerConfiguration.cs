@@ -12,6 +12,8 @@ public sealed class GamePlayerConfiguration : IEntityTypeConfiguration<GamePlaye
         // hold several of those, so (GameId, PlayerId) cannot be the key. It stays unique for known players.
         builder.HasKey(gp => gp.Id);
         builder.HasIndex(gp => new { gp.GameId, gp.PlayerId }).IsUnique();
+        // The seat decides whose bid a call is on (Game.PreviousPlayerOf), so no two players of a game may share one.
+        builder.HasIndex(gp => new { gp.GameId, gp.Seat }).IsUnique();
 
         builder.Property(gp => gp.Seat).HasDefaultValue(0);
         builder.Property(gp => gp.BadPoints).HasDefaultValue(0);

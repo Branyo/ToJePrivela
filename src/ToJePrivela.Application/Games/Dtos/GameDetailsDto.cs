@@ -25,6 +25,9 @@ public sealed record GameDetailsDto(
 /// <see cref="FalseAlarms"/> those of them the player took the card for (the estimate was not too much after all),
 /// <see cref="CorrectCalls"/> the rest;
 /// <see cref="Caught"/> counts the cards the player took after the next player called "To je priveľa!" on their bid.
+/// <see cref="PreviousPlayerId"/> is the player before this one in the order of play (<c>Game.PreviousPlayerOf</c>),
+/// whose bid this player calls "To je priveľa!" on: after this player's call only they or that player may take the card.
+/// It is null for an unknown player, and when the seat before is a deleted player's.
 /// Players come in the order of play, the order they were added to the game.
 /// </summary>
 public sealed record GamePlayerDto(
@@ -40,4 +43,5 @@ public sealed record GamePlayerDto(
     int TooMuchCalls,
     int FalseAlarms,
     int CorrectCalls,
-    int Caught);
+    int Caught,
+    int? PreviousPlayerId);

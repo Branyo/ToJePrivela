@@ -22,6 +22,7 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
             .HasMaxLength(BadPointsModeMaxLength);
         builder.Property(g => g.IsCancelled).HasDefaultValue(false);
         builder.Ignore(g => g.IsFinished);
+        builder.Ignore(g => g.PlayersInSeatOrder);
 
         // Updates are guarded by WHERE "Version" = <the value read>, so a lost update surfaces as a conflict.
         builder.Property(g => g.Version)

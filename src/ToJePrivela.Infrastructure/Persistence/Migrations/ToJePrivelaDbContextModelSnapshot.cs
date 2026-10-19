@@ -162,6 +162,9 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.HasIndex("GameId", "PlayerId")
                         .IsUnique();
 
+                    b.HasIndex("GameId", "Seat")
+                        .IsUnique();
+
                     b.ToTable("GamePlayers");
                 });
 

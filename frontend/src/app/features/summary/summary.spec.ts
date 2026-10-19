@@ -20,6 +20,7 @@ const seat = (playerId: number | null, name: string | null, overrides: Partial<G
   falseAlarms: 0,
   correctCalls: 0,
   caught: 0,
+  previousPlayerId: null,
   ...overrides,
 });
 

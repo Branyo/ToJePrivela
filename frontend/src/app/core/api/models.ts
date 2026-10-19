@@ -51,6 +51,11 @@ export interface GamePlayer {
   correctCalls: number;
   /** Cards this player took after somebody else called "To je priveľa!": caught overdoing it. */
   caught: number;
+  /**
+   * The player before this one in the order of play, as the server counts it: after this player calls "To je priveľa!"
+   * only they or that player may take the card. Null for an unknown player, or when the seat before is one.
+   */
+  previousPlayerId: number | null;
 }
 
 /** A player who still exists; every player of a running game is one. */

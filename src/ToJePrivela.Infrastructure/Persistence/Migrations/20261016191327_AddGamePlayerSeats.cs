@@ -24,11 +24,21 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                 SET Seat = (SELECT COUNT(*) FROM GamePlayers AS earlier
                             WHERE earlier.GameId = GamePlayers.GameId AND earlier.Id < GamePlayers.Id);
                 """);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GamePlayers_GameId_Seat",
+                table: "GamePlayers",
+                columns: new[] { "GameId", "Seat" },
+                unique: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropIndex(
+                name: "IX_GamePlayers_GameId_Seat",
+                table: "GamePlayers");
+
             migrationBuilder.DropColumn(
                 name: "Seat",
                 table: "GamePlayers");

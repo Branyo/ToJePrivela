@@ -63,6 +63,9 @@ public class Game
 
     public IReadOnlyCollection<GamePlayer> GamePlayers => _gamePlayers.AsReadOnly();
 
+    /// <summary>The players in the order of play (<see cref="GamePlayer.Seat"/>), the one order every view and rule uses.</summary>
+    public IEnumerable<GamePlayer> PlayersInSeatOrder => _gamePlayers.OrderBy(gp => gp.Seat).ThenBy(gp => gp.Id);
+
     public bool IsFinished => Finished is not null;
 
     /// <summary>Ended without a result because one of its players was deleted; nobody lost it.</summary>
@@ -104,7 +107,7 @@ public class Game
     /// </summary>
     public int? PreviousPlayerOf(int playerId)
     {
-        var seats = _gamePlayers.OrderBy(gp => gp.Seat).ThenBy(gp => gp.Id).ToList();
+        var seats = PlayersInSeatOrder.ToList();
         var index = seats.FindIndex(gp => gp.PlayerId == playerId);
         return index < 0 ? null : seats[(index - 1 + seats.Count) % seats.Count].PlayerId;
     }
@@ -257,15 +260,14 @@ public class Game
     /// <summary>
     /// Where every player stands, worst first: the losers (<see cref="GamePlayer.IsLoser"/>, the verdict stored when
     /// the game finished), then most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus doubles). Players with
-    /// the same verdict and final bad points share the rank and keep their seat order (player id, unknown players
-    /// last). Nobody has lost a running or cancelled game.
+    /// the same verdict and final bad points share the rank and keep their order of play (<see cref="GamePlayer.Seat"/>).
+    /// Nobody has lost a running or cancelled game.
     /// </summary>
     public IReadOnlyList<GameStanding> Standings()
     {
-        var ordered = _gamePlayers
+        var ordered = PlayersInSeatOrder
             .OrderByDescending(gp => gp.IsLoser)
             .ThenByDescending(gp => gp.FinalBadPoints)
-            .ThenBy(gp => gp.PlayerId ?? int.MaxValue)
             .ToList();
 
         var standings = new List<GameStanding>(ordered.Count);

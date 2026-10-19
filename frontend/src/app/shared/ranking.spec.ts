@@ -15,6 +15,7 @@ const player = (playerId: number, name: string, rank: number, isLoser = false): 
   falseAlarms: 0,
   correctCalls: 0,
   caught: 0,
+  previousPlayerId: null,
 });
 
 describe('rankPlayers', () => {

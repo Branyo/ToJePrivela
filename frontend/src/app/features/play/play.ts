@@ -32,7 +32,7 @@ const VERDICT_MS = 1700;
  * How long after a call the seats ignore taps: the call bubble swaps for one that grows in, so the second tap of a
  * quick double tap would otherwise land on the seat underneath and hand the card out.
  */
-const CALL_GUARD_MS = 400;
+const CALL_GUARD_MS = 1000;
 
 /** How a round's call turned out: the caller took the card themselves, or caught somebody overdoing it. */
 export type Verdict = 'false-alarm' | 'too-much';
@@ -158,7 +158,8 @@ export class Play implements OnInit, OnDestroy {
   }
 
   protected award(playerId: number, seat: number): void {
-    if (performance.now() - this.calledAt < CALL_GUARD_MS) {
+    // Checked before the card flies: a tap the store refuses (a second taker in the same frame) must not animate a card.
+    if (performance.now() - this.calledAt < CALL_GUARD_MS || !this.store.canTake(playerId)) {
       return;
     }
     const from = this.cardSource()?.nativeElement as HTMLElement | undefined;

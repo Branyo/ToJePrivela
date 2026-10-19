@@ -66,16 +66,12 @@ export class PlayStore {
   });
   /**
    * Who may take the card once somebody called "To je priveľa!": the caller (a false alarm) or the player before them
-   * in the order of play, whose bid was called. The server holds cards to the same rule.
+   * in the order of play, whose bid was called. Who that is comes from the server (`previousPlayerId`), which holds
+   * cards to the same rule.
    */
   readonly takerIds = computed<readonly number[]>(() => {
-    const seats = this.seats();
-    const index = seats.findIndex((p) => p.playerId === this.callerId());
-    if (index < 0) {
-      return [];
-    }
-    const previous = seats[(index - 1 + seats.length) % seats.length];
-    return [...new Set([seats[index].playerId, previous.playerId])];
+    const caller = this.caller();
+    return caller ? [caller.playerId, caller.previousPlayerId].filter((id): id is number => id !== null) : [];
   });
   /** While bidding and after "To je priveľa!", but before the card is handed out. */
   readonly canDouble = computed(() => this.phase() === 'asking' || this.phase() === 'revealed');

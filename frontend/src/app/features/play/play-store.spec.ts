@@ -15,8 +15,8 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   cancelled: false,
   hasResult: false,
   players: [
-    { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
-    { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
+    { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+    { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
   ],
   ...overrides,
 });
@@ -123,8 +123,8 @@ describe('PlayStore', () => {
       [],
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
-          { playerId: null, name: null, avatar: null, badPoints: 3, badCards: 1, doubles: 0, finalBadPoints: 3, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: null, name: null, avatar: null, badPoints: 3, badCards: 1, doubles: 0, finalBadPoints: 3, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: null },
         ],
       }),
     );
@@ -226,11 +226,11 @@ describe('PlayStore', () => {
   });
 
   it('lets only the caller or the player before them, whose bid was called, take the card', async () => {
-    const seat = (playerId: number, name: string) => ({ ...game().players[0], playerId, name });
-    await startWithQuestion([], game({ players: [seat(3, 'Cy'), seat(1, 'Ana'), seat(2, 'Bo')] }));
+    const seat = (playerId: number, name: string, previousPlayerId: number) => ({ ...game().players[0], playerId, name, previousPlayerId });
+    await startWithQuestion([], game({ players: [seat(3, 'Cy', 2), seat(1, 'Ana', 3), seat(2, 'Bo', 1)] }));
 
     store.reveal(3);
-    expect(store.takerIds()).toEqual([3, 2]); // round the table: Bo sits before Cy
+    expect(store.takerIds()).toEqual([3, 2]); // the server says Bo sits before Cy, round the table
     expect([1, 2, 3].map((id) => store.canTake(id))).toEqual([false, true, true]);
 
     await store.award(1);
@@ -300,8 +300,8 @@ describe('PlayStore', () => {
     request.flush(
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 4, badCards: 1, doubles: 0, finalBadPoints: 4, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
-          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 4, badCards: 1, doubles: 0, finalBadPoints: 4, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
         ],
       }),
     );
@@ -332,8 +332,8 @@ describe('PlayStore', () => {
     request.flush(
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
-          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
         ],
       }),
     );
@@ -369,8 +369,8 @@ describe('PlayStore', () => {
     http.expectOne('/api/games/5/doubles').flush(
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
-          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
         ],
       }),
     );
@@ -795,7 +795,7 @@ describe('PlayStore', () => {
   it('flags a player one card away from the limit', async () => {
     await startWithQuestion();
 
-    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 2, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 })).toBe(true);
-    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 1, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0 })).toBe(false);
+    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 2, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 })).toBe(true);
+    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 1, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 })).toBe(false);
   });
 });

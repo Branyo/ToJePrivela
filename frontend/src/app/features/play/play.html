@@ -154,13 +154,13 @@
             {{ 'play.call.text' | translate }}
           </button>
         } @else if (store.callerId() === player.playerId && (store.phase() === 'revealed' || store.phase() === 'awarding')) {
-          <span class="call call--made" [attr.aria-label]="'play.call.made' | translate: { name: player.name }">
+          <span class="call call--made" aria-hidden="true">
             {{ 'play.call.text' | translate }}
           </span>
         }
         @if (verdict(); as shown) {
           @if (shown.playerId === player.playerId) {
-            <span class="verdict" [class.verdict--false]="shown.kind === 'false-alarm'" role="status">
+            <span class="verdict" [class.verdict--false]="shown.kind === 'false-alarm'" aria-hidden="true">
               <span class="verdict__emoji" aria-hidden="true">{{ shown.kind === 'false-alarm' ? '🤨' : '🫣' }}</span>
               {{ (shown.kind === 'false-alarm' ? 'play.verdict.falseAlarm' : 'play.verdict.tooMuch') | translate }}
             </span>
@@ -220,6 +220,17 @@
       </li>
     }
   </ul>
+
+  <!-- Always in the page, so screen readers announce the text it changes to: who called, then how the call turned out. -->
+  <p class="sr-only" role="status">
+    @if (verdict(); as shown) {
+      {{ (shown.kind === 'false-alarm' ? 'play.verdict.falseAlarm' : 'play.verdict.tooMuch') | translate }}
+    } @else if (store.caller(); as caller) {
+      @if (store.phase() === 'revealed' || store.phase() === 'awarding') {
+        {{ 'play.call.made' | translate: { name: caller.name } }}
+      }
+    }
+  </p>
   @if (store.phase() === 'revealed') {
     <p class="muted hint doubles-hint">{{ 'play.doublesFirst' | translate }}</p>
   }
