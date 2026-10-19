@@ -89,14 +89,6 @@ public class GamePlayer
 
     internal void MarkLoser() => IsLoser = true;
 
-    /// <summary>Clears the call counters, as on a seat played before calls were recorded. For tests only.</summary>
-    internal void ClearCallData()
-    {
-        TooMuchCalls = 0;
-        FalseAlarms = 0;
-        Caught = 0;
-    }
-
     /// <summary>The player is gone; the score stays, credited to nobody.</summary>
     internal void ForgetPlayer()
     {

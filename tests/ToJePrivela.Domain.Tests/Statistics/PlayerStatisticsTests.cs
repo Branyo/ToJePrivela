@@ -32,7 +32,6 @@ public class PlayerStatisticsTests
         Assert.Null(statistics.AverageCaught);
         Assert.Null(statistics.AverageCalledOn);
         Assert.Null(statistics.CaughtCardShare);
-        Assert.Null(statistics.FalseAlarmCardShare);
         Assert.Null(statistics.MostCorrectCalls);
     }
 
@@ -193,7 +192,6 @@ public class PlayerStatisticsTests
         Assert.Equal(2, ana.CalledOn);
         Assert.Equal(2, ana.AverageCalledOn);
         Assert.Equal(0.5, ana.CaughtCardShare);
-        Assert.Equal(0.5, ana.FalseAlarmCardShare);
     }
 
     [Fact]
@@ -207,7 +205,6 @@ public class PlayerStatisticsTests
 
         Assert.Equal((1, 2), (cy.Caught, cy.CalledOn));
         Assert.Equal(1, cy.CaughtCardShare);
-        Assert.Equal(0, cy.FalseAlarmCardShare);
         Assert.Null(cy.CallAccuracy);
     }
 
@@ -286,12 +283,18 @@ internal static class GameTestExtensions
         return game;
     }
 
-    /// <summary>Clears the call counters, as in a game played before calls were recorded.</summary>
+    /// <summary>
+    /// Clears the call counters, as in a game played before calls were recorded. The domain never gets there, so
+    /// the private setters are written the way EF writes them.
+    /// </summary>
     public static Game WithoutCallData(this Game game)
     {
         foreach (var seat in game.GamePlayers)
         {
-            seat.ClearCallData();
+            foreach (var counter in new[] { nameof(GamePlayer.TooMuchCalls), nameof(GamePlayer.FalseAlarms), nameof(GamePlayer.Caught) })
+            {
+                typeof(GamePlayer).GetProperty(counter)!.SetValue(seat, 0);
+            }
         }
 
         return game;

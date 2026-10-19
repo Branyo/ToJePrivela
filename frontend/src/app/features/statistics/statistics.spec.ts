@@ -44,7 +44,6 @@ const statistics = (overrides: Partial<PlayerStatistics> = {}): PlayerStatistics
   calledOn: 5,
   averageCalledOn: 2.5,
   caughtCardShare: 0.6,
-  falseAlarmCardShare: 0.4,
   criedWolfLosses: 1,
   mostCorrectCalls: { gameId: 7, finished: '2026-09-24T19:00:00Z', count: 3 },
   ...overrides,
@@ -119,20 +118,37 @@ describe('Statistics', () => {
     expect(metric(page, 'mostCorrectCalls')).toBe('3');
     expect(page.querySelector('[data-metric="mostCorrectCalls"] a')?.getAttribute('href')).toBe('/games/7/summary');
     expect(page.querySelectorAll('.group__note')).toHaveLength(2);
+    expect(page.querySelector('[data-metric="mostCorrectCalls"] .tile__note')).not.toBeNull();
+  });
+
+  it('shows the cried-wolf losses among the figures from the games with calls', async () => {
+    const page = (await render(2, statistics())).nativeElement as HTMLElement;
+
+    const group = page.querySelector('[data-metric="criedWolfLosses"]')?.closest('.group');
+    expect(group?.querySelector('[data-metric="caughtCardShare"]')).not.toBeNull();
+    expect(group?.querySelector('.group__note')).not.toBeNull();
   });
 
   it('leaves the games-with-calls note out when every game has calls', async () => {
     const page = (await render(2, statistics({ gamesWithCalls: 3 }))).nativeElement as HTMLElement;
 
     expect(page.querySelector('.group__note')).toBeNull();
+    expect(page.querySelector('.tile__note')).toBeNull();
   });
 
   it('shows card shares that add up to 100 %', async () => {
-    const page = (await render(2, statistics({ caughtCardShare: 0.125, falseAlarmCardShare: 0.875 })))
-      .nativeElement as HTMLElement;
+    const page = (await render(2, statistics({ caughtCardShare: 0.125 }))).nativeElement as HTMLElement;
 
     expect(metric(page, 'caughtCardShare')?.replace(/\s/g, ' ')).toBe('13 %');
     expect(metric(page, 'falseAlarmCardShare')?.replace(/\s/g, ' ')).toBe('87 %');
+  });
+
+  it('rounds a card share that floating point puts just below the half', async () => {
+    // 0.285 * 100 is 28.499999999999996.
+    const page = (await render(2, statistics({ caughtCardShare: 0.285 }))).nativeElement as HTMLElement;
+
+    expect(metric(page, 'caughtCardShare')?.replace(/\s/g, ' ')).toBe('29 %');
+    expect(metric(page, 'falseAlarmCardShare')?.replace(/\s/g, ' ')).toBe('71 %');
   });
 
   it('shows a dash where there is nothing to average', async () => {

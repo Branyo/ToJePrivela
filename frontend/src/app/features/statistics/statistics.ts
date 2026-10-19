@@ -33,6 +33,8 @@ interface GameRecord {
   key: 'worstGame' | 'bestGame' | 'mostCorrectCalls';
   icon: string;
   game: { gameId: number; finished: string; value: number } | null;
+  /** Number of games the record is looked for in, when that is not all of them (`statistics.fromGamesWithCalls`). */
+  fromGames?: number;
 }
 
 /** Shown for an average (or the loss index) with nothing to average. */
@@ -85,8 +87,8 @@ export class Statistics {
     const share = (value: number | null) =>
       value === null ? NONE : this.i18n.formatNumber(value, { style: 'percent', maximumFractionDigits: 0 });
     // The two card shares add up to 1; rounded each on its own they could show 99 % or 101 %, so the false-alarm
-    // share is what the rounded caught share leaves.
-    const caughtCardShare = s.caughtCardShare === null ? null : Math.round(s.caughtCardShare * 100) / 100;
+    // share is what the rounded caught share leaves. Rounded as whole percents: 0.285 * 100 is 28.499…
+    const caughtPercent = s.caughtCardShare === null ? null : Math.round(s.caughtCardShare * 100 + 1e-9);
     const fromGames = s.gamesWithCalls < s.gamesPlayed ? s.gamesWithCalls : undefined;
 
     return [
@@ -129,8 +131,9 @@ export class Statistics {
         tiles: [
           { key: 'caught', icon: '🫣', value: count(s.caught), average: average(s.averageCaught) },
           { key: 'calledOn', icon: '👉', value: count(s.calledOn), average: average(s.averageCalledOn) },
-          { key: 'caughtCardShare', icon: '📈', value: share(caughtCardShare) },
-          { key: 'falseAlarmCardShare', icon: '📢', value: share(caughtCardShare === null ? null : 1 - caughtCardShare) },
+          { key: 'caughtCardShare', icon: '📈', value: share(caughtPercent === null ? null : caughtPercent / 100) },
+          { key: 'falseAlarmCardShare', icon: '📢', value: share(caughtPercent === null ? null : (100 - caughtPercent) / 100) },
+          { key: 'criedWolfLosses', icon: '🚨', value: count(s.criedWolfLosses) },
         ],
       },
       {
@@ -140,7 +143,6 @@ export class Statistics {
           { key: 'luckyFinishes', icon: '🍀', value: count(s.luckyFinishes) },
           { key: 'closestEscapes', icon: '😅', value: count(s.closestEscapes) },
           { key: 'reversals', icon: '🔄', value: count(s.reversals) },
-          { key: 'criedWolfLosses', icon: '🚨', value: count(s.criedWolfLosses) },
         ],
       },
     ];
@@ -154,7 +156,12 @@ export class Statistics {
       ? [
           { key: 'worstGame', icon: '💀', game: score(s.worstGame) },
           { key: 'bestGame', icon: '🏆', game: score(s.bestGame) },
-          { key: 'mostCorrectCalls', icon: '🦅', game: tally(s.mostCorrectCalls) },
+          {
+            key: 'mostCorrectCalls',
+            icon: '🦅',
+            game: tally(s.mostCorrectCalls),
+            fromGames: s.gamesWithCalls < s.gamesPlayed ? s.gamesWithCalls : undefined,
+          },
         ]
       : [];
   });

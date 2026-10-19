@@ -44,7 +44,6 @@ public sealed record PlayerStatisticsDto(
     int CalledOn,
     double? AverageCalledOn,
     double? CaughtCardShare,
-    double? FalseAlarmCardShare,
     int CriedWolfLosses,
     GameTallyDto? MostCorrectCalls);
 

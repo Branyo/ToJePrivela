@@ -41,7 +41,7 @@ public class PlayerStatisticsEndpointsTests : IClassFixture<ApiFactory>
         // The loser called the only round and took the card: a false alarm, and a loss crying wolf.
         Assert.Equal((1, 1, 0, 1), (statistics.GamesWithCalls, statistics.TooMuchCalls, statistics.CorrectCalls, statistics.FalseAlarms));
         Assert.Equal(0, statistics.CallAccuracy);
-        Assert.Equal(1, statistics.FalseAlarmCardShare);
+        Assert.Equal(0, statistics.CaughtCardShare);
         Assert.Equal(1, statistics.CriedWolfLosses);
         Assert.Null(statistics.MostCorrectCalls);
     }

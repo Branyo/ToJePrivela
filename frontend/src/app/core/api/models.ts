@@ -231,7 +231,6 @@ export interface PlayerStatistics {
   averageCalledOn: number | null;
   /** Share of the cards (0–1) taken for being caught overbidding; the rest were false alarms. */
   caughtCardShare: number | null;
-  falseAlarmCardShare: number | null;
   /** Losses with more false-alarm cards than cards for being caught. */
   criedWolfLosses: number;
   /** Most correct calls in one game. */

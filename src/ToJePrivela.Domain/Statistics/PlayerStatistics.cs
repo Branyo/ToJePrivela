@@ -108,12 +108,9 @@ public sealed class PlayerStatistics
 
     /// <summary>
     /// Of the player's cards in games with calls, the share taken for being caught overbidding, from 0 to 1; null
-    /// without such a card. The rest are their false alarms (<see cref="FalseAlarmCardShare"/>).
+    /// without such a card. The rest are their false alarms.
     /// </summary>
     public double? CaughtCardShare { get; private init; }
-
-    /// <summary>Of the player's cards in games with calls, the share taken for their own false alarms.</summary>
-    public double? FalseAlarmCardShare { get; private init; }
 
     /// <summary>"Cried wolf": games the player lost holding more false-alarm cards than cards for being caught.</summary>
     public int CriedWolfLosses { get; private init; }
@@ -188,9 +185,7 @@ public sealed class PlayerStatistics
             AverageCaught = Ratio(caught, callCount),
             CalledOn = calledOn,
             AverageCalledOn = Ratio(calledOn, callCount),
-            // Every card after a call is either a catch or a false alarm, so the two shares add up to 1.
             CaughtCardShare = Ratio(caught, cardsAfterCalls),
-            FalseAlarmCardShare = Ratio(cardsAfterCalls - caught, cardsAfterCalls),
             CriedWolfLosses = withCalls.Count(p => p.IsLoss && p.Seat.FalseAlarms > p.Seat.Caught),
             MostCorrectCalls = withCalls
                 .Where(p => p.Seat.CorrectCalls > 0)

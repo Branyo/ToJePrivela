@@ -37,7 +37,6 @@ public static class PlayerStatisticsMapper
         statistics.CalledOn,
         statistics.AverageCalledOn,
         statistics.CaughtCardShare,
-        statistics.FalseAlarmCardShare,
         statistics.CriedWolfLosses,
         ToDto(statistics.MostCorrectCalls));
 

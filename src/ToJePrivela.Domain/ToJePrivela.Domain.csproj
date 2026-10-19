@@ -6,8 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="ToJePrivela.Domain.Tests" />
-  </ItemGroup>
-
 </Project>
