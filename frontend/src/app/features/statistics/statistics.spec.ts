@@ -121,6 +121,20 @@ describe('Statistics', () => {
     expect(page.querySelectorAll('.group__note')).toHaveLength(2);
   });
 
+  it('leaves the games-with-calls note out when every game has calls', async () => {
+    const page = (await render(2, statistics({ gamesWithCalls: 3 }))).nativeElement as HTMLElement;
+
+    expect(page.querySelector('.group__note')).toBeNull();
+  });
+
+  it('shows card shares that add up to 100 %', async () => {
+    const page = (await render(2, statistics({ caughtCardShare: 0.125, falseAlarmCardShare: 0.875 })))
+      .nativeElement as HTMLElement;
+
+    expect(metric(page, 'caughtCardShare')?.replace(/\s/g, ' ')).toBe('13 %');
+    expect(metric(page, 'falseAlarmCardShare')?.replace(/\s/g, ' ')).toBe('87 %');
+  });
+
   it('shows a dash where there is nothing to average', async () => {
     const empty = statistics({
       gamesPlayed: 0,

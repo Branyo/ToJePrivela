@@ -160,12 +160,12 @@ public sealed class PlayerStatistics
         {
             GamesPlayed = count,
             BadCards = badCards,
-            AverageBadCards = Average(badCards, count),
+            AverageBadCards = Ratio(badCards, count),
             FinalBadPoints = finalBadPoints,
-            AverageFinalBadPoints = Average(finalBadPoints, count),
+            AverageFinalBadPoints = Ratio(finalBadPoints, count),
             Doubles = doubles,
-            AverageDoubles = Average(doubles, count),
-            AveragePlayers = Average(played.Sum(p => p.Game.GamePlayers.Count), count),
+            AverageDoubles = Ratio(doubles, count),
+            AveragePlayers = Ratio(played.Sum(p => p.Game.GamePlayers.Count), count),
             Losses = losses,
             SharedLosses = played.Count(p => p.IsLoss && p.Losers.Count > 1),
             // Every counted game has a loser, so the expected losses are above zero whenever there is a game.
@@ -180,19 +180,19 @@ public sealed class PlayerStatistics
             BestGame = scores.OrderBy(s => s.FinalBadPoints).FirstOrDefault(),
             GamesWithCalls = callCount,
             TooMuchCalls = tooMuchCalls,
-            AverageTooMuchCalls = Average(tooMuchCalls, callCount),
+            AverageTooMuchCalls = Ratio(tooMuchCalls, callCount),
             CorrectCalls = correctCalls,
             FalseAlarms = tooMuchCalls - correctCalls,
-            CallAccuracy = Share(correctCalls, tooMuchCalls),
+            CallAccuracy = Ratio(correctCalls, tooMuchCalls),
             Caught = caught,
-            AverageCaught = Average(caught, callCount),
+            AverageCaught = Ratio(caught, callCount),
             CalledOn = calledOn,
-            AverageCalledOn = Average(calledOn, callCount),
+            AverageCalledOn = Ratio(calledOn, callCount),
             // Every card after a call is either a catch or a false alarm, so the two shares add up to 1.
-            CaughtCardShare = Share(caught, cardsAfterCalls),
-            FalseAlarmCardShare = Share(cardsAfterCalls - caught, cardsAfterCalls),
+            CaughtCardShare = Ratio(caught, cardsAfterCalls),
+            FalseAlarmCardShare = Ratio(cardsAfterCalls - caught, cardsAfterCalls),
             CriedWolfLosses = withCalls.Count(p => p.IsLoss && p.Seat.FalseAlarms > p.Seat.Caught),
-            MostCorrectCalls = played
+            MostCorrectCalls = withCalls
                 .Where(p => p.Seat.CorrectCalls > 0)
                 .OrderByDescending(p => p.Seat.CorrectCalls)
                 .ThenByDescending(p => p.Game.Finished)
@@ -205,9 +205,8 @@ public sealed class PlayerStatistics
     private static IReadOnlyList<GamePlayer> Losers(Game game) =>
         game.GamePlayers.Where(gp => gp.IsLoser).ToList();
 
-    private static double? Average(int total, int count) => count == 0 ? null : (double)total / count;
-
-    private static double? Share(int part, int whole) => Average(part, whole);
+    /// <summary>An average or a share alike: null when there is nothing to divide by.</summary>
+    private static double? Ratio(int part, int whole) => whole == 0 ? null : (double)part / whole;
 
     private sealed record PlayedGame(Game Game, GamePlayer Seat, IReadOnlyList<GamePlayer> Losers)
     {
@@ -215,14 +214,7 @@ public sealed class PlayerStatistics
 
         public bool HasCalls => Game.GamePlayers.Any(gp => gp.TooMuchCalls > 0);
 
-        /// <summary>The player after this one in the order of play, wrapping round: the one who calls their bids.</summary>
-        public GamePlayer NextSeat
-        {
-            get
-            {
-                var seats = Game.PlayersInSeatOrder.ToList();
-                return seats[(seats.IndexOf(Seat) + 1) % seats.Count];
-            }
-        }
+        /// <summary>The player after this one in the order of play: the one who calls their bids.</summary>
+        public GamePlayer NextSeat { get; } = Game.NextSeatOf(Seat);
     }
 }

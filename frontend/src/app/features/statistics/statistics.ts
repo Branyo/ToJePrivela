@@ -84,6 +84,10 @@ export class Statistics {
     const average = (value: number | null) => (value === null ? NONE : this.format(value, 2));
     const share = (value: number | null) =>
       value === null ? NONE : this.i18n.formatNumber(value, { style: 'percent', maximumFractionDigits: 0 });
+    // The two card shares add up to 1; rounded each on its own they could show 99 % or 101 %, so the false-alarm
+    // share is what the rounded caught share leaves.
+    const caughtCardShare = s.caughtCardShare === null ? null : Math.round(s.caughtCardShare * 100) / 100;
+    const fromGames = s.gamesWithCalls < s.gamesPlayed ? s.gamesWithCalls : undefined;
 
     return [
       {
@@ -111,7 +115,7 @@ export class Statistics {
       },
       {
         key: 'calls',
-        fromGames: s.gamesWithCalls,
+        fromGames,
         tiles: [
           { key: 'tooMuchCalls', icon: '🤚', value: count(s.tooMuchCalls), average: average(s.averageTooMuchCalls) },
           { key: 'correctCalls', icon: '🧑‍⚖️', value: count(s.correctCalls) },
@@ -121,12 +125,12 @@ export class Statistics {
       },
       {
         key: 'calledOn',
-        fromGames: s.gamesWithCalls,
+        fromGames,
         tiles: [
           { key: 'caught', icon: '🫣', value: count(s.caught), average: average(s.averageCaught) },
           { key: 'calledOn', icon: '👉', value: count(s.calledOn), average: average(s.averageCalledOn) },
-          { key: 'caughtCardShare', icon: '📈', value: share(s.caughtCardShare) },
-          { key: 'falseAlarmCardShare', icon: '📢', value: share(s.falseAlarmCardShare) },
+          { key: 'caughtCardShare', icon: '📈', value: share(caughtCardShare) },
+          { key: 'falseAlarmCardShare', icon: '📢', value: share(caughtCardShare === null ? null : 1 - caughtCardShare) },
         ],
       },
       {

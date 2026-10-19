@@ -291,10 +291,7 @@ internal static class GameTestExtensions
     {
         foreach (var seat in game.GamePlayers)
         {
-            foreach (var counter in new[] { nameof(GamePlayer.TooMuchCalls), nameof(GamePlayer.FalseAlarms), nameof(GamePlayer.Caught) })
-            {
-                typeof(GamePlayer).GetProperty(counter)!.SetValue(seat, 0);
-            }
+            seat.ClearCallData();
         }
 
         return game;
