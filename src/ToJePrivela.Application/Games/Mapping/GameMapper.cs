@@ -12,25 +12,30 @@ public static class GameMapper
         game.BadCardLimit,
         game.BadPointsMode.ToString(),
         game.IsCancelled,
-        game.GamePlayers.OrderBy(SeatOrder).Select(gp => gp.PlayerId).ToList());
+        game.PlayersInSeatOrder.Select(gp => gp.PlayerId).ToList());
 
     public static IReadOnlyList<GameDto> ToDtos(IEnumerable<Game> games) => games.Select(ToDto).ToList();
 
-    /// <summary>Players stay in seat order (player id, unknown players last); each carries the rank the game gives them.</summary>
-    public static GameDetailsDto ToDetailsDto(Game game) => new(
-        game.Id,
-        game.Started,
-        game.Finished,
-        game.BadCardLimit,
-        game.BadPointsMode.ToString(),
-        game.IsCancelled,
-        game.HasResult,
-        game.Standings()
-            .OrderBy(standing => SeatOrder(standing.Player))
-            .Select(ToDto)
-            .ToList());
+    /// <summary>
+    /// Players stay in the order of play (<c>Game.PlayersInSeatOrder</c>); each carries the rank the game gives them and
+    /// the player before them (<c>Game.PreviousPlayerOf</c>).
+    /// </summary>
+    public static GameDetailsDto ToDetailsDto(Game game)
+    {
+        var standings = game.Standings().ToDictionary(standing => standing.Player);
 
-    private static GamePlayerDto ToDto(GameStanding standing) => new(
+        return new(
+            game.Id,
+            game.Started,
+            game.Finished,
+            game.BadCardLimit,
+            game.BadPointsMode.ToString(),
+            game.IsCancelled,
+            game.HasResult,
+            game.PlayersInSeatOrder.Select(gp => ToDto(standings[gp], game)).ToList());
+    }
+
+    private static GamePlayerDto ToDto(GameStanding standing, Game game) => new(
         standing.Player.PlayerId,
         standing.Player.IsUnknownPlayer ? null : standing.Player.Player?.Name ?? string.Empty,
         standing.Player.IsUnknownPlayer ? null : standing.Player.Player?.Avatar ?? string.Empty,
@@ -39,7 +44,10 @@ public static class GameMapper
         standing.Player.Doubles,
         standing.Player.FinalBadPoints,
         standing.Rank,
-        standing.IsLoser);
-
-    private static int SeatOrder(GamePlayer gamePlayer) => gamePlayer.PlayerId ?? int.MaxValue;
+        standing.IsLoser,
+        standing.Player.TooMuchCalls,
+        standing.Player.FalseAlarms,
+        standing.Player.CorrectCalls,
+        standing.Player.Caught,
+        standing.Player.PlayerId is { } playerId ? game.PreviousPlayerOf(playerId) : null);
 }

@@ -115,22 +115,21 @@
                 <p class="muted hint">{{ 'play.choose.hint' | translate }}</p>
               }
               @case ('asking') {
-                <button type="button" class="btn btn--danger btn--huge too-much" (click)="store.reveal()">
-                  {{ 'play.reveal' | translate }}
-                </button>
+                <p class="muted hint">{{ 'play.callHint' | translate }}</p>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">
                   {{ 'play.skip' | translate }}
                 </button>
-                <p class="muted hint">{{ 'play.doubleRule' | translate }}</p>
               }
               @case ('revealed') {
                 <p class="prompt">
-                  <span class="prompt__question" [innerHTML]="'play.whoTakes' | translate: { points: store.badPoints() }"></span>
-                  <span class="prompt__tap">{{ 'play.tapPlayer' | translate }}</span>
+                  @if (store.caller(); as caller) {
+                    <span class="prompt__caller">{{ 'play.calledBy' | translate: { name: caller.name } }}</span>
+                  }
+                  <span class="prompt__question" [innerHTML]="'play.whoTakes' | translate: { points: store.badPoints() }"></span>{{ ' ' }}<span class="prompt__tap">{{ 'play.tapPlayer' | translate }}</span>
                 </p>
+                <button type="button" class="btn btn--ghost" (click)="store.back()">{{ 'play.back' | translate }}</button>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">{{ 'play.nobody' | translate }}</button>
                 <p class="muted hint">{{ 'play.cardRule' | translate }}</p>
-                <p class="muted hint">{{ 'play.doublesFirst' | translate }}</p>
               }
               @case ('awarding') {
                 <p class="prompt">{{ 'play.incoming' | translate }}</p>
@@ -145,6 +144,28 @@
   <ul class="seats" [class.seats--picking]="store.phase() === 'revealed'">
     @for (player of store.seats(); track player.playerId; let seat = $index) {
       <li>
+        @if (store.phase() === 'asking') {
+          <button
+            type="button"
+            class="call"
+            [attr.aria-label]="'play.call.label' | translate: { name: player.name }"
+            (click)="call(player.playerId)"
+          >
+            {{ 'play.call.text' | translate }}
+          </button>
+        } @else if (store.callerId() === player.playerId && (store.phase() === 'revealed' || store.phase() === 'awarding')) {
+          <span class="call call--made" aria-hidden="true">
+            {{ 'play.call.text' | translate }}
+          </span>
+        }
+        @if (verdict(); as shown) {
+          @if (shown.playerId === player.playerId) {
+            <span class="verdict" [class.verdict--false]="shown.kind === 'false-alarm'" aria-hidden="true">
+              <span class="verdict__emoji" aria-hidden="true">{{ shown.kind === 'false-alarm' ? '🤨' : '🫣' }}</span>
+              {{ (shown.kind === 'false-alarm' ? 'play.verdict.falseAlarm' : 'play.verdict.tooMuch') | translate }}
+            </span>
+          }
+        }
         <button
           #seatButton
           type="button"
@@ -152,7 +173,7 @@
           [class.seat--hit]="hitPlayerId() === player.playerId"
           [class.seat--edge]="store.isOnTheEdge(player)"
           [class.seat--out]="player.badCards >= store.badCardLimit()"
-          [disabled]="store.phase() !== 'revealed'"
+          [disabled]="!store.canTake(player.playerId)"
           [attr.aria-label]="'play.seat' | translate: { name: player.name, cards: player.badCards, points: player.finalBadPoints, doubles: player.doubles }"
           (click)="award(player.playerId, seat)"
         >
@@ -199,6 +220,20 @@
       </li>
     }
   </ul>
+
+  <!-- Always in the page, so screen readers announce the text it changes to: who called, then how the call turned out. -->
+  <p class="sr-only" role="status">
+    @if (verdict(); as shown) {
+      {{ (shown.kind === 'false-alarm' ? 'play.verdict.falseAlarm' : 'play.verdict.tooMuch') | translate }}
+    } @else if (store.caller(); as caller) {
+      @if (store.phase() === 'revealed' || store.phase() === 'awarding') {
+        {{ 'play.call.made' | translate: { name: caller.name } }}
+      }
+    }
+  </p>
+  @if (store.phase() === 'revealed') {
+    <p class="muted hint doubles-hint">{{ 'play.doublesFirst' | translate }}</p>
+  }
 </section>
 
 @switch (confirming()) {

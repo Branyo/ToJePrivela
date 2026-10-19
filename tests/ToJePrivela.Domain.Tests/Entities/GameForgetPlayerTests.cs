@@ -26,7 +26,7 @@ public class GameForgetPlayerTests
     public void ForgetPlayer_KeepsTheSeatAndItsScoresAsAnUnknownPlayer()
     {
         var game = new Game(TestAccountId, [1, 2], Start);
-        game.AwardBadCard(2, Question(4), null, Start);
+        game.AwardBadCard(2, 2, Question(4), null, Start);
         game.AwardDouble(2);
 
         game.ForgetPlayer(2, DeletedAt);
@@ -42,7 +42,7 @@ public class GameForgetPlayerTests
     public void ForgetPlayer_GivesACancelledGameNoLoser()
     {
         var game = new Game(TestAccountId, [1, 2], Start);
-        game.AwardBadCard(1, Question(5), null, Start);
+        game.AwardBadCard(1, 1, Question(5), null, Start);
 
         game.ForgetPlayer(2, DeletedAt);
 
@@ -53,8 +53,8 @@ public class GameForgetPlayerTests
     public void ForgetPlayer_LeavesAFinishedGameAndItsResultAlone()
     {
         var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
-        game.AwardBadCard(2, Question(3), null, Start);
-        game.AwardBadCard(2, Question(3), null, Start.AddMinutes(30));
+        game.AwardBadCard(2, 2, Question(3), null, Start);
+        game.AwardBadCard(2, 2, Question(3), null, Start.AddMinutes(30));
         var finished = game.Finished;
 
         game.ForgetPlayer(2, DeletedAt);

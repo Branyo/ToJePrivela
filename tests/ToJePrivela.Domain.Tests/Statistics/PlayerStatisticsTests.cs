@@ -186,7 +186,7 @@ internal static class GameTestExtensions
         foreach (var points in badPoints)
         {
             var question = new Question("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), points, QuestionSource.Manual, CreatedAt);
-            game.AwardBadCard(playerId, question, null, game.Started!.Value.AddMinutes(1));
+            game.AwardBadCard(playerId, playerId, question, null, game.Started!.Value.AddMinutes(1));
         }
 
         return game;

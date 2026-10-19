@@ -15,8 +15,8 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   cancelled: false,
   hasResult: false,
   players: [
-    { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
-    { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
+    { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+    { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
   ],
   ...overrides,
 });
@@ -70,12 +70,12 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('asking');
     expect(store.question()?.id).toBe(42);
     expect(store.questionNumber()).toBe(1);
-    expect(store.seats().map((p) => p.playerId)).toEqual([1, 2]);
+    expect(store.seats().map((p) => p.playerId)).toEqual([2, 1]); // the order of play the server sent
   });
 
   it('fetches the current question again in place, keeping the round where it is', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     const refreshed = store.refreshQuestion();
     http
@@ -123,8 +123,8 @@ describe('PlayStore', () => {
       [],
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
-          { playerId: null, name: null, avatar: null, badPoints: 3, badCards: 1, doubles: 0, finalBadPoints: 3, rank: 1, isLoser: false },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: null, name: null, avatar: null, badPoints: 3, badCards: 1, doubles: 0, finalBadPoints: 3, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: null },
         ],
       }),
     );
@@ -138,7 +138,7 @@ describe('PlayStore', () => {
     expect(store.phase()).toBe('choosing');
     expect(store.canDouble()).toBe(false);
 
-    store.reveal();
+    store.reveal(1);
     store.choose(6);
     expect(store.phase()).toBe('choosing');
 
@@ -161,11 +161,11 @@ describe('PlayStore', () => {
   it('in a chooser game sends the chosen bad points with the card and asks again for the next question', async () => {
     await startWithQuestion([], game({ badPointsMode: 'Chooser' }));
     store.choose(1);
-    store.reveal();
+    store.reveal(1);
 
     const awarded = store.award(2);
     const request = http.expectOne('/api/games/5/bad-cards');
-    expect(request.request.body).toEqual({ playerId: 2, questionId: 42, badPoints: 1 });
+    expect(request.request.body).toEqual({ playerId: 2, calledByPlayerId: 1, questionId: 42, badPoints: 1 });
     request.flush(game({ badPointsMode: 'Chooser' }));
     await flush();
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
@@ -188,7 +188,7 @@ describe('PlayStore', () => {
   it('reveals the answer only while asking', async () => {
     await startWithQuestion();
 
-    store.reveal();
+    store.reveal(1);
     expect(store.phase()).toBe('revealed');
   });
 
@@ -206,21 +206,102 @@ describe('PlayStore', () => {
     expect(store.questionNumber()).toBe(2);
   });
 
+  it('reveals the answer for the player who called "too much", and goes back to bidding on a mis-tap', async () => {
+    await startWithQuestion();
+
+    store.reveal(99);
+    expect(store.phase()).toBe('asking');
+    expect(store.caller()).toBeNull();
+
+    store.reveal(2);
+    expect(store.phase()).toBe('revealed');
+    expect(store.caller()?.name).toBe('Bo');
+
+    store.back();
+    expect(store.phase()).toBe('asking');
+    expect(store.callerId()).toBeNull();
+
+    store.reveal(1);
+    expect(store.caller()?.name).toBe('Ana');
+  });
+
+  it('lets only the caller or the player before them, whose bid was called, take the card', async () => {
+    const seat = (playerId: number, name: string, previousPlayerId: number) => ({ ...game().players[0], playerId, name, previousPlayerId });
+    await startWithQuestion([], game({ players: [seat(3, 'Cy', 2), seat(1, 'Ana', 3), seat(2, 'Bo', 1)] }));
+
+    store.reveal(3);
+    expect(store.takerIds()).toEqual([3, 2]); // the server says Bo sits before Cy, round the table
+    expect([1, 2, 3].map((id) => store.canTake(id))).toEqual([false, true, true]);
+
+    await store.award(1);
+    http.expectNone('/api/games/5/bad-cards');
+    expect(store.phase()).toBe('revealed');
+
+    store.back();
+    store.reveal(1);
+    expect(store.takerIds()).toEqual([1, 3]);
+  });
+
+  it('sends the caller with the card, also when the caller takes it (a false alarm), and forgets them for the next question', async () => {
+    await startWithQuestion();
+    store.reveal(2);
+
+    const awarded = store.award(2);
+    const request = http.expectOne('/api/games/5/bad-cards');
+    expect(request.request.body).toEqual({ playerId: 2, calledByPlayerId: 2, questionId: 42 });
+    request.flush(game());
+    await flush();
+    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
+    await flush();
+    http.expectOne('/api/questions/44/views').flush(question);
+    await awarded;
+
+    expect(store.phase()).toBe('asking');
+    expect(store.callerId()).toBeNull();
+  });
+
+  it('hands the saved game to onSaved once the card is counted', async () => {
+    await startWithQuestion();
+    store.reveal(1);
+    const saved = game({ finished: '2026-09-25T19:00:00Z' });
+    const onSaved = vi.fn();
+
+    const awarded = store.award(2, Promise.resolve(), onSaved);
+    http.expectOne('/api/games/5/bad-cards').flush(saved);
+    await awarded;
+
+    expect(onSaved).toHaveBeenCalledExactlyOnceWith(saved);
+  });
+
+  it('never calls onSaved for a card the server refused', async () => {
+    await startWithQuestion();
+    store.reveal(1);
+    const onSaved = vi.fn();
+
+    const awarded = store.award(2, Promise.resolve(), onSaved);
+    http.expectOne('/api/games/5/bad-cards').flush({ detail: 'Gone.' }, { status: 409, statusText: 'Conflict' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await awarded;
+
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it('awards the card, waits for it to land, then draws the next question', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     let land!: () => void;
     const landing = new Promise<void>((resolve) => (land = resolve));
     const awarded = store.award(2, landing);
 
     const request = http.expectOne('/api/games/5/bad-cards');
-    expect(request.request.body).toEqual({ playerId: 2, questionId: 42 });
+    expect(request.request.body).toEqual({ playerId: 2, calledByPlayerId: 1, questionId: 42 });
     request.flush(
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 4, badCards: 1, doubles: 0, finalBadPoints: 4, rank: 1, isLoser: false },
-          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 4, badCards: 1, doubles: 0, finalBadPoints: 4, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
         ],
       }),
     );
@@ -251,8 +332,8 @@ describe('PlayStore', () => {
     request.flush(
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
-          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
         ],
       }),
     );
@@ -264,7 +345,7 @@ describe('PlayStore', () => {
 
   it('hands out the card only after the doubles tapped before it are saved', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     void store.awardDouble(1);
     const awarded = store.award(1);
@@ -288,8 +369,8 @@ describe('PlayStore', () => {
     http.expectOne('/api/games/5/doubles').flush(
       game({
         players: [
-          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false },
-          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false },
+          { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
+          { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 1, finalBadPoints: -1, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
         ],
       }),
     );
@@ -315,7 +396,7 @@ describe('PlayStore', () => {
 
   it('ignores a double once the card is on its way', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     const awarded = store.award(2);
     await store.awardDouble(1);
@@ -336,7 +417,7 @@ describe('PlayStore', () => {
 
   it('ends when the server finishes the game at the limit', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     const awarded = store.award(1);
     http.expectOne('/api/games/5/bad-cards').flush(game({ finished: '2026-09-25T19:00:00Z' }));
@@ -495,7 +576,7 @@ describe('PlayStore', () => {
 
   it('sends nothing else while the game is being deleted', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     const deleted = store.delete();
     await store.award(1);
@@ -509,7 +590,7 @@ describe('PlayStore', () => {
 
   it('does not delete a game while its card is being handed out', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
     const awarded = store.award(1);
 
     expect(await store.delete()).toBe(false);
@@ -532,7 +613,7 @@ describe('PlayStore', () => {
 
   it('keeps the round where it was when deleting fails', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     const deleted = store.delete();
     http.expectOne('/api/games/5').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
@@ -545,7 +626,7 @@ describe('PlayStore', () => {
 
   it('finishes the game only after the doubles tapped before are saved', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     void store.awardDouble(1);
     const finished = store.finish();
@@ -562,7 +643,7 @@ describe('PlayStore', () => {
 
   it('sends no card while the game is being finished', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     const finished = store.finish();
     await store.award(1);
@@ -574,7 +655,7 @@ describe('PlayStore', () => {
 
   it('does not finish a game while its card is being handed out', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
     const awarded = store.award(1);
 
     await store.finish();
@@ -590,7 +671,7 @@ describe('PlayStore', () => {
 
   it('keeps the round where it was when finishing fails', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     const finished = store.finish();
     http.expectOne('/api/games/5/finish').flush({ detail: 'Boom.' }, { status: 500, statusText: 'Server Error' });
@@ -655,7 +736,7 @@ describe('PlayStore', () => {
 
   it('does not let a reload still running reopen a game being ended', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     // A failed card reloads the game; meanwhile its players can end it.
     const awarded = store.award(1);
@@ -681,7 +762,7 @@ describe('PlayStore', () => {
 
   it('does not end the game when a double tapped before fails, and keeps its error', async () => {
     await startWithQuestion();
-    store.reveal();
+    store.reveal(1);
 
     void store.awardDouble(1);
     const finished = store.finish();
@@ -714,7 +795,7 @@ describe('PlayStore', () => {
   it('flags a player one card away from the limit', async () => {
     await startWithQuestion();
 
-    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 2, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false })).toBe(true);
-    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 1, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false })).toBe(false);
+    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 2, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 })).toBe(true);
+    expect(store.isOnTheEdge({ playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 5, badCards: 1, doubles: 0, finalBadPoints: 5, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 })).toBe(false);
   });
 });

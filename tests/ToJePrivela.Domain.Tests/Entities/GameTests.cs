@@ -14,7 +14,7 @@ public class GameTests
     /// <summary>A running game player 1 holds a bad card in, so it has a result and may be finished.</summary>
     private static Game WithABadCard(Game game)
     {
-        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(1));
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(1));
         return game;
     }
 
@@ -74,7 +74,7 @@ public class GameTests
 
         Assert.False(game.HasResult);
 
-        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(1));
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(1));
         game.ForgetPlayer(1, Start.AddMinutes(2));
 
         Assert.True(game.HasResult);
@@ -85,10 +85,10 @@ public class GameTests
     {
         // The start was just corrected to a time the server's clock had not reached when the card came.
         var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
-        game.AwardBadCard(1, QuestionWorth(2), null, Start.AddMinutes(1));
+        game.AwardBadCard(1, 1, QuestionWorth(2), null, Start.AddMinutes(1));
         game.Reschedule(Start.AddMinutes(10), null, Start.AddMinutes(10));
 
-        game.AwardBadCard(1, QuestionWorth(2), null, Start.AddMinutes(9));
+        game.AwardBadCard(1, 1, QuestionWorth(2), null, Start.AddMinutes(9));
 
         Assert.Equal(Start.AddMinutes(10), game.Finished);
         Assert.True(Assert.Single(game.GamePlayers, gp => gp.PlayerId == 1).IsLoser);
@@ -139,9 +139,9 @@ public class GameTests
     public void Finish_StoresTheVerdictOfAGameEndedEarlyAsItStands()
     {
         var game = new Game(TestAccountId, [1, 2, 3], Start, badCardLimit: 5);
-        game.AwardBadCard(1, QuestionWorth(2), null, Start.AddMinutes(1));
-        game.AwardBadCard(1, QuestionWorth(2), null, Start.AddMinutes(2));
-        game.AwardBadCard(2, QuestionWorth(4), null, Start.AddMinutes(3));
+        game.AwardBadCard(1, 1, QuestionWorth(2), null, Start.AddMinutes(1));
+        game.AwardBadCard(1, 1, QuestionWorth(2), null, Start.AddMinutes(2));
+        game.AwardBadCard(2, 2, QuestionWorth(4), null, Start.AddMinutes(3));
 
         Assert.All(game.GamePlayers, gp => Assert.False(gp.IsLoser));
 
@@ -260,8 +260,8 @@ public class GameTests
     public void Reschedule_NeverReopensAFinishedGame()
     {
         var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
-        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(5));
-        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(6));
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(5));
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(6));
 
         Assert.Throws<DomainException>(() => game.Reschedule(Start, null, Now));
         Assert.Equal(Start.AddMinutes(6), game.Finished);
@@ -274,9 +274,10 @@ public class GameTests
         var finished = WithABadCard(new Game(TestAccountId, [1, 2], Start));
         finished.Finish(Start.AddHours(1));
 
-        Assert.Equal(GameRuleViolation.PlayerNotInGame, chooser.CheckAwardBadCard(9, 3));
-        Assert.Equal(GameRuleViolation.ChosenBadPointsRequired, chooser.CheckAwardBadCard(1, null));
-        Assert.Equal(GameRuleViolation.ChosenBadPointsNotAllowed, new Game(TestAccountId, [1, 2], Start).CheckAwardBadCard(1, 3));
+        Assert.Equal(GameRuleViolation.PlayerNotInGame, chooser.CheckAwardBadCard(9, 9, 3));
+        Assert.Equal(GameRuleViolation.ChosenBadPointsRequired, chooser.CheckAwardBadCard(1, 1, null));
+        Assert.Equal(GameRuleViolation.CallerNotInGame, chooser.CheckAwardBadCard(1, 9, 3));
+        Assert.Equal(GameRuleViolation.ChosenBadPointsNotAllowed, new Game(TestAccountId, [1, 2], Start).CheckAwardBadCard(1, 1, 3));
         Assert.Equal(GameRuleViolation.NoDoubleToRemove, chooser.CheckRemoveDouble(1));
         Assert.Equal(GameRuleViolation.AlreadyFinished, finished.CheckAwardDouble(1));
         Assert.Equal(GameRuleViolation.AlreadyFinished, finished.CheckFinish(Start.AddHours(2)));
@@ -294,9 +295,9 @@ public class GameTests
     {
         var game = new Game(TestAccountId, [1, 2], Start, badPointsMode: BadPointsMode.Chooser);
         game.AwardDouble(1);
-        game.AwardBadCard(2, QuestionWorth(3), 1, Start.AddMinutes(1));
+        game.AwardBadCard(2, 2, QuestionWorth(3), 1, Start.AddMinutes(1));
 
-        Assert.Null(game.CheckAwardBadCard(1, 3));
+        Assert.Null(game.CheckAwardBadCard(1, 1, 3));
         Assert.Null(game.CheckAwardDouble(2));
         Assert.Null(game.CheckRemoveDouble(1));
         Assert.Null(game.CheckFinish(Start.AddHours(1)));
@@ -335,8 +336,8 @@ public class GameTests
     {
         var game = new Game(TestAccountId, [1, 2], Start);
 
-        var player = game.AwardBadCard(2, QuestionWorth(4), null, Start.AddMinutes(5));
-        game.AwardBadCard(2, QuestionWorth(1), null, Start.AddMinutes(6));
+        var player = game.AwardBadCard(2, 2, QuestionWorth(4), null, Start.AddMinutes(5));
+        game.AwardBadCard(2, 2, QuestionWorth(1), null, Start.AddMinutes(6));
 
         Assert.Equal(2, player.BadCards);
         Assert.Equal(5, player.BadPoints);
@@ -350,8 +351,8 @@ public class GameTests
         var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
         var end = Start.AddMinutes(10);
 
-        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(5));
-        game.AwardBadCard(1, QuestionWorth(3), null, end);
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(5));
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, end);
 
         Assert.True(game.IsFinished);
         Assert.Equal(end, game.Finished);
@@ -361,10 +362,10 @@ public class GameTests
     public void AwardBadCard_RejectsAFinishedGame()
     {
         var game = new Game(TestAccountId, [1, 2], Start, badCardLimit: 2);
-        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(5));
-        game.AwardBadCard(1, QuestionWorth(3), null, Start.AddMinutes(6));
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(5));
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(6));
 
-        Assert.Throws<DomainException>(() => game.AwardBadCard(2, QuestionWorth(3), null, Start.AddMinutes(7)));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(2, 2, QuestionWorth(3), null, Start.AddMinutes(7)));
     }
 
     [Fact]
@@ -372,7 +373,7 @@ public class GameTests
     {
         var game = new Game(TestAccountId, [1, 2], Start);
 
-        Assert.Throws<DomainException>(() => game.AwardBadCard(9, QuestionWorth(3), null, Start.AddMinutes(5)));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(9, 9, QuestionWorth(3), null, Start.AddMinutes(5)));
     }
 
     [Theory]
@@ -382,7 +383,7 @@ public class GameTests
     {
         var game = new Game(TestAccountId, [1, 2], Start, badPointsMode: BadPointsMode.Chooser);
 
-        Assert.Throws<DomainException>(() => game.AwardBadCard(1, QuestionWorth(3), badPoints, Start.AddMinutes(5)));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(1, 1, QuestionWorth(3), badPoints, Start.AddMinutes(5)));
         Assert.Equal(0, game.GamePlayers.Single(gp => gp.PlayerId == 1).BadCards);
     }
 
@@ -391,7 +392,7 @@ public class GameTests
     {
         var game = new Game(TestAccountId, [1, 2], Start, badPointsMode: BadPointsMode.Chooser);
 
-        var player = game.AwardBadCard(1, QuestionWorth(4), 1, Start.AddMinutes(5));
+        var player = game.AwardBadCard(1, 1, QuestionWorth(4), 1, Start.AddMinutes(5));
 
         Assert.Equal(1, player.BadPoints);
     }
@@ -402,7 +403,7 @@ public class GameTests
         var game = new Game(TestAccountId, [1, 2], Start, badPointsMode: BadPointsMode.Chooser);
 
         Assert.True(game.RequiresChosenBadPoints);
-        Assert.Throws<DomainException>(() => game.AwardBadCard(1, QuestionWorth(4), null, Start.AddMinutes(5)));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(1, 1, QuestionWorth(4), null, Start.AddMinutes(5)));
     }
 
     [Fact]
@@ -411,7 +412,7 @@ public class GameTests
         var game = new Game(TestAccountId, [1, 2], Start);
 
         Assert.False(game.RequiresChosenBadPoints);
-        Assert.Throws<DomainException>(() => game.AwardBadCard(1, QuestionWorth(4), 2, Start.AddMinutes(5)));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(1, 1, QuestionWorth(4), 2, Start.AddMinutes(5)));
         Assert.Equal(0, game.GamePlayers.Single(gp => gp.PlayerId == 1).BadCards);
     }
 
@@ -419,7 +420,7 @@ public class GameTests
     public void AwardDouble_TakesOneBadPointOffTheFinalScore()
     {
         var game = new Game(TestAccountId, [1, 2], Start);
-        game.AwardBadCard(2, QuestionWorth(4), null, Start.AddMinutes(5));
+        game.AwardBadCard(2, 2, QuestionWorth(4), null, Start.AddMinutes(5));
 
         var player = game.AwardDouble(2);
         game.AwardDouble(2);
@@ -509,5 +510,83 @@ public class GameTests
     public void Constructor_RejectsAMissingAccount()
     {
         Assert.Throws<DomainException>(() => new Game(0, [1, 2], Start));
+    }
+
+    [Fact]
+    public void AwardBadCard_CreditsTheCallerWithTheCall()
+    {
+        var game = new Game(TestAccountId, [1, 2, 3], Start);
+
+        game.AwardBadCard(1, 2, QuestionWorth(4), null, Start.AddMinutes(5));
+
+        var seats = game.GamePlayers.ToDictionary(gp => gp.PlayerId!.Value);
+        Assert.Equal((1, 0, 1, 0), (seats[2].TooMuchCalls, seats[2].FalseAlarms, seats[2].CorrectCalls, seats[2].Caught));
+        Assert.Equal((0, 0, 1, 4), (seats[1].TooMuchCalls, seats[1].FalseAlarms, seats[1].Caught, seats[1].BadPoints));
+        Assert.Equal((0, 0, 0), (seats[3].TooMuchCalls, seats[3].FalseAlarms, seats[3].Caught));
+    }
+
+    [Fact]
+    public void AwardBadCard_ToTheCallerIsAFalseAlarm()
+    {
+        var game = new Game(TestAccountId, [1, 2], Start, badPointsMode: BadPointsMode.Chooser);
+
+        game.AwardBadCard(1, 1, QuestionWorth(4), 2, Start.AddMinutes(5));
+
+        var caller = game.GamePlayers.Single(gp => gp.PlayerId == 1);
+        Assert.Equal((1, 1, 0, 0, 2), (caller.TooMuchCalls, caller.FalseAlarms, caller.CorrectCalls, caller.Caught, caller.BadPoints));
+    }
+
+    [Fact]
+    public void AwardBadCard_RejectsACallerOutsideTheGame()
+    {
+        var game = new Game(TestAccountId, [1, 2], Start);
+
+        Assert.Throws<DomainException>(() => game.AwardBadCard(1, 9, QuestionWorth(3), null, Start.AddMinutes(5)));
+        Assert.All(game.GamePlayers, gp => Assert.Equal((0, 0, 0, 0), (gp.BadCards, gp.TooMuchCalls, gp.FalseAlarms, gp.Caught)));
+    }
+
+    [Fact]
+    public void AwardBadCard_CountsEveryCallFalseAlarmAndCaughtCard()
+    {
+        var game = new Game(TestAccountId, [1, 2, 3], Start, badCardLimit: 10);
+        game.AwardBadCard(1, 2, QuestionWorth(1), null, Start.AddMinutes(1)); // 2 was right
+        game.AwardBadCard(2, 2, QuestionWorth(1), null, Start.AddMinutes(2)); // 2 was wrong
+        game.AwardBadCard(2, 3, QuestionWorth(1), null, Start.AddMinutes(3)); // 3 was right
+        game.AwardBadCard(3, 3, QuestionWorth(1), null, Start.AddMinutes(4)); // 3 was wrong
+
+        Assert.Equal(
+            [(1, 0, 0, 1), (2, 2, 1, 1), (3, 2, 1, 0)],
+            game.GamePlayers.OrderBy(gp => gp.PlayerId).Select(gp => (gp.PlayerId!.Value, gp.TooMuchCalls, gp.FalseAlarms, gp.Caught)));
+    }
+
+    [Fact]
+    public void Constructor_SeatsThePlayersInTheOrderTheyWereAdded()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start);
+
+        Assert.Equal([(3, 0), (1, 1), (2, 2)], game.GamePlayers.Select(gp => (gp.PlayerId!.Value, gp.Seat)));
+    }
+
+    [Fact]
+    public void PreviousPlayerOf_GoesRoundTheOrderOfPlay()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start);
+
+        Assert.Equal(3, game.PreviousPlayerOf(1));
+        Assert.Equal(1, game.PreviousPlayerOf(2));
+        Assert.Equal(2, game.PreviousPlayerOf(3));
+        Assert.Null(game.PreviousPlayerOf(9));
+    }
+
+    [Fact]
+    public void AwardBadCard_LetsOnlyTheCallerOrThePlayerBeforeThemTakeTheCard()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start, badCardLimit: 10);
+
+        Assert.Null(game.CheckAwardBadCard(1, 1, null));
+        Assert.Null(game.CheckAwardBadCard(3, 1, null));
+        Assert.Equal(GameRuleViolation.TakerNotCallerOrBidder, game.CheckAwardBadCard(2, 1, null));
+        Assert.Throws<DomainException>(() => game.AwardBadCard(2, 1, QuestionWorth(3), null, Start.AddMinutes(5)));
+        Assert.All(game.GamePlayers, gp => Assert.Equal((0, 0, 0), (gp.BadCards, gp.TooMuchCalls, gp.Caught)));
     }
 }

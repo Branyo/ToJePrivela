@@ -51,17 +51,40 @@ public class MapperTests
     }
 
     [Fact]
-    public void GameMapper_ToDetailsDto_CarriesTheGamesVerdictInSeatOrder()
+    public void GameMapper_ToDetailsDto_CarriesTheGamesVerdictInTheOrderOfPlay()
     {
         var game = TestEntities.Game(3, [6, 5], Start);
         var question = TestEntities.Question(1, "How many wheels does a car have?", "4", TestEntities.Category(1, "Cars"), badPoints: 2);
-        game.AwardBadCard(6, question, null, Start);
+        game.AwardBadCard(6, 6, question, null, Start);
         game.Finish(Start.AddHours(1));
 
         var details = GameMapper.ToDetailsDto(game);
 
-        Assert.Equal([5, 6], details.Players.Select(p => p.PlayerId));
-        Assert.Equal([(2, false), (1, true)], details.Players.Select(p => (p.Rank, p.IsLoser)));
+        Assert.Equal([6, 5], details.Players.Select(p => p.PlayerId));
+        Assert.Equal([(1, true), (2, false)], details.Players.Select(p => (p.Rank, p.IsLoser)));
+    }
+
+    [Fact]
+    public void GameMapper_ToDetailsDto_GivesEachPlayerThePlayerBeforeThem()
+    {
+        var details = GameMapper.ToDetailsDto(TestEntities.Game(3, [7, 5, 6], Start));
+
+        Assert.Equal([(7, 6), (5, 7), (6, 5)], details.Players.Select(p => (p.PlayerId!.Value, p.PreviousPlayerId!.Value)));
+    }
+
+    [Fact]
+    public void GameMapper_ToDetailsDto_CarriesEachPlayersTooMuchCalls()
+    {
+        var game = TestEntities.Game(3, [5, 6], Start, badCardLimit: 5);
+        var question = TestEntities.Question(1, "How many wheels does a car have?", "4", TestEntities.Category(1, "Cars"));
+        game.AwardBadCard(6, 5, question, null, Start);
+        game.AwardBadCard(5, 5, question, null, Start);
+
+        var details = GameMapper.ToDetailsDto(game);
+
+        Assert.Equal(
+            [(5, 2, 1, 1, 0), (6, 0, 0, 0, 1)],
+            details.Players.Select(p => (p.PlayerId!.Value, p.TooMuchCalls, p.FalseAlarms, p.CorrectCalls, p.Caught)));
     }
 
     [Fact]

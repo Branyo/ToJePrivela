@@ -43,7 +43,7 @@ public class Game
         BadCardLimit = Guard.AgainstOutOfRange(badCardLimit, nameof(badCardLimit), MinBadCardLimit, MaxBadCardLimit);
         BadPointsMode = badPointsMode;
         Started = UtcTime.Normalize(startedAt);
-        _gamePlayers.AddRange(distinctIds.Select(id => new GamePlayer(id)));
+        _gamePlayers.AddRange(distinctIds.Select((id, seat) => new GamePlayer(id, seat)));
     }
 
     public int Id { get; private set; }
@@ -62,6 +62,9 @@ public class Game
     public BadPointsMode BadPointsMode { get; private set; }
 
     public IReadOnlyCollection<GamePlayer> GamePlayers => _gamePlayers.AsReadOnly();
+
+    /// <summary>The players in the order of play (<see cref="GamePlayer.Seat"/>), the one order every view and rule uses.</summary>
+    public IEnumerable<GamePlayer> PlayersInSeatOrder => _gamePlayers.OrderBy(gp => gp.Seat).ThenBy(gp => gp.Id);
 
     public bool IsFinished => Finished is not null;
 
@@ -98,8 +101,27 @@ public class Game
         : UtcTime.Normalize(finishedAt) < Started ? GameRuleViolation.EndsBeforeStart
         : CheckResult();
 
-    public GameRuleViolation? CheckAwardBadCard(int playerId, int? chosenBadPoints) =>
+    /// <summary>
+    /// The player before <paramref name="playerId"/> in the order of play (<see cref="GamePlayer.Seat"/>, going round):
+    /// whose bid that player called "To je priveľa!" on. Null for a player not in the game.
+    /// </summary>
+    public int? PreviousPlayerOf(int playerId)
+    {
+        var seats = PlayersInSeatOrder.ToList();
+        var index = seats.FindIndex(gp => gp.PlayerId == playerId);
+        return index < 0 ? null : seats[(index - 1 + seats.Count) % seats.Count].PlayerId;
+    }
+
+    /// <param name="callerId">
+    /// Who called "To je priveľa!" in the round. Only they (a false alarm) or the player before them, whose bid they
+    /// called (<see cref="PreviousPlayerOf"/>), can take the card.
+    /// </param>
+    public GameRuleViolation? CheckAwardBadCard(int playerId, int callerId, int? chosenBadPoints) =>
         CheckRunningPlayer(playerId)
+        ?? (HasPlayer(callerId) ? null : (GameRuleViolation?)GameRuleViolation.CallerNotInGame)
+        ?? (playerId == callerId || playerId == PreviousPlayerOf(callerId)
+            ? null
+            : (GameRuleViolation?)GameRuleViolation.TakerNotCallerOrBidder)
         ?? (RequiresChosenBadPoints, chosenBadPoints.HasValue) switch
         {
             (true, false) => GameRuleViolation.ChosenBadPointsRequired,
@@ -133,16 +155,24 @@ public class Game
     /// <summary>
     /// Gives the player a bad card for <paramref name="question"/>, worth what <see cref="BadPointsMode"/>
     /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game.
-    /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards.
+    /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. <paramref name="callerId"/>, who
+    /// called "To je priveľa!" in that round, is credited with the call (<see cref="GamePlayer.TooMuchCalls"/>); taking
+    /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>), otherwise the player before
+    /// them, whose bid it was, takes it and was caught overdoing it (<see cref="GamePlayer.Caught"/>).
     /// </summary>
-    public GamePlayer AwardBadCard(int playerId, Question question, int? chosenBadPoints, DateTime awardedAt)
+    public GamePlayer AwardBadCard(int playerId, int callerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {
         ArgumentNullException.ThrowIfNull(question);
-        ThrowIfBroken(CheckAwardBadCard(playerId, chosenBadPoints));
+        ThrowIfBroken(CheckAwardBadCard(playerId, callerId, chosenBadPoints));
 
         var gamePlayer = FindPlayer(playerId)!;
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
+        FindPlayer(callerId)!.AddTooMuchCall(falseAlarm: callerId == playerId);
+        if (callerId != playerId)
+        {
+            gamePlayer.AddCaught();
+        }
 
         // The card itself is the result, so none of Finish's checks apply: the game simply ends now. A card is never
         // refused over the clock, so should it read earlier than a start just corrected to now (the only way the end
@@ -230,15 +260,14 @@ public class Game
     /// <summary>
     /// Where every player stands, worst first: the losers (<see cref="GamePlayer.IsLoser"/>, the verdict stored when
     /// the game finished), then most <see cref="GamePlayer.FinalBadPoints"/> (bad points minus doubles). Players with
-    /// the same verdict and final bad points share the rank and keep their seat order (player id, unknown players
-    /// last). Nobody has lost a running or cancelled game.
+    /// the same verdict and final bad points share the rank and keep their order of play (<see cref="GamePlayer.Seat"/>).
+    /// Nobody has lost a running or cancelled game.
     /// </summary>
     public IReadOnlyList<GameStanding> Standings()
     {
-        var ordered = _gamePlayers
+        var ordered = PlayersInSeatOrder
             .OrderByDescending(gp => gp.IsLoser)
             .ThenByDescending(gp => gp.FinalBadPoints)
-            .ThenBy(gp => gp.PlayerId ?? int.MaxValue)
             .ToList();
 
         var standings = new List<GameStanding>(ordered.Count);

@@ -6,7 +6,8 @@ namespace ToJePrivela.Application.Games.Dtos;
 /// <summary>
 /// In a <see cref="BadPointsMode.Question"/> game the card is worth the bad points stored on the question, so
 /// <see cref="BadPoints"/> must be left out; in a <see cref="BadPointsMode.Chooser"/> game it is required and is
-/// what the starting player set before the question was shown.
+/// what the starting player set before the question was shown. <see cref="CalledByPlayerId"/> is who called
+/// "To je priveľa!" in the round: any player of the game, the one taking the card included (a false alarm).
 /// </summary>
 public sealed class AwardBadCardRequest
 {
@@ -15,6 +16,9 @@ public sealed class AwardBadCardRequest
 
     [Range(1, int.MaxValue, ErrorMessage = "Question id is required.")]
     public int QuestionId { get; init; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Who called \"too much\" is required.")]
+    public int CalledByPlayerId { get; init; }
 
     [Range(Question.MinBadPoints, Question.MaxBadPoints, ErrorMessage = "Bad points should be between {1} and {2}.")]
     public int? BadPoints { get; init; }

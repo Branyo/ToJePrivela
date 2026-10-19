@@ -55,10 +55,10 @@ export class Setup {
   protected readonly starting = signal(false);
   protected readonly error = signal<Message | null>(null);
 
-  /** Seated by id, the same order the game screens use. */
+  /** In the order they were added: the order of play the game keeps and the game screens show. */
   protected readonly selectedPlayers = computed(() => {
     const byId = new Map(this.players().map((p) => [p.id, p]));
-    return [...this.selectedIds()].sort((a, b) => a - b).flatMap((id) => byId.get(id) ?? []);
+    return this.selectedIds().flatMap((id) => byId.get(id) ?? []);
   });
 
   protected readonly benchPlayers = computed(() => {

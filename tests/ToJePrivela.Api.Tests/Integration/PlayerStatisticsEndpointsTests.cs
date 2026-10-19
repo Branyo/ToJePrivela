@@ -25,10 +25,10 @@ public class PlayerStatisticsEndpointsTests : IClassFixture<ApiFactory>
         var other = await CreatePlayerAsync();
         var question = await CreateQuestionAsync();
         var finished = await CreateGameAsync(loser.Id, other.Id);
-        await _client.PostAsJsonAsync($"/api/games/{finished.Id}/bad-cards", new { playerId = loser.Id, questionId = question.Id });
+        await _client.PostAsJsonAsync($"/api/games/{finished.Id}/bad-cards", new { playerId = loser.Id, calledByPlayerId = loser.Id, questionId = question.Id });
         await _client.PostAsync($"/api/games/{finished.Id}/finish", null);
         var running = await CreateGameAsync(loser.Id, other.Id);
-        await _client.PostAsJsonAsync($"/api/games/{running.Id}/bad-cards", new { playerId = loser.Id, questionId = question.Id });
+        await _client.PostAsJsonAsync($"/api/games/{running.Id}/bad-cards", new { playerId = loser.Id, calledByPlayerId = loser.Id, questionId = question.Id });
 
         var response = await _client.GetAsync($"/api/players/{loser.Id}/statistics");
 

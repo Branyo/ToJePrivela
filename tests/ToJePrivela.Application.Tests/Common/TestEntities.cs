@@ -42,7 +42,7 @@ public static class TestEntities
     /// <summary>Gives the player a bad card worth 3, so the running game has a result and may be finished.</summary>
     public static Game WithABadCard(Game game, int playerId)
     {
-        game.AwardBadCard(playerId, Question(99, "Koľko kolies má auto?", "4", Category(99, "Autá")), null, game.Started!.Value);
+        game.AwardBadCard(playerId, playerId, Question(99, "Koľko kolies má auto?", "4", Category(99, "Autá")), null, game.Started!.Value);
         return game;
     }
 

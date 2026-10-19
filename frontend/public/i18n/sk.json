@@ -75,6 +75,7 @@
       "namePlaceholder": "Meno hráča…",
       "name": "Meno hráča",
       "add": "➕ Pridať",
+      "orderHint": "Pridávaj hráčov v poradí, v akom budú hrať, jeden po druhom okolo stola.",
       "empty": "Pri stole zatiaľ nikto nesedí. Pridaj mená alebo ťukni na stálych hráčov nižšie.",
       "remove": "Odobrať hráča {{name}}",
       "regulars": "Stáli hráči"
@@ -165,20 +166,30 @@
       "second": "HRY!"
     },
     "answer": "Správna odpoveď je",
-    "reveal": "✋ To je priveľa! Ukázať odpoveď",
+    "callHint": "Kto zvolal „To je priveľa!“? Ťukni na jeho bublinu.",
+    "call": {
+      "text": "🤚 To je priveľa!",
+      "label": "{{name}}: To je priveľa! Ukázať odpoveď",
+      "made": "{{name}}: To je priveľa!"
+    },
     "skip": "😴 Priľahké, preskočiť (bez somárov)",
-    "doubleRule": "Vyšiel niekomu Double? Ďalší hráč prihodil, tak ťukni na + pri ✌️ u hráča, ktorý ho vyhlásil – na konci hry mu odráta jedného somára. Omyl opravíš tlačidlom −.",
+    "calledBy": "🤚 {{name}}: „To je priveľa!“",
     "whoTakes": "Kto berie kartu <strong>🫏 ×{{points}}</strong>?",
     "tapPlayer": "Ťukni na hráča 👇",
     "nobody": "🙅 Nikto, ďalšia otázka",
+    "back": "↩️ Späť, zvolal to niekto iný",
     "cardRule": "Bol posledný odhad vyšší ako odpoveď? Kartu berie ten, kto ho povedal. Ak nie, berie ju ten, kto zvolal „To je priveľa!“.",
-    "doublesFirst": "Najprv pridaj (+) každý Double ✌️, ktorý vyšiel, a až potom priraď kartu.",
+    "doublesFirst": "Najprv pridaj ✌️ Double, ak niekomu vyšiel.",
     "double": {
       "group": "Double hráča {{name}}",
       "label": "Double vyšiel: {{name}} (−1 somár)",
       "remove": "Ubrať Double: {{name}}"
     },
     "incoming": "Letia somáre! 🫏💨",
+    "verdict": {
+      "falseAlarm": "Falošné obvinenie!",
+      "tooMuch": "Bolo to priveľa!"
+    },
     "seat": "{{name}}, karty: {{cards}}, Double: {{doubles}}, výsledné trestné body: {{points}}",
     "onTheEdge": "🔥 na hrane",
     "confirmEnd": {
@@ -227,6 +238,14 @@
     "doublesOff": "(✌️ −{{count}})",
     "doublesLabel": "Double: {{count}}",
     "board": "📊 Počet somárov",
+    "calls": {
+      "title": "🤚 To je priveľa!",
+      "calls": "Volania „To je priveľa!“: {{count}}",
+      "hits": "Správne odhalenia, že to bolo priveľa: {{count}}",
+      "falseAlarms": "Falošné obvinenia: {{count}}",
+      "caught": "Prichytenia pri prehnanom odhade: {{count}}",
+      "legend": "🤚 volania · 🧑‍⚖️ správne odhalenia · 🤨 falošné obvinenia · 🫣 prichytený/á pri prehnanom odhade"
+    },
     "rematch": "🔁 Odveta s rovnakými hráčmi",
     "back": "▶️ Späť do hry",
     "home": "🏠 Domov",

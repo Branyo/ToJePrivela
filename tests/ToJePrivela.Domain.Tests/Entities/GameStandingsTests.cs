@@ -52,6 +52,14 @@ public class GameStandingsTests
     }
 
     [Fact]
+    public void Standings_KeepTheOrderOfPlayAmongPlayersWhoStandEqual()
+    {
+        var game = new Game(TestAccountId, [Cy, Ana, Bo], Start, badCardLimit: Game.MaxBadCardLimit);
+
+        Assert.Equal([Cy, Ana, Bo], game.Standings().Select(s => s.Player.PlayerId));
+    }
+
+    [Fact]
     public void Standings_HaveNoLoserWhileTheGameRuns()
     {
         Cards(Ana, 3);
@@ -111,7 +119,7 @@ public class GameStandingsTests
         foreach (var points in badPoints)
         {
             var question = new Question("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), points, QuestionSource.Manual, Start);
-            _game.AwardBadCard(playerId, question, null, Start.AddMinutes(1));
+            _game.AwardBadCard(playerId, playerId, question, null, Start.AddMinutes(1));
         }
     }
 

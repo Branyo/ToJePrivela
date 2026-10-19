@@ -149,7 +149,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     {
         var game = await CreateGameAsync();
         var question = await CreateQuestionAsync(badPoints: 3);
-        var card = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        var card = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, calledByPlayerId = 2, questionId = question.Id });
         Assert.Equal(HttpStatusCode.OK, card.StatusCode);
         var doubled = await _client.PostAsJsonAsync($"/api/games/{game.Id}/doubles", new { playerId = 1 });
         Assert.Equal(HttpStatusCode.OK, doubled.StatusCode);
@@ -184,7 +184,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         var game = await CreateGameAsync(badCardLimit: 2);
         var question = await CreateQuestionAsync(badPoints: 4);
 
-        var first = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        var first = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, calledByPlayerId = 2, questionId = question.Id });
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         var details = (await first.Content.ReadFromJsonAsync<GameDetailsDto>())!;
         var player = details.Players.Single(p => p.PlayerId == 2);
@@ -193,12 +193,12 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal((1, false), (player.Rank, player.IsLoser));
         Assert.Equal((2, false), details.Players.Where(p => p.PlayerId != 2).Select(p => (p.Rank, p.IsLoser)).Single());
 
-        var second = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        var second = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, calledByPlayerId = 2, questionId = question.Id });
         var finished = (await second.Content.ReadFromJsonAsync<GameDetailsDto>())!;
         Assert.NotNull(finished.Finished);
         Assert.Equal([2], finished.Players.Where(p => p.IsLoser).Select(p => p.PlayerId));
 
-        var third = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 1, questionId = question.Id });
+        var third = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 1, calledByPlayerId = 1, questionId = question.Id });
         Assert.Equal(HttpStatusCode.Conflict, third.StatusCode);
     }
 
@@ -211,17 +211,17 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
 
         Assert.Equal("Chooser", game.BadPointsMode);
 
-        var withoutPoints = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        var withoutPoints = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, calledByPlayerId = 2, questionId = question.Id });
         Assert.Equal(HttpStatusCode.BadRequest, withoutPoints.StatusCode);
 
         var tooMany = await _client.PostAsJsonAsync(
             $"/api/games/{game.Id}/bad-cards",
-            new { playerId = 2, questionId = question.Id, badPoints = 6 });
+            new { playerId = 2, calledByPlayerId = 2, questionId = question.Id, badPoints = 6 });
         Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
 
         var card = await _client.PostAsJsonAsync(
             $"/api/games/{game.Id}/bad-cards",
-            new { playerId = 2, questionId = question.Id, badPoints = 2 });
+            new { playerId = 2, calledByPlayerId = 2, questionId = question.Id, badPoints = 2 });
         Assert.Equal(HttpStatusCode.OK, card.StatusCode);
         var player = (await card.Content.ReadFromJsonAsync<GameDetailsDto>())!.Players.Single(p => p.PlayerId == 2);
         Assert.Equal(2, player.BadPoints);
@@ -237,7 +237,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
 
         var response = await _client.PostAsJsonAsync(
             $"/api/games/{game.Id}/bad-cards",
-            new { playerId = 2, questionId = question.Id, badPoints = 1 });
+            new { playerId = 2, calledByPlayerId = 2, questionId = question.Id, badPoints = 1 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -266,7 +266,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         var game = await CreateGameAsync();
         var question = await CreateQuestionAsync(badPoints: 2);
 
-        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 3, questionId = question.Id });
+        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 3, calledByPlayerId = 3, questionId = question.Id });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -276,13 +276,13 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     {
         var game = await CreateGameAsync(badCardLimit: 2);
         var question = await CreateQuestionAsync(badPoints: 3);
-        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, calledByPlayerId = 2, questionId = question.Id });
 
         var doubled = await _client.PostAsJsonAsync($"/api/games/{game.Id}/doubles", new { playerId = 1 });
         Assert.Equal(HttpStatusCode.OK, doubled.StatusCode);
         Assert.Equal(1, (await doubled.Content.ReadFromJsonAsync<GameDetailsDto>())!.Players.Single(p => p.PlayerId == 1).Doubles);
 
-        var card = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, questionId = question.Id });
+        var card = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, calledByPlayerId = 2, questionId = question.Id });
         var details = (await card.Content.ReadFromJsonAsync<GameDetailsDto>())!;
         Assert.NotNull(details.Finished);
         Assert.Equal(-1, details.Players.Single(p => p.PlayerId == 1).FinalBadPoints);
@@ -346,7 +346,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     private async Task GiveABadCardAsync(GameDto game, int playerId)
     {
         var question = await CreateQuestionAsync(badPoints: 2);
-        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId, questionId = question.Id });
+        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId, calledByPlayerId = playerId, questionId = question.Id });
         response.EnsureSuccessStatusCode();
     }
 
