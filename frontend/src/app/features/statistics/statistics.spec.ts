@@ -117,23 +117,21 @@ describe('Statistics', () => {
     expect(metric(page, 'criedWolfLosses')).toBe('1');
     expect(metric(page, 'mostCorrectCalls')).toBe('3');
     expect(page.querySelector('[data-metric="mostCorrectCalls"] a')?.getAttribute('href')).toBe('/games/7/summary');
-    expect(page.querySelectorAll('.group__note')).toHaveLength(2);
-    expect(page.querySelector('[data-metric="mostCorrectCalls"] .tile__note')).not.toBeNull();
+    expect(page.querySelectorAll('.group__note')).toHaveLength(1);
+    expect(page.querySelector('[data-metric="tooMuchCalls"]')?.closest('.group')?.querySelector('.group__note')).not.toBeNull();
   });
 
-  it('shows the cried-wolf losses among the figures from the games with calls', async () => {
+  it('shows the cried-wolf losses next to the card shares', async () => {
     const page = (await render(2, statistics())).nativeElement as HTMLElement;
 
     const group = page.querySelector('[data-metric="criedWolfLosses"]')?.closest('.group');
     expect(group?.querySelector('[data-metric="caughtCardShare"]')).not.toBeNull();
-    expect(group?.querySelector('.group__note')).not.toBeNull();
   });
 
   it('leaves the games-with-calls note out when every game has calls', async () => {
     const page = (await render(2, statistics({ gamesWithCalls: 3 }))).nativeElement as HTMLElement;
 
     expect(page.querySelector('.group__note')).toBeNull();
-    expect(page.querySelector('.tile__note')).toBeNull();
   });
 
   it('shows card shares that add up to 100 %', async () => {
@@ -149,6 +147,26 @@ describe('Statistics', () => {
 
     expect(metric(page, 'caughtCardShare')?.replace(/\s/g, ' ')).toBe('29 %');
     expect(metric(page, 'falseAlarmCardShare')?.replace(/\s/g, ' ')).toBe('71 %');
+  });
+
+  it('rounds the call accuracy like the card shares', async () => {
+    const page = (await render(2, statistics({ callAccuracy: 0.285 }))).nativeElement as HTMLElement;
+
+    expect(metric(page, 'callAccuracy')?.replace(/\s/g, ' ')).toBe('29 %');
+  });
+
+  it('shows neither card share as 0 % or 100 % while both kinds of card exist', async () => {
+    const page = (await render(2, statistics({ caughtCardShare: 0.995 }))).nativeElement as HTMLElement;
+
+    expect(metric(page, 'caughtCardShare')?.replace(/\s/g, ' ')).toBe('99 %');
+    expect(metric(page, 'falseAlarmCardShare')?.replace(/\s/g, ' ')).toBe('1 %');
+  });
+
+  it('shows a card share of 100 % when every card was caught', async () => {
+    const page = (await render(2, statistics({ caughtCardShare: 1 }))).nativeElement as HTMLElement;
+
+    expect(metric(page, 'caughtCardShare')?.replace(/\s/g, ' ')).toBe('100 %');
+    expect(metric(page, 'falseAlarmCardShare')?.replace(/\s/g, ' ')).toBe('0 %');
   });
 
   it('shows a dash where there is nothing to average', async () => {

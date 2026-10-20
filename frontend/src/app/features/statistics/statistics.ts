@@ -24,7 +24,10 @@ interface TileGroup {
   /** Title under `statistics.groups.<key>`. */
   key: string;
   tiles: Tile[];
-  /** Number of games the group is counted from, when that is not all of them (`statistics.fromGamesWithCalls`). */
+  /**
+   * Number of games the call figures (this group, the next one and the eagle-eye record) are counted from, when that
+   * is not all of them (`statistics.fromGamesWithCalls`). Set on the first call group only, so the note shows once.
+   */
   fromGames?: number;
 }
 
@@ -33,8 +36,6 @@ interface GameRecord {
   key: 'worstGame' | 'bestGame' | 'mostCorrectCalls';
   icon: string;
   game: { gameId: number; finished: string; value: number } | null;
-  /** Number of games the record is looked for in, when that is not all of them (`statistics.fromGamesWithCalls`). */
-  fromGames?: number;
 }
 
 /** Shown for an average (or the loss index) with nothing to average. */
@@ -84,11 +85,18 @@ export class Statistics {
 
     const count = (value: number) => this.format(value, 0);
     const average = (value: number | null) => (value === null ? NONE : this.format(value, 2));
+    // Rounded to whole percents here, not by the formatter, so every share rounds alike: 0.285 * 100 is 28.499…
+    const percent = (value: number) => Math.round(value * 100 + 1e-9);
     const share = (value: number | null) =>
-      value === null ? NONE : this.i18n.formatNumber(value, { style: 'percent', maximumFractionDigits: 0 });
+      value === null ? NONE : this.i18n.formatNumber(percent(value) / 100, { style: 'percent', maximumFractionDigits: 0 });
     // The two card shares add up to 1; rounded each on its own they could show 99 % or 101 %, so the false-alarm
-    // share is what the rounded caught share leaves. Rounded as whole percents: 0.285 * 100 is 28.499…
-    const caughtPercent = s.caughtCardShare === null ? null : Math.round(s.caughtCardShare * 100 + 1e-9);
+    // share is what the rounded caught share leaves. Neither shows 0 % or 100 % while both kinds of card exist.
+    const caughtPercent =
+      s.caughtCardShare === null
+        ? null
+        : s.caughtCardShare > 0 && s.caughtCardShare < 1
+          ? Math.min(99, Math.max(1, percent(s.caughtCardShare)))
+          : percent(s.caughtCardShare);
     const fromGames = s.gamesWithCalls < s.gamesPlayed ? s.gamesWithCalls : undefined;
 
     return [
@@ -127,7 +135,6 @@ export class Statistics {
       },
       {
         key: 'calledOn',
-        fromGames,
         tiles: [
           { key: 'caught', icon: '🫣', value: count(s.caught), average: average(s.averageCaught) },
           { key: 'calledOn', icon: '👉', value: count(s.calledOn), average: average(s.averageCalledOn) },
@@ -156,12 +163,7 @@ export class Statistics {
       ? [
           { key: 'worstGame', icon: '💀', game: score(s.worstGame) },
           { key: 'bestGame', icon: '🏆', game: score(s.bestGame) },
-          {
-            key: 'mostCorrectCalls',
-            icon: '🦅',
-            game: tally(s.mostCorrectCalls),
-            fromGames: s.gamesWithCalls < s.gamesPlayed ? s.gamesWithCalls : undefined,
-          },
+          { key: 'mostCorrectCalls', icon: '🦅', game: tally(s.mostCorrectCalls) },
         ]
       : [];
   });

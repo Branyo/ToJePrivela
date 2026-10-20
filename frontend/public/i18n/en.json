@@ -434,8 +434,8 @@
     "back": "All players",
     "perGame": "{{value}} per game",
     "fromGamesWithCalls": {
-      "one": "From {{count}} game with calls recorded.",
-      "other": "From {{count}} games with calls recorded."
+      "one": "The call figures below come from {{count}} game with calls recorded.",
+      "other": "The call figures below come from {{count}} games with calls recorded."
     },
     "groups": {
       "games": "🎲 Games",

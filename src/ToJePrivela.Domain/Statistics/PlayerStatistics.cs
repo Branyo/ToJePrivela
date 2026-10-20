@@ -148,9 +148,11 @@ public sealed class PlayerStatistics
         var withCalls = played.Where(p => p.HasCalls).ToList();
         var callCount = withCalls.Count;
         var tooMuchCalls = withCalls.Sum(p => p.Seat.TooMuchCalls);
-        var correctCalls = withCalls.Sum(p => p.Seat.CorrectCalls);
+        var falseAlarms = withCalls.Sum(p => p.Seat.FalseAlarms);
+        var correctCalls = tooMuchCalls - falseAlarms;
         var caught = withCalls.Sum(p => p.Seat.Caught);
-        var calledOn = withCalls.Sum(p => p.Seat.Caught + p.NextSeat.FalseAlarms);
+        // The player after this one in the order of play is the one who calls their bids.
+        var calledOn = withCalls.Sum(p => p.Seat.Caught + p.Game.NextSeatOf(p.Seat).FalseAlarms);
         var cardsAfterCalls = withCalls.Sum(p => p.Seat.BadCards);
 
         return new PlayerStatistics
@@ -179,7 +181,7 @@ public sealed class PlayerStatistics
             TooMuchCalls = tooMuchCalls,
             AverageTooMuchCalls = Ratio(tooMuchCalls, callCount),
             CorrectCalls = correctCalls,
-            FalseAlarms = tooMuchCalls - correctCalls,
+            FalseAlarms = falseAlarms,
             CallAccuracy = Ratio(correctCalls, tooMuchCalls),
             Caught = caught,
             AverageCaught = Ratio(caught, callCount),
@@ -187,7 +189,7 @@ public sealed class PlayerStatistics
             AverageCalledOn = Ratio(calledOn, callCount),
             CaughtCardShare = Ratio(caught, cardsAfterCalls),
             CriedWolfLosses = withCalls.Count(p => p.IsLoss && p.Seat.FalseAlarms > p.Seat.Caught),
-            MostCorrectCalls = withCalls
+            MostCorrectCalls = played
                 .Where(p => p.Seat.CorrectCalls > 0)
                 .OrderByDescending(p => p.Seat.CorrectCalls)
                 .ThenByDescending(p => p.Game.Finished)
@@ -208,8 +210,5 @@ public sealed class PlayerStatistics
         public bool IsLoss => Losers.Contains(Seat);
 
         public bool HasCalls => Game.GamePlayers.Any(gp => gp.TooMuchCalls > 0);
-
-        /// <summary>The player after this one in the order of play: the one who calls their bids.</summary>
-        public GamePlayer NextSeat { get; } = Game.NextSeatOf(Seat);
     }
 }

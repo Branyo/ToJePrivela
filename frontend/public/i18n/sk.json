@@ -444,10 +444,10 @@
     "back": "Všetci hráči",
     "perGame": "{{value}} na hru",
     "fromGamesWithCalls": {
-      "one": "Z {{count}} hry so zaznamenanými volaniami.",
-      "few": "Z {{count}} hier so zaznamenanými volaniami.",
-      "many": "Z {{count}} hry so zaznamenanými volaniami.",
-      "other": "Z {{count}} hier so zaznamenanými volaniami."
+      "one": "Údaje o volaniach nižšie sú z {{count}} hry so zaznamenanými volaniami.",
+      "few": "Údaje o volaniach nižšie sú z {{count}} hier so zaznamenanými volaniami.",
+      "many": "Údaje o volaniach nižšie sú z {{count}} hry so zaznamenanými volaniami.",
+      "other": "Údaje o volaniach nižšie sú z {{count}} hier so zaznamenanými volaniami."
     },
     "groups": {
       "games": "🎲 Hry",

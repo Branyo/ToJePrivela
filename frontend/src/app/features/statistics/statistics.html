@@ -84,9 +84,6 @@
                     <strong class="tile__value">{{ none }}</strong>
                   }
                   <span class="tile__hint muted">{{ 'statistics.metrics.' + record.key + '.hint' | translate }}</span>
-                  @if (record.fromGames !== undefined) {
-                    <span class="tile__hint tile__note muted">{{ i18n.pluralKey('statistics.fromGamesWithCalls', record.fromGames) | translate: { count: record.fromGames } }}</span>
-                  }
                 </li>
               }
             </ul>
