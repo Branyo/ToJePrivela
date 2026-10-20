@@ -114,17 +114,6 @@
         "other": "{{count}} otázok"
       }
     },
-    "generator": {
-      "title": "🤖 Nová kategória s AI otázkami",
-      "namePlaceholder": "napr. Zvieratá, Vesmír, Jedlo…",
-      "name": "Názov kategórie",
-      "count": "Počet otázok",
-      "thinking": "Premýšľam…",
-      "generate": "✨ Vygenerovať",
-      "done": "Kategória „{{name}}“ je pripravená, nových otázok: {{count}}! ✨",
-      "nameLanguage": "Jazyk názvu",
-      "translated": "Názov do druhého jazyka preloží AI."
-    },
     "start": "🚀 Poďme hrať!",
     "starting": "Miešam… 🃏",
     "errors": {
@@ -299,13 +288,70 @@
     }
   },
   "admin": {
-    "title": "🗂️ Kategórie a AI otázky",
+    "title": "🗂️ Kategórie a otázky",
     "text": "S týmito otázkami hrajú všetci. Meniť ich môžu len správcovia.",
+    "newCategory": {
+      "title": "➕ Nová kategória",
+      "nameStep": "Názov",
+      "nameIn": {
+        "sk": "Po slovensky",
+        "en": "Po anglicky"
+      },
+      "namePlaceholder": {
+        "sk": "napr. Zvieratá, Vesmír, Jedlo…",
+        "en": "e.g. Animals, Space, Food…"
+      },
+      "namesHint": "Vyplň aspoň jeden názov; chýbajúci preloží AI.",
+      "translatedTo": {
+        "en": "Anglický názov preloží AI. Ak ho vyplníš sám, AI netreba.",
+        "sk": "Slovenský názov preloží AI. Ak ho vyplníš sám, AI netreba."
+      },
+      "questionsStep": "Otázky",
+      "sources": {
+        "none": "Zatiaľ bez otázok",
+        "ai": "✨ Vygeneruje AI",
+        "json": "📥 Import z JSON"
+      },
+      "noneHint": "Kategória bude prázdna. Otázky do nej môžeš neskôr vygenerovať alebo importovať v zozname kategórií nižšie.",
+      "count": "Počet otázok",
+      "aiHint": "AI napíše každú otázku po slovensky aj po anglicky. Môže to chvíľu trvať.",
+      "jsonLabel": "Otázky v JSON",
+      "submit": {
+        "none": "Vytvoriť kategóriu",
+        "ai": "✨ Vytvoriť a vygenerovať",
+        "json": "📥 Vytvoriť a importovať"
+      },
+      "working": "Premýšľam…",
+      "createdEmpty": "Kategória „{{name}}“ je pripravená, zatiaľ bez otázok."
+    },
     "categories": "Kategórie",
     "loading": "Načítavam kategórie…",
     "counts": "otázok: {{total}}, od AI: {{ai}}",
     "moreCount": "Počet AI otázok na pridanie do kategórie {{name}}",
     "generateMore": "✨ Pridať AI otázky",
+    "importJson": "📥 Importovať JSON",
+    "import": {
+      "label": "Otázky pre „{{name}}“ v JSON",
+      "hint": "Rovnaký formát, v akom píše AI generátor: pole JSON [{\"questionSk\": \"…\", \"questionEn\": \"…\", \"answer\": 42}]. Otázky, ktoré už kategória má, sa vynechajú.",
+      "submit": "Importovať",
+      "cancel": "Zrušiť",
+      "empty": "Najprv vlož JSON alebo vyber súbor.",
+      "unreadable": "Súbor sa nepodarilo prečítať.",
+      "done": "Do kategórie „{{name}}“ pribudlo otázok: {{count}} z {{total}}. 📥",
+      "skipped": "Vynechané:",
+      "reasons": {
+        "Malformed": "Položka {{position}}: nie je otázka s questionSk, questionEn a answer.",
+        "InvalidText": "Položka {{position}}: text otázky je príliš krátky alebo dlhý.",
+        "InvalidAnswer": "Položka {{position}}: odpoveď nie je obyčajné číslo.",
+        "AnswerTooLarge": "Položka {{position}}: odpoveď je väčšia ako 1 000 000 000 000.",
+        "StatesAnswer": "Položka {{position}}: otázka prezrádza svoju odpoveď.",
+        "Duplicate": "Položka {{position}}: kategória už túto otázku má."
+      },
+      "created": "Kategória „{{name}}“ je pripravená, importovaných otázok: {{count}} z {{total}}! 📥",
+      "pickFile": "📂 Vybrať súbor",
+      "orPaste": "…alebo JSON vlož do poľa nižšie.",
+      "fileLoaded": "Načítaný súbor: {{name}}"
+    },
     "deleteAi": "Vymazať AI otázky",
     "deleteCategory": "Vymazať kategóriu",
     "confirmAi": "Vymazať AI otázky kategórie „{{name}}“ ({{count}})? Ručne pridané otázky zostanú.",
@@ -394,11 +440,16 @@
         "NotFound": "Táto kategória neexistuje.",
         "NameTaken": "Kategória s týmto názvom už existuje.",
         "TranslationNameTaken": "Preklad tohto názvu už existuje ako kategória. Skús iný názov.",
-        "TranslationUnavailable": "AI prekladač teraz nie je dostupný. Skús to neskôr.",
+        "TranslationUnavailable": "AI prekladač teraz nie je dostupný. Vyplň názov po slovensky aj po anglicky, alebo to skús neskôr.",
         "TranslationFailed": "Názov sa nepodarilo preložiť. Skús to znova."
       },
       "QuestionGeneration": {
         "Failed": "Nepodarilo sa vygenerovať žiadne otázky. Skús to znova."
+      },
+      "QuestionImport": {
+        "InvalidJson": "Text nie je pole otázok v JSON. Skontroluj formát a skús znova.",
+        "Empty": "Pole JSON neobsahuje žiadne otázky.",
+        "TooMany": "Na jeden import je to priveľa otázok. Rozdeľ súbor a skús znova."
       },
       "Question": {
         "NotFound": "Táto otázka neexistuje.",

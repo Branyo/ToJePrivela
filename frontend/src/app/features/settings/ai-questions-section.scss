@@ -12,7 +12,7 @@
   font-weight: 700;
 }
 
-.generator,
+.step__line,
 .row__actions,
 .row__confirm {
   display: flex;
@@ -21,13 +21,68 @@
   gap: 10px;
 }
 
-.name-language {
+.names {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.name-field {
+  display: grid;
+  gap: 4px;
+}
+
+.name-field__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.question-source {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
+.new-category {
+  display: grid;
+  gap: 20px;
+}
+
+.step {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.step__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.step__title .step-number {
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+}
+
+.count-line {
+  font-weight: 500;
+}
+
+.new-category__submit {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .hint {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 0.9rem;
 }
 
@@ -78,6 +133,27 @@
   padding: 10px;
   border-radius: var(--radius);
   background: #ffe1e1;
+}
+
+.row__import {
+  display: grid;
+  gap: 8px;
+}
+
+.notice__text {
+  margin: 0;
+}
+
+.notice__details {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+}
+
+/* Only a long list scrolls; a short one would show a needless scrollbar over a fraction of a pixel. */
+.notice__details--long {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .row__actions .btn,

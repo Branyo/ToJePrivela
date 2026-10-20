@@ -6,6 +6,7 @@ using ToJePrivela.Application.QuestionCategories.Dtos;
 using ToJePrivela.Application.QuestionCategories.Mapping;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.QuestionGeneration.Mapping;
+using ToJePrivela.Application.QuestionImport;
 using ToJePrivela.Application.Questions.Mapping;
 using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
@@ -17,6 +18,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
     private readonly IQuestionCategoryRepository _categories;
     private readonly IQuestionRepository _questions;
     private readonly IQuestionGenerationService _questionGeneration;
+    private readonly IQuestionImporter _importer;
     private readonly ITextTranslator _translator;
     private readonly ICurrentLanguage _language;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +27,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
         IQuestionCategoryRepository categories,
         IQuestionRepository questions,
         IQuestionGenerationService questionGeneration,
+        IQuestionImporter importer,
         ITextTranslator translator,
         ICurrentLanguage language,
         IUnitOfWork unitOfWork)
@@ -32,6 +35,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
         _categories = categories;
         _questions = questions;
         _questionGeneration = questionGeneration;
+        _importer = importer;
         _translator = translator;
         _language = language;
         _unitOfWork = unitOfWork;
@@ -59,7 +63,22 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
             return Result.Failure<CreatedQuestionCategoryDto>(invalid);
         }
 
-        // Names are checked before translation and generation, so a rejected request never pays for AI calls.
+        // The JSON and the names are checked before translation and generation, so a rejected request never pays for
+        // AI calls.
+        IReadOnlyList<GeneratedQuestion?>? importItems = null;
+
+        if (request.QuestionsJson is not null)
+        {
+            var read = _importer.Read(request.QuestionsJson);
+
+            if (read.IsFailure)
+            {
+                return Result.Failure<CreatedQuestionCategoryDto>(read.Error);
+            }
+
+            importItems = read.Value;
+        }
+
         var nameSk = NormalizeOptionalName(request.NameSk);
         var nameEn = NormalizeOptionalName(request.NameEn);
 
@@ -98,8 +117,15 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
             return Result.Failure<CreatedQuestionCategoryDto>(QuestionGenerationErrors.For(generation));
         }
 
+        var import = importItems is null ? null : await _importer.ToQuestionsAsync(category, importItems, cancellationToken);
+
         await _categories.AddAsync(category, cancellationToken);
         await _questions.AddRangeAsync(generation.Questions, cancellationToken);
+
+        if (import is not null)
+        {
+            await _questions.AddRangeAsync(import.Questions, cancellationToken);
+        }
 
         try
         {
@@ -111,7 +137,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
             return Result.Failure<CreatedQuestionCategoryDto>(QuestionCategoryErrors.NameTaken(category.NameIn(_language.Language)));
         }
 
-        return Result.Success(QuestionCategoryMapper.ToCreatedDto(category, generation, _language.Language));
+        return Result.Success(QuestionCategoryMapper.ToCreatedDto(category, generation, import, _language.Language));
     }
 
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)

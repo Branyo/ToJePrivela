@@ -6,6 +6,8 @@ using ToJePrivela.Application.Common;
 using ToJePrivela.Application.QuestionCategories;
 using ToJePrivela.Application.QuestionCategories.Dtos;
 using ToJePrivela.Application.QuestionGeneration;
+using ToJePrivela.Application.QuestionImport;
+using ToJePrivela.Application.QuestionImport.Dtos;
 using ToJePrivela.Application.Tests.Common;
 using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
@@ -15,6 +17,15 @@ namespace ToJePrivela.Application.Tests.QuestionCategories;
 public class QuestionCategoryServiceTests
 {
     private const string ValidText = "How many players are on a football pitch?";
+
+    private const string ImportJson =
+        """
+        [{"questionSk": "Koľko hráčov je na futbalovom ihrisku?", "questionEn": "How many players are on a football pitch?", "answer": 22},
+         {"questionSk": "koľko hráčov je na futbalovom ihrisku", "questionEn": "Football players on the pitch?", "answer": 22},
+         {"questionSk": "Koľko?", "questionEn": "How many?", "answer": 1}]
+        """;
+
+    private static readonly DateTimeOffset Now = new(2026, 10, 20, 12, 0, 0, TimeSpan.Zero);
 
     private readonly IQuestionCategoryRepository _categories = Substitute.For<IQuestionCategoryRepository>();
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
@@ -31,7 +42,14 @@ public class QuestionCategoryServiceTests
         _generation.GenerateAsync(Arg.Any<QuestionCategory>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(call => Generated(call.Arg<QuestionCategory>(), call.Arg<int>(), created: call.Arg<int>()));
 
-        _sut = new QuestionCategoryService(_categories, _questions, _generation, _translator, _language, _unitOfWork);
+        _sut = new QuestionCategoryService(
+            _categories,
+            _questions,
+            _generation,
+            new QuestionImporter(_questions, new FixedBadPointsPicker(2), new FixedTimeProvider(Now)),
+            _translator,
+            _language,
+            _unitOfWork);
     }
 
     [Fact]
@@ -130,6 +148,73 @@ public class QuestionCategoryServiceTests
             Arg.Is<IEnumerable<Question>>(questions => questions.Count() == 3),
             Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_StoresTheCategoryWithItsImportedQuestionsInOneSave()
+    {
+        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest
+        {
+            NameSk = "Šport", NameEn = "Sport", QuestionCount = 0, QuestionsJson = ImportJson,
+        });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal((1, 1), (result.Value.QuestionCount, result.Value.AiQuestionCount));
+        Assert.Equal(
+            new QuestionImportSummaryDto(3, 1, [new(2, QuestionRejection.Duplicate), new(3, QuestionRejection.InvalidText)]),
+            result.Value.QuestionImport,
+            new ImportSummaryComparer());
+        await _categories.Received(1).AddAsync(Arg.Any<QuestionCategory>(), Arg.Any<CancellationToken>());
+        await _questions.Received(1).AddRangeAsync(
+            Arg.Is<IEnumerable<Question>>(questions => questions.Count() == 1 && questions.All(q => q.Source == QuestionSource.Ai)),
+            Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_StoresTheCategoryEvenWhenNoImportedQuestionIsUsable()
+    {
+        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest
+        {
+            NameSk = "Šport", NameEn = "Sport", QuestionCount = 0, QuestionsJson = "[{\"questionSk\": \"Koľko?\"}]",
+        });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.Value.QuestionImport!.Imported);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("not json", "QuestionImport.InvalidJson")]
+    [InlineData("[]", "QuestionImport.Empty")]
+    public async Task CreateAsync_RejectsUnusableJsonBeforeTranslating(string json, string code)
+    {
+        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { NameSk = "Vtáky", QuestionCount = 0, QuestionsJson = json });
+
+        Assert.Equal(code, result.Error.Code);
+        await _translator.DidNotReceive().TranslateAsync(
+            Arg.Any<string>(), Arg.Any<Language>(), Arg.Any<Language>(), Arg.Any<CancellationToken>());
+        await _categories.DidNotReceive().AddAsync(Arg.Any<QuestionCategory>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_EitherGeneratesOrImports()
+    {
+        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest
+        {
+            NameSk = "Šport", NameEn = "Sport", QuestionCount = 5, QuestionsJson = ImportJson,
+        });
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _generation.DidNotReceive().GenerateAsync(Arg.Any<QuestionCategory>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithoutJsonHasNoImportSummary()
+    {
+        var result = await _sut.CreateAsync(new CreateQuestionCategoryRequest { NameSk = "Šport", NameEn = "Sport", QuestionCount = 0 });
+
+        Assert.Null(result.Value.QuestionImport);
     }
 
     [Fact]
@@ -407,4 +492,14 @@ public class QuestionCategoryServiceTests
                 .ToList(),
             requested,
             discarded);
+
+    private sealed class ImportSummaryComparer : IEqualityComparer<QuestionImportSummaryDto?>
+    {
+        public bool Equals(QuestionImportSummaryDto? x, QuestionImportSummaryDto? y) =>
+            x is not null && y is not null
+            && (x.Received, x.Imported) == (y.Received, y.Imported)
+            && x.Rejected.SequenceEqual(y.Rejected);
+
+        public int GetHashCode(QuestionImportSummaryDto? obj) => 0;
+    }
 }

@@ -14,20 +14,33 @@ public static partial class GeneratedQuestionFilter
     /// <summary>Anything larger is unreadable in a quiz; the prompt asks for "how many millions/billions" instead.</summary>
     public const decimal MaxAnswer = 1_000_000_000_000m;
 
-    public static bool IsUsable(GeneratedQuestion question)
+    public static bool IsUsable(GeneratedQuestion question) => Check(question) is null;
+
+    /// <returns>Why the question is not usable; null when it is.</returns>
+    public static QuestionRejection? Check(GeneratedQuestion question)
     {
         ArgumentNullException.ThrowIfNull(question);
 
-        if (!Question.IsValidText(question.TextSk)
-            || !Question.IsValidText(question.TextEn)
-            || !Question.IsValidAnswer(question.Answer))
+        if (!Question.IsValidText(question.TextSk) || !Question.IsValidText(question.TextEn))
         {
-            return false;
+            return QuestionRejection.InvalidText;
+        }
+
+        if (!Question.IsValidAnswer(question.Answer))
+        {
+            return QuestionRejection.InvalidAnswer;
         }
 
         var value = Math.Abs(decimal.Parse(question.Answer, NumberStyles.Float, CultureInfo.InvariantCulture));
 
-        return value <= MaxAnswer && !StatesNumber(question.TextSk, value) && !StatesNumber(question.TextEn, value);
+        if (value > MaxAnswer)
+        {
+            return QuestionRejection.AnswerTooLarge;
+        }
+
+        return StatesNumber(question.TextSk, value) || StatesNumber(question.TextEn, value)
+            ? QuestionRejection.StatesAnswer
+            : null;
     }
 
     /// <summary>A question that states its own answer gives it away ("In 1969, which year did Apollo 11 land?").</summary>

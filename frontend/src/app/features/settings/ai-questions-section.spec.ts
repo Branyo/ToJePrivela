@@ -60,13 +60,16 @@ describe('AiQuestionsSection', () => {
     reload.flush(CATEGORIES);
   });
 
-  it('sends the new name in the language picked for it, for the AI to translate', async () => {
+  function typeName(page: HTMLElement, language: 'sk' | 'en', value: string) {
+    const name = page.querySelector<HTMLInputElement>(`.new-category__name[data-language="${language}"]`)!;
+    name.value = value;
+    name.dispatchEvent(new Event('input'));
+  }
+
+  it('sends the new name in the language it was typed in, for the AI to translate', async () => {
     const { fixture, page } = await render();
 
-    [...page.querySelectorAll<HTMLButtonElement>('.name-language .chip')].find((chip) => chip.textContent?.trim() === 'EN')!.click();
-    const name = page.querySelector<HTMLInputElement>('form .text-input:not(.count)')!;
-    name.value = 'Birds';
-    name.dispatchEvent(new Event('input'));
+    typeName(page, 'en', 'Birds');
     await fixture.whenStable();
 
     page.querySelector<HTMLButtonElement>('form button[type="submit"]')!.click();
@@ -194,7 +197,242 @@ describe('AiQuestionsSection', () => {
   it('offers to delete AI questions only where there are some', async () => {
     const { page } = await render([CATEGORIES[1], { ...CATEGORIES[0], aiQuestionCount: 0 }]);
 
-    const deleteAi = [...page.querySelectorAll<HTMLButtonElement>('.row__actions .btn--ghost:not(.danger)')];
+    const deleteAi = [...page.querySelectorAll<HTMLButtonElement>('.row__actions .btn--ghost:not(.danger):not(.row__import-open)')];
     expect(deleteAi.map((button) => button.disabled)).toEqual([false, true]);
+  });
+
+  async function openImport(fixture: { whenStable(): Promise<unknown> }, page: HTMLElement) {
+    page.querySelector<HTMLButtonElement>('.row__import-open')!.click();
+    await fixture.whenStable();
+    return page.querySelector<HTMLTextAreaElement>('.row__import .json-input__text')!;
+  }
+
+  it('imports pasted JSON into the category and lists what it left out', async () => {
+    const { fixture, page } = await render();
+    const json = '[{"questionSk": "Koľko kolies má auto?", "questionEn": "How many wheels does a car have?", "answer": 4}]';
+
+    const text = await openImport(fixture, page);
+    text.value = json;
+    text.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    page.querySelector<HTMLButtonElement>('.row__import button[type="submit"]')!.click();
+
+    const request = http.expectOne({ method: 'POST', url: '/api/question-categories/1/imported-questions' });
+    expect(request.request.body).toEqual({ json });
+    request.flush({
+      received: 3,
+      imported: 1,
+      rejected: [
+        { position: 2, reason: 'Duplicate' },
+        { position: 3, reason: 'InvalidAnswer' },
+      ],
+      questions: [],
+    });
+    flushLoad();
+    await fixture.whenStable();
+
+    expect(page.querySelector('.row__import')).toBeNull();
+    expect(page.querySelector('.notice')).not.toBeNull();
+    expect([...page.querySelectorAll('.notice__details li')].map((item) => item.textContent?.trim())).toEqual([
+      'admin.import.reasons.Duplicate',
+      'admin.import.reasons.InvalidAnswer',
+    ]);
+  });
+
+  it('puts a picked file into the text box before importing it', async () => {
+    const { fixture, page } = await render();
+    const json = '[{"questionSk": "Koľko kolies má auto?", "questionEn": "How many wheels does a car have?", "answer": 4}]';
+
+    await openImport(fixture, page);
+    const file = page.querySelector<HTMLInputElement>('.row__import .json-input__file')!;
+    Object.defineProperty(file, 'files', { value: [new File([json], 'questions.json', { type: 'application/json' })] });
+    file.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+
+    expect(page.querySelector<HTMLTextAreaElement>('.row__import .json-input__text')!.value).toBe(json);
+    http.expectNone({ method: 'POST' });
+  });
+
+  it('keeps the import open and shows why the server refused the JSON', async () => {
+    const { fixture, page } = await render();
+
+    const text = await openImport(fixture, page);
+    text.value = 'no json here';
+    text.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    page.querySelector<HTMLButtonElement>('.row__import button[type="submit"]')!.click();
+
+    http
+      .expectOne({ method: 'POST', url: '/api/question-categories/1/imported-questions' })
+      .flush({ code: 'QuestionImport.InvalidJson', detail: 'Not a JSON array.' }, { status: 400, statusText: 'Bad Request' });
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="alert"]')).not.toBeNull();
+    expect(page.querySelector<HTMLTextAreaElement>('.row__import .json-input__text')!.value).toBe('no json here');
+  });
+
+  it('closes the import without sending anything', async () => {
+    const { fixture, page } = await render();
+
+    await openImport(fixture, page);
+    page.querySelector<HTMLButtonElement>('.row__import .row__actions .btn--ghost')!.click();
+    await fixture.whenStable();
+
+    expect(page.querySelector('.row__import')).toBeNull();
+    http.expectNone({ method: 'POST' });
+  });
+
+  async function startImportedCategory(fixture: { whenStable(): Promise<unknown> }, page: HTMLElement, json: string) {
+    sourceChip(page, 'json').click();
+    await fixture.whenStable();
+    typeName(page, 'sk', 'Autobusy');
+    const text = page.querySelector<HTMLTextAreaElement>('.new-category .json-input__text')!;
+    text.value = json;
+    text.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  }
+
+  it('creates a new category with imported JSON questions instead of AI ones', async () => {
+    const { fixture, page } = await render();
+    const json = '[{"questionSk": "Koľko kolies má autobus?", "questionEn": "How many wheels does a bus have?", "answer": 6}]';
+
+    await startImportedCategory(fixture, page, json);
+    expect(page.querySelector('.new-category .count')).toBeNull();
+
+    page.querySelector<HTMLButtonElement>('.new-category button[type="submit"]')!.click();
+    const request = http.expectOne({ method: 'POST', url: '/api/question-categories' });
+    expect(request.request.body).toEqual({ nameSk: 'Autobusy', questionCount: 0, questionsJson: json });
+    request.flush({
+      id: 3,
+      name: 'Autobusy',
+      nameSk: 'Autobusy',
+      nameEn: 'Buses',
+      questionCount: 1,
+      aiQuestionCount: 1,
+      questionGeneration: { requested: 0, created: 0, discarded: 0 },
+      questionImport: { received: 2, imported: 1, rejected: [{ position: 2, reason: 'StatesAnswer' }] },
+    });
+    flushLoad();
+    await fixture.whenStable();
+
+    expect(page.querySelector('.notice')).not.toBeNull();
+    expect([...page.querySelectorAll('.notice__details li')].map((item) => item.textContent?.trim())).toEqual([
+      'admin.import.reasons.StatesAnswer',
+    ]);
+    expect(page.querySelector<HTMLTextAreaElement>('.new-category .json-input__text')!.value).toBe('');
+  });
+
+  it('puts a picked file into the new category\'s JSON box', async () => {
+    const { fixture, page } = await render();
+    const json = '[{"questionSk": "Koľko kolies má autobus?", "questionEn": "How many wheels does a bus have?", "answer": 6}]';
+
+    await startImportedCategory(fixture, page, '');
+    const file = page.querySelector<HTMLInputElement>('.new-category .json-input__file')!;
+    Object.defineProperty(file, 'files', { value: [new File([json], 'buses.json', { type: 'application/json' })] });
+    file.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+
+    expect(page.querySelector<HTMLTextAreaElement>('.new-category .json-input__text')!.value).toBe(json);
+    expect(page.querySelector<HTMLButtonElement>('.new-category button[type="submit"]')!.disabled).toBe(false);
+    http.expectNone({ method: 'POST' });
+  });
+
+  it('does not create an imported category without JSON', async () => {
+    const { fixture, page } = await render();
+
+    await startImportedCategory(fixture, page, '   ');
+
+    expect(page.querySelector<HTMLButtonElement>('.new-category button[type="submit"]')!.disabled).toBe(true);
+    http.expectNone({ method: 'POST' });
+  });
+
+  function sourceChip(page: HTMLElement, source: 'none' | 'ai' | 'json'): HTMLButtonElement {
+    const index = ['none', 'ai', 'json'].indexOf(source);
+    return page.querySelectorAll<HTMLButtonElement>('.question-source .chip')[index];
+  }
+
+  it('offers a new category without questions, with AI questions or with imported ones, AI by default', async () => {
+    const { page } = await render();
+
+    const chips = [...page.querySelectorAll<HTMLButtonElement>('.question-source .chip')];
+    expect(chips.map((chip) => chip.textContent?.trim())).toEqual([
+      'admin.newCategory.sources.none',
+      'admin.newCategory.sources.ai',
+      'admin.newCategory.sources.json',
+    ]);
+    expect(chips.map((chip) => chip.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
+  });
+
+  it('creates an empty category', async () => {
+    const { fixture, page } = await render();
+
+    sourceChip(page, 'none').click();
+    await fixture.whenStable();
+    expect(page.querySelector('.new-category .count')).toBeNull();
+    expect(page.querySelector('.new-category .json-input__text')).toBeNull();
+    typeName(page, 'sk', 'Lode');
+    await fixture.whenStable();
+
+    const submit = page.querySelector<HTMLButtonElement>('.new-category button[type="submit"]')!;
+    expect(submit.textContent?.trim()).toBe('admin.newCategory.submit.none');
+    submit.click();
+    const request = http.expectOne({ method: 'POST', url: '/api/question-categories' });
+    expect(request.request.body).toEqual({ nameSk: 'Lode', questionCount: 0 });
+    request.flush({
+      id: 3,
+      name: 'Lode',
+      nameSk: 'Lode',
+      nameEn: 'Ships',
+      questionCount: 0,
+      aiQuestionCount: 0,
+      questionGeneration: { requested: 0, created: 0, discarded: 0 },
+      questionImport: null,
+    });
+    flushLoad();
+    await fixture.whenStable();
+
+    expect(page.querySelector('.notice')).not.toBeNull();
+    expect(page.querySelector('.notice__details')).toBeNull();
+  });
+
+  it('says the AI translates a missing name only while one of the two is missing', async () => {
+    const { fixture, page } = await render();
+    const hint = () => page.querySelector('.step .hint')?.textContent?.trim();
+    expect(hint()).toBe('admin.newCategory.namesHint');
+
+    typeName(page, 'sk', 'Vtáky');
+    await fixture.whenStable();
+    expect(hint()).toBe('admin.newCategory.translatedTo.en');
+
+    typeName(page, 'en', 'Birds');
+    await fixture.whenStable();
+    expect(hint()).toBe('admin.newCategory.namesHint');
+  });
+
+  it('sends both names when both are filled in, so the AI need not translate', async () => {
+    const { fixture, page } = await render();
+
+    sourceChip(page, 'none').click();
+    typeName(page, 'sk', ' Vtáky ');
+    typeName(page, 'en', 'Birds');
+    await fixture.whenStable();
+    page.querySelector<HTMLButtonElement>('.new-category button[type="submit"]')!.click();
+
+    const request = http.expectOne({ method: 'POST', url: '/api/question-categories' });
+    expect(request.request.body).toEqual({ nameSk: 'Vtáky', nameEn: 'Birds', questionCount: 0 });
+    request.flush({
+      id: 3,
+      name: 'Vtáky',
+      nameSk: 'Vtáky',
+      nameEn: 'Birds',
+      questionCount: 0,
+      aiQuestionCount: 0,
+      questionGeneration: { requested: 0, created: 0, discarded: 0 },
+      questionImport: null,
+    });
+    flushLoad();
+    await fixture.whenStable();
   });
 });

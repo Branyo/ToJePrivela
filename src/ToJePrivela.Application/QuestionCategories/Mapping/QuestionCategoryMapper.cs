@@ -2,6 +2,8 @@ using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.QuestionCategories.Dtos;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.QuestionGeneration.Mapping;
+using ToJePrivela.Application.QuestionImport;
+using ToJePrivela.Application.QuestionImport.Mapping;
 using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
@@ -21,12 +23,19 @@ public static class QuestionCategoryMapper
     public static CreatedQuestionCategoryDto ToCreatedDto(
         QuestionCategory category,
         QuestionGenerationResult generation,
-        Language language) => new(
-        category.Id,
-        category.NameIn(language),
-        category.NameSk,
-        category.NameEn,
-        generation.Questions.Count,
-        generation.Questions.Count,
-        QuestionGenerationMapper.ToSummaryDto(generation));
+        QuestionImportOutcome? import,
+        Language language)
+    {
+        var questionCount = generation.Questions.Count + (import?.Questions.Count ?? 0);
+
+        return new(
+            category.Id,
+            category.NameIn(language),
+            category.NameSk,
+            category.NameEn,
+            questionCount,
+            questionCount,
+            QuestionGenerationMapper.ToSummaryDto(generation),
+            import is null ? null : QuestionImportMapper.ToSummaryDto(import));
+    }
 }
