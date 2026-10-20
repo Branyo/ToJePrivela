@@ -2,6 +2,7 @@ using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.QuestionGeneration;
 using ToJePrivela.Application.Rules.Dtos;
+using ToJePrivela.Application.Rules.Mapping;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Rules;
@@ -18,7 +19,7 @@ public sealed class GameRulesService : IGameRulesService
         Account.MaxPlayers,
         new LimitDto(QuestionCategory.NameMinLength, QuestionCategory.NameMaxLength),
         QuestionGenerationOptions.MaxCount,
-        [.. PlayerAvatars.All.Select(avatar => new AvatarDto(avatar.Emoji, avatar.Color))],
+        AvatarMapper.ToDtos(PlayerAvatars.All),
         new LimitDto(Account.NameMinLength, Account.NameMaxLength),
         new LimitDto(PasswordRules.MinLength, PasswordRules.MaxLength),
         new LimitDto(Question.TextMinLength, Question.TextMaxLength));
