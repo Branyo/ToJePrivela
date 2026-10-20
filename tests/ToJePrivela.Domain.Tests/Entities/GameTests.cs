@@ -579,6 +579,19 @@ public class GameTests
     }
 
     [Fact]
+    public void NextSeatOf_GoesRoundTheOrderOfPlayTheOtherWay()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start);
+        GamePlayer Seat(int playerId) => game.GamePlayers.Single(gp => gp.PlayerId == playerId);
+
+        Assert.Same(Seat(1), game.NextSeatOf(Seat(3)));
+        Assert.Same(Seat(2), game.NextSeatOf(Seat(1)));
+        Assert.Same(Seat(3), game.NextSeatOf(Seat(2)));
+        Assert.All(game.GamePlayers, gp => Assert.Equal(gp.PlayerId, game.PreviousPlayerOf(game.NextSeatOf(gp).PlayerId!.Value)));
+        Assert.Throws<ArgumentException>(() => game.NextSeatOf(new Game(TestAccountId, [3, 1], Start).GamePlayers.First()));
+    }
+
+    [Fact]
     public void AwardBadCard_LetsOnlyTheCallerOrThePlayerBeforeThemTakeTheCard()
     {
         var game = new Game(TestAccountId, [3, 1, 2], Start, badCardLimit: 10);

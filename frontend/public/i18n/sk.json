@@ -443,10 +443,18 @@
     "pick": "Vyber hráča a uvidíš jeho štatistiky.",
     "back": "Všetci hráči",
     "perGame": "{{value}} na hru",
+    "fromGamesWithCalls": {
+      "one": "Údaje o volaniach nižšie sú z {{count}} hry so zaznamenanými volaniami.",
+      "few": "Údaje o volaniach nižšie sú z {{count}} hier so zaznamenanými volaniami.",
+      "many": "Údaje o volaniach nižšie sú z {{count}} hry so zaznamenanými volaniami.",
+      "other": "Údaje o volaniach nižšie sú z {{count}} hier so zaznamenanými volaniami."
+    },
     "groups": {
       "games": "🎲 Hry",
       "cards": "🫏 Karty a body",
       "losses": "😵 Prehry",
+      "calls": "🤚 Volania „To je priveľa!“",
+      "calledOn": "🫣 Keď volajú na teba",
       "feats": "🏅 Kúsky",
       "records": "📌 Rekordy"
     },
@@ -483,6 +491,38 @@
         "label": "Index prehier",
         "hint": "Skutočný podiel prehier voči očakávanému. 1 je priemer, nad 1 prehráva častejšie, ako by mal."
       },
+      "tooMuchCalls": {
+        "label": "Volania",
+        "hint": "Koľkokrát zvolal „To je priveľa!“ v kole, ktoré skončilo kartou."
+      },
+      "correctCalls": {
+        "label": "Správne odhalenia",
+        "hint": "Volania, po ktorých kartu zobral hráč s prehnaným odhadom."
+      },
+      "falseAlarms": {
+        "label": "Falošné obvinenia",
+        "hint": "Volania, po ktorých kartu zobral sám, lebo odhad nebol prehnaný."
+      },
+      "callAccuracy": {
+        "label": "Presnosť volaní",
+        "hint": "Podiel správnych odhalení zo všetkých volaní."
+      },
+      "caught": {
+        "label": "Prichytený pri prehnanom odhade",
+        "hint": "Karty za odhad, ktorý ďalší hráč právom označil za priveľa."
+      },
+      "calledOn": {
+        "label": "Volali na neho",
+        "hint": "Koľkokrát ďalší hráč zvolal „To je priveľa!“ na jeho odhad, právom či nie."
+      },
+      "caughtCardShare": {
+        "label": "Karty za prehnaný odhad",
+        "hint": "Podiel jeho kariet, ktoré dostal za prichytenie pri prehnanom odhade."
+      },
+      "falseAlarmCardShare": {
+        "label": "Karty za falošné obvinenie",
+        "hint": "Podiel jeho kariet, ktoré dostal za vlastné neoprávnené volanie."
+      },
       "flawlessVictories": {
         "label": "Čistá výhra",
         "hint": "Hry, ktoré skončil bez jedinej trestnej karty a neprehral."
@@ -499,6 +539,10 @@
         "label": "Do mínusu",
         "hint": "Hry ukončené pod nulou konečných bodov."
       },
+      "criedWolfLosses": {
+        "label": "Falošný poplašník",
+        "hint": "Prehry s viac kartami za falošné obvinenia ako za prehnané odhady."
+      },
       "worstGame": {
         "label": "Najhoršia hra",
         "hint": "Najviac konečných trestných bodov v jednej hre."
@@ -506,6 +550,10 @@
       "bestGame": {
         "label": "Najlepšia hra",
         "hint": "Najmenej konečných trestných bodov v jednej hre."
+      },
+      "mostCorrectCalls": {
+        "label": "Orlie oko",
+        "hint": "Najviac správnych odhalení v jednej hre."
       }
     }
   }

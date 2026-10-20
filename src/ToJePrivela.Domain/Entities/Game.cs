@@ -105,11 +105,21 @@ public class Game
     /// The player before <paramref name="playerId"/> in the order of play (<see cref="GamePlayer.Seat"/>, going round):
     /// whose bid that player called "To je priveľa!" on. Null for a player not in the game.
     /// </summary>
-    public int? PreviousPlayerOf(int playerId)
+    public int? PreviousPlayerOf(int playerId) => SeatBeside(gp => gp.PlayerId == playerId, -1)?.PlayerId;
+
+    /// <summary>
+    /// The seat after <paramref name="seat"/> in the order of play (going round): the one who calls "To je priveľa!"
+    /// on its bids, the reverse of <see cref="PreviousPlayerOf"/>.
+    /// </summary>
+    public GamePlayer NextSeatOf(GamePlayer seat) =>
+        SeatBeside(gp => gp == seat, 1) ?? throw new ArgumentException("The seat is not in this game.", nameof(seat));
+
+    /// <summary>The seat <paramref name="offset"/> places from the matching one in the order of play, going round.</summary>
+    private GamePlayer? SeatBeside(Predicate<GamePlayer> match, int offset)
     {
         var seats = PlayersInSeatOrder.ToList();
-        var index = seats.FindIndex(gp => gp.PlayerId == playerId);
-        return index < 0 ? null : seats[(index - 1 + seats.Count) % seats.Count].PlayerId;
+        var index = seats.FindIndex(match);
+        return index < 0 ? null : seats[(index + offset + seats.Count) % seats.Count];
     }
 
     /// <param name="callerId">

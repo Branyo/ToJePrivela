@@ -433,10 +433,16 @@
     "pick": "Pick a player to see their statistics.",
     "back": "All players",
     "perGame": "{{value}} per game",
+    "fromGamesWithCalls": {
+      "one": "The call figures below come from {{count}} game with calls recorded.",
+      "other": "The call figures below come from {{count}} games with calls recorded."
+    },
     "groups": {
       "games": "🎲 Games",
       "cards": "🫏 Cards & points",
       "losses": "😵 Losses",
+      "calls": "🤚 \"That's too much!\" calls",
+      "calledOn": "🫣 When others call you",
       "feats": "🏅 Feats",
       "records": "📌 Records"
     },
@@ -473,6 +479,38 @@
         "label": "Loss index",
         "hint": "Actual loss rate over the expected one. 1 is average, above 1 loses more often than chance."
       },
+      "tooMuchCalls": {
+        "label": "Calls made",
+        "hint": "Times they called \"That's too much!\" in a round that ended with a card."
+      },
+      "correctCalls": {
+        "label": "Correct calls",
+        "hint": "Calls after which the overbidding player took the card."
+      },
+      "falseAlarms": {
+        "label": "False alarms",
+        "hint": "Calls after which they took the card themselves: the estimate was not too much."
+      },
+      "callAccuracy": {
+        "label": "Call accuracy",
+        "hint": "Share of correct calls out of all calls."
+      },
+      "caught": {
+        "label": "Caught overbidding",
+        "hint": "Cards for an estimate the next player rightly called too much."
+      },
+      "calledOn": {
+        "label": "Times called on",
+        "hint": "Times the next player called their estimate too much, rightly or not."
+      },
+      "caughtCardShare": {
+        "label": "Cards for overbidding",
+        "hint": "Share of their cards taken for being caught overbidding."
+      },
+      "falseAlarmCardShare": {
+        "label": "Cards for false alarms",
+        "hint": "Share of their cards taken for their own wrong calls."
+      },
       "flawlessVictories": {
         "label": "Flawless victory",
         "hint": "Games you ended with no bad card and did not lose."
@@ -489,6 +527,10 @@
         "label": "Reverser",
         "hint": "Games ended below zero final points."
       },
+      "criedWolfLosses": {
+        "label": "Cried wolf",
+        "hint": "Losses with more cards for false alarms than for overbidding."
+      },
       "worstGame": {
         "label": "Worst single game",
         "hint": "Most final bad points in one game."
@@ -496,6 +538,10 @@
       "bestGame": {
         "label": "Best single game",
         "hint": "Fewest final bad points in one game."
+      },
+      "mostCorrectCalls": {
+        "label": "Eagle eye",
+        "hint": "Most correct calls in one game."
       }
     }
   }

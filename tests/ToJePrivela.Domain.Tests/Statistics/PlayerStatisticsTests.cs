@@ -26,6 +26,13 @@ public class PlayerStatisticsTests
         Assert.Null(statistics.LossIndex);
         Assert.Null(statistics.WorstGame);
         Assert.Null(statistics.BestGame);
+        Assert.Equal(0, statistics.GamesWithCalls);
+        Assert.Null(statistics.AverageTooMuchCalls);
+        Assert.Null(statistics.CallAccuracy);
+        Assert.Null(statistics.AverageCaught);
+        Assert.Null(statistics.AverageCalledOn);
+        Assert.Null(statistics.CaughtCardShare);
+        Assert.Null(statistics.MostCorrectCalls);
     }
 
     [Fact]
@@ -164,6 +171,82 @@ public class PlayerStatisticsTests
         Assert.Equal(new GameScore(0, Start.AddHours(4), 0), statistics.BestGame);
     }
 
+    [Fact]
+    public void For_CountsCallsTheirAccuracyAndTimesTheBidWasCalled()
+    {
+        // Seats Ana, Bo, Cy: Ana calls Cy's bids, Bo calls Ana's.
+        var game = Finished(NewGame(Ana, Bo, Cy)
+            .Call(caller: Ana, taker: Cy)
+            .Call(caller: Ana, taker: Ana)
+            .Call(caller: Bo, taker: Ana)
+            .Call(caller: Bo, taker: Bo));
+
+        var ana = PlayerStatistics.For(Ana, [game]);
+
+        Assert.Equal(1, ana.GamesWithCalls);
+        Assert.Equal((2, 1, 1), (ana.TooMuchCalls, ana.CorrectCalls, ana.FalseAlarms));
+        Assert.Equal(2, ana.AverageTooMuchCalls);
+        Assert.Equal(0.5, ana.CallAccuracy);
+        Assert.Equal(1, ana.Caught);
+        // Caught once, and once Bo's false alarm.
+        Assert.Equal(2, ana.CalledOn);
+        Assert.Equal(2, ana.AverageCalledOn);
+        Assert.Equal(0.5, ana.CaughtCardShare);
+    }
+
+    [Fact]
+    public void For_CountsTheLastSeatsBidsAsCalledByTheFirstSeat()
+    {
+        var game = Finished(NewGame(Ana, Bo, Cy)
+            .Call(caller: Ana, taker: Cy)
+            .Call(caller: Ana, taker: Ana));
+
+        var cy = PlayerStatistics.For(Cy, [game]);
+
+        Assert.Equal((1, 2), (cy.Caught, cy.CalledOn));
+        Assert.Equal(1, cy.CaughtCardShare);
+        Assert.Null(cy.CallAccuracy);
+    }
+
+    [Fact]
+    public void For_LeavesGamesPlayedBeforeCallsWereRecordedOutOfTheCallFigures()
+    {
+        var withCalls = Finished(NewGame(Ana, Bo).Call(caller: Bo, taker: Ana).Call(caller: Ana, taker: Ana));
+        var beforeCalls = Finished(NewGame(Ana, Bo).Cards(Ana, 1, 1).Cards(Bo, 1)).WithoutCallData();
+
+        var statistics = PlayerStatistics.For(Ana, [withCalls, beforeCalls]);
+
+        Assert.Equal((2, 1), (statistics.GamesPlayed, statistics.GamesWithCalls));
+        Assert.Equal(1, statistics.AverageTooMuchCalls);
+        Assert.Equal(1, statistics.AverageCaught);
+        // Only the two cards of the game with calls are shared out.
+        Assert.Equal(0.5, statistics.CaughtCardShare);
+    }
+
+    [Fact]
+    public void For_CountsALossWithMoreFalseAlarmsThanCatchesAsCryingWolf()
+    {
+        var criedWolf = Finished(NewGame(Ana, Bo).Call(caller: Ana, taker: Ana).Call(caller: Ana, taker: Ana).Call(caller: Bo, taker: Ana));
+        var overbid = Finished(NewGame(Ana, Bo).Call(caller: Ana, taker: Ana).Call(caller: Bo, taker: Ana).Call(caller: Bo, taker: Ana));
+        var won = Finished(NewGame(Ana, Bo).Call(caller: Ana, taker: Ana).Cards(Bo, 5));
+
+        var statistics = PlayerStatistics.For(Ana, [criedWolf, overbid, won]);
+
+        Assert.Equal(2, statistics.Losses);
+        Assert.Equal(1, statistics.CriedWolfLosses);
+    }
+
+    [Fact]
+    public void For_PicksTheGameWithTheMostCorrectCallsAndTheLatestOneOnATie()
+    {
+        var early = Finished(NewGame(Ana, Bo).Call(caller: Ana, taker: Bo).Call(caller: Ana, taker: Bo), Start.AddHours(1));
+        var late = Finished(NewGame(Ana, Bo).Call(caller: Ana, taker: Bo).Call(caller: Ana, taker: Bo), Start.AddHours(3));
+        var fewer = Finished(NewGame(Ana, Bo).Call(caller: Ana, taker: Bo), Start.AddHours(4));
+
+        Assert.Equal(new GameTally(0, Start.AddHours(3), 2), PlayerStatistics.For(Ana, [early, late, fewer]).MostCorrectCalls);
+        Assert.Null(PlayerStatistics.For(Bo, [early, late, fewer]).MostCorrectCalls);
+    }
+
     private static Game NewGame(params int[] playerIds) => NewGame(playerIds, Game.MaxBadCardLimit);
 
     private static Game NewGameWithLimit(int limit, params int[] playerIds) => NewGame(playerIds, limit);
@@ -187,6 +270,31 @@ internal static class GameTestExtensions
         {
             var question = new Question("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), points, QuestionSource.Manual, CreatedAt);
             game.AwardBadCard(playerId, playerId, question, null, game.Started!.Value.AddMinutes(1));
+        }
+
+        return game;
+    }
+
+    /// <summary>A card for <paramref name="taker"/> after <paramref name="caller"/> called "To je priveľa!".</summary>
+    public static Game Call(this Game game, int caller, int taker, int badPoints = 1)
+    {
+        var question = new Question("Koľko kolies má auto?", "How many wheels does a car have?", "4", new QuestionCategory("Autá", "Cars"), badPoints, QuestionSource.Manual, CreatedAt);
+        game.AwardBadCard(taker, caller, question, null, game.Started!.Value.AddMinutes(1));
+        return game;
+    }
+
+    /// <summary>
+    /// Clears the call counters, as in a game played before calls were recorded. The domain never gets there, so
+    /// the private setters are written the way EF writes them.
+    /// </summary>
+    public static Game WithoutCallData(this Game game)
+    {
+        foreach (var seat in game.GamePlayers)
+        {
+            foreach (var counter in new[] { nameof(GamePlayer.TooMuchCalls), nameof(GamePlayer.FalseAlarms), nameof(GamePlayer.Caught) })
+            {
+                typeof(GamePlayer).GetProperty(counter)!.SetValue(seat, 0);
+            }
         }
 
         return game;

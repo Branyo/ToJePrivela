@@ -295,6 +295,13 @@ a `CreatedAt` timestamp.
   the actual loss rate over the expected one, the average of (losers / players) per game, so a shared loss weighs as much as chance says. A closest escape is
   exactly one final point below the loser; best and worst games pick the latest game on a tie. Averages
   and the loss index are null without anything to average. The frontend shows it at `/statistics`.
+  The "To je priveľa!" figures come only from games with calls (`GamesWithCalls`: any seat's `TooMuchCalls` above 0),
+  since games played before calls were recorded hold zeros; their averages are per those games. Calls made, correct
+  calls, false alarms and call accuracy (correct / calls) come from the player's own seat; times called on is
+  `Caught` plus the next seat's `FalseAlarms` (a caller always calls the bid of the player before them, wrapping
+  round). Every card after a call is a catch or a false alarm, so the card shares split the player's cards between
+  the two. "Cried wolf" is a loss with more false-alarm cards than catches; "Eagle eye" is the game with the
+  most correct calls (latest on a tie, null without one).
 
 ## Frontend
 

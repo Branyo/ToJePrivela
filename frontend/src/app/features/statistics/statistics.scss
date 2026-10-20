@@ -91,6 +91,11 @@
   font-size: 1.15rem;
 }
 
+.group__note {
+  margin: -6px 0 10px;
+  font-size: 0.9rem;
+}
+
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));

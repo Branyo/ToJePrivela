@@ -4,7 +4,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { EMPTY, catchError, switchMap, tap } from 'rxjs';
-import { GameScore, Player, PlayerStatistics } from '../../core/api/models';
+import { Player, PlayerStatistics } from '../../core/api/models';
 import { PlayersApi } from '../../core/api/players-api';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
@@ -24,12 +24,18 @@ interface TileGroup {
   /** Title under `statistics.groups.<key>`. */
   key: string;
   tiles: Tile[];
+  /**
+   * Number of games the call figures (this group, the next one and the eagle-eye record) are counted from, when that
+   * is not all of them (`statistics.fromGamesWithCalls`). Set on the first call group only, so the note shows once.
+   */
+  fromGames?: number;
 }
 
-interface ScoreRecord {
-  key: 'worstGame' | 'bestGame';
+/** One game standing out, with its value and the game to link to. */
+interface GameRecord {
+  key: 'worstGame' | 'bestGame' | 'mostCorrectCalls';
   icon: string;
-  score: GameScore | null;
+  game: { gameId: number; finished: string; value: number } | null;
 }
 
 /** Shown for an average (or the loss index) with nothing to average. */
@@ -79,6 +85,19 @@ export class Statistics {
 
     const count = (value: number) => this.format(value, 0);
     const average = (value: number | null) => (value === null ? NONE : this.format(value, 2));
+    // Rounded to whole percents here, not by the formatter, so every share rounds alike: 0.285 * 100 is 28.499…
+    const percent = (value: number) => Math.round(value * 100 + 1e-9);
+    const share = (value: number | null) =>
+      value === null ? NONE : this.i18n.formatNumber(percent(value) / 100, { style: 'percent', maximumFractionDigits: 0 });
+    // The two card shares add up to 1; rounded each on its own they could show 99 % or 101 %, so the false-alarm
+    // share is what the rounded caught share leaves. Neither shows 0 % or 100 % while both kinds of card exist.
+    const caughtPercent =
+      s.caughtCardShare === null
+        ? null
+        : s.caughtCardShare > 0 && s.caughtCardShare < 1
+          ? Math.min(99, Math.max(1, percent(s.caughtCardShare)))
+          : percent(s.caughtCardShare);
+    const fromGames = s.gamesWithCalls < s.gamesPlayed ? s.gamesWithCalls : undefined;
 
     return [
       {
@@ -105,6 +124,26 @@ export class Statistics {
         ],
       },
       {
+        key: 'calls',
+        fromGames,
+        tiles: [
+          { key: 'tooMuchCalls', icon: '🤚', value: count(s.tooMuchCalls), average: average(s.averageTooMuchCalls) },
+          { key: 'correctCalls', icon: '🧑‍⚖️', value: count(s.correctCalls) },
+          { key: 'falseAlarms', icon: '🤨', value: count(s.falseAlarms) },
+          { key: 'callAccuracy', icon: '🔍', value: share(s.callAccuracy) },
+        ],
+      },
+      {
+        key: 'calledOn',
+        tiles: [
+          { key: 'caught', icon: '🫣', value: count(s.caught), average: average(s.averageCaught) },
+          { key: 'calledOn', icon: '👉', value: count(s.calledOn), average: average(s.averageCalledOn) },
+          { key: 'caughtCardShare', icon: '📈', value: share(caughtPercent === null ? null : caughtPercent / 100) },
+          { key: 'falseAlarmCardShare', icon: '📢', value: share(caughtPercent === null ? null : (100 - caughtPercent) / 100) },
+          { key: 'criedWolfLosses', icon: '🚨', value: count(s.criedWolfLosses) },
+        ],
+      },
+      {
         key: 'feats',
         tiles: [
           { key: 'flawlessVictories', icon: '✨', value: count(s.flawlessVictories) },
@@ -116,12 +155,15 @@ export class Statistics {
     ];
   });
 
-  protected readonly records = computed<ScoreRecord[]>(() => {
+  protected readonly records = computed<GameRecord[]>(() => {
     const s = this.statistics();
+    const score = (g: PlayerStatistics['worstGame']) => g && { gameId: g.gameId, finished: g.finished, value: g.finalBadPoints };
+    const tally = (g: PlayerStatistics['mostCorrectCalls']) => g && { gameId: g.gameId, finished: g.finished, value: g.count };
     return s
       ? [
-          { key: 'worstGame', icon: '💀', score: s.worstGame },
-          { key: 'bestGame', icon: '🏆', score: s.bestGame },
+          { key: 'worstGame', icon: '💀', game: score(s.worstGame) },
+          { key: 'bestGame', icon: '🏆', game: score(s.bestGame) },
+          { key: 'mostCorrectCalls', icon: '🦅', game: tally(s.mostCorrectCalls) },
         ]
       : [];
   });

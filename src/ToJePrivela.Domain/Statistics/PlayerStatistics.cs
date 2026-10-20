@@ -6,10 +6,15 @@ namespace ToJePrivela.Domain.Statistics;
 /// <summary>One game's final bad points for a player, and the game it was scored in.</summary>
 public sealed record GameScore(int GameId, DateTime Finished, int FinalBadPoints);
 
+/// <summary>How many times something happened to a player in one game, and the game it happened in.</summary>
+public sealed record GameTally(int GameId, DateTime Finished, int Count);
+
 /// <summary>
 /// A player's record over their counted games: started, finished, not cancelled and with a loser. Averages are per counted game
 /// and null when there is none.
 /// Who lost each game is the game's own verdict, stored when it finished (<see cref="GamePlayer.IsLoser"/>).
+/// The "To je priveľa!" figures come only from games with calls (<see cref="GamesWithCalls"/>): games played before calls
+/// were recorded hold none, so they would only water the averages and shares down.
 /// </summary>
 public sealed class PlayerStatistics
 {
@@ -68,11 +73,56 @@ public sealed class PlayerStatistics
     /// <summary>Games the player finished with negative final bad points.</summary>
     public int Reversals { get; private init; }
 
+    /// <summary>
+    /// Counted games with calls recorded: every card of a game is taken after a call, so a game with cards but no call
+    /// is one played before calls were recorded. The call averages and card shares are per these games.
+    /// </summary>
+    public int GamesWithCalls { get; private init; }
+
+    /// <summary>Times the player called "To je priveľa!" in a round that ended with a card.</summary>
+    public int TooMuchCalls { get; private init; }
+
+    public double? AverageTooMuchCalls { get; private init; }
+
+    /// <summary>Calls after which the bidder took the card: the estimate really was too much.</summary>
+    public int CorrectCalls { get; private init; }
+
+    /// <summary>Calls after which the player took the card themselves: the estimate was not too much after all.</summary>
+    public int FalseAlarms { get; private init; }
+
+    /// <summary>Correct calls out of all calls, from 0 to 1; null without a call.</summary>
+    public double? CallAccuracy { get; private init; }
+
+    /// <summary>Cards the player took because the next player rightly called their bid too much.</summary>
+    public int Caught { get; private init; }
+
+    public double? AverageCaught { get; private init; }
+
+    /// <summary>
+    /// Times the next player called the player's bid too much: caught, or the next player's false alarm (a caller
+    /// always calls the bid of the player before them).
+    /// </summary>
+    public int CalledOn { get; private init; }
+
+    public double? AverageCalledOn { get; private init; }
+
+    /// <summary>
+    /// Of the player's cards in games with calls, the share taken for being caught overbidding, from 0 to 1; null
+    /// without such a card. The rest are their false alarms.
+    /// </summary>
+    public double? CaughtCardShare { get; private init; }
+
+    /// <summary>"Cried wolf": games the player lost holding more false-alarm cards than cards for being caught.</summary>
+    public int CriedWolfLosses { get; private init; }
+
     /// <summary>Most final bad points in one game; the latest such game on a tie.</summary>
     public GameScore? WorstGame { get; private init; }
 
     /// <summary>Fewest final bad points in one game; the latest such game on a tie.</summary>
     public GameScore? BestGame { get; private init; }
+
+    /// <summary>"Eagle eye": most correct calls in one game; the latest such game on a tie, null without a correct call.</summary>
+    public GameTally? MostCorrectCalls { get; private init; }
 
     /// <param name="games">Any games; only the counted ones the player took part in are used.</param>
     public static PlayerStatistics For(int playerId, IEnumerable<Game> games)
@@ -95,17 +145,26 @@ public sealed class PlayerStatistics
             .OrderByDescending(s => s.Finished)
             .ThenByDescending(s => s.GameId)
             .ToList();
+        var withCalls = played.Where(p => p.HasCalls).ToList();
+        var callCount = withCalls.Count;
+        var tooMuchCalls = withCalls.Sum(p => p.Seat.TooMuchCalls);
+        var falseAlarms = withCalls.Sum(p => p.Seat.FalseAlarms);
+        var correctCalls = tooMuchCalls - falseAlarms;
+        var caught = withCalls.Sum(p => p.Seat.Caught);
+        // The player after this one in the order of play is the one who calls their bids.
+        var calledOn = withCalls.Sum(p => p.Seat.Caught + p.Game.NextSeatOf(p.Seat).FalseAlarms);
+        var cardsAfterCalls = withCalls.Sum(p => p.Seat.BadCards);
 
         return new PlayerStatistics
         {
             GamesPlayed = count,
             BadCards = badCards,
-            AverageBadCards = Average(badCards, count),
+            AverageBadCards = Ratio(badCards, count),
             FinalBadPoints = finalBadPoints,
-            AverageFinalBadPoints = Average(finalBadPoints, count),
+            AverageFinalBadPoints = Ratio(finalBadPoints, count),
             Doubles = doubles,
-            AverageDoubles = Average(doubles, count),
-            AveragePlayers = Average(played.Sum(p => p.Game.GamePlayers.Count), count),
+            AverageDoubles = Ratio(doubles, count),
+            AveragePlayers = Ratio(played.Sum(p => p.Game.GamePlayers.Count), count),
             Losses = losses,
             SharedLosses = played.Count(p => p.IsLoss && p.Losers.Count > 1),
             // Every counted game has a loser, so the expected losses are above zero whenever there is a game.
@@ -118,16 +177,38 @@ public sealed class PlayerStatistics
             // Stable sorts over the latest-first list keep the latest game on a tie.
             WorstGame = scores.OrderByDescending(s => s.FinalBadPoints).FirstOrDefault(),
             BestGame = scores.OrderBy(s => s.FinalBadPoints).FirstOrDefault(),
+            GamesWithCalls = callCount,
+            TooMuchCalls = tooMuchCalls,
+            AverageTooMuchCalls = Ratio(tooMuchCalls, callCount),
+            CorrectCalls = correctCalls,
+            FalseAlarms = falseAlarms,
+            CallAccuracy = Ratio(correctCalls, tooMuchCalls),
+            Caught = caught,
+            AverageCaught = Ratio(caught, callCount),
+            CalledOn = calledOn,
+            AverageCalledOn = Ratio(calledOn, callCount),
+            CaughtCardShare = Ratio(caught, cardsAfterCalls),
+            CriedWolfLosses = withCalls.Count(p => p.IsLoss && p.Seat.FalseAlarms > p.Seat.Caught),
+            MostCorrectCalls = played
+                .Where(p => p.Seat.CorrectCalls > 0)
+                .OrderByDescending(p => p.Seat.CorrectCalls)
+                .ThenByDescending(p => p.Game.Finished)
+                .ThenByDescending(p => p.Game.Id)
+                .Select(p => new GameTally(p.Game.Id, p.Game.Finished!.Value, p.Seat.CorrectCalls))
+                .FirstOrDefault(),
         };
     }
 
     private static IReadOnlyList<GamePlayer> Losers(Game game) =>
         game.GamePlayers.Where(gp => gp.IsLoser).ToList();
 
-    private static double? Average(int total, int count) => count == 0 ? null : (double)total / count;
+    /// <summary>An average or a share alike: null when there is nothing to divide by.</summary>
+    private static double? Ratio(int part, int whole) => whole == 0 ? null : (double)part / whole;
 
     private sealed record PlayedGame(Game Game, GamePlayer Seat, IReadOnlyList<GamePlayer> Losers)
     {
         public bool IsLoss => Losers.Contains(Seat);
+
+        public bool HasCalls => Game.GamePlayers.Any(gp => gp.TooMuchCalls > 0);
     }
 }
