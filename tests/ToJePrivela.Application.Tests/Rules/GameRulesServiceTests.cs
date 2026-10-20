@@ -29,6 +29,8 @@ public class GameRulesServiceTests
     [Fact]
     public void Get_ServesTheAvatarPoolInItsOrder()
     {
-        Assert.Equal(PlayerAvatars.All, _rules.Avatars);
+        Assert.Equal(
+            PlayerAvatars.All.Select(avatar => (avatar.Emoji, avatar.Color)),
+            _rules.Avatars.Select(avatar => (avatar.Emoji, avatar.Color)));
     }
 }

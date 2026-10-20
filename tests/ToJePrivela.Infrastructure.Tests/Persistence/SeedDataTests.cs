@@ -23,7 +23,7 @@ public class SeedDataTests : IDisposable
 
         var avatars = await context.Players.Select(p => p.Avatar).ToListAsync();
 
-        Assert.All(avatars, avatar => Assert.Contains(avatar, Domain.Entities.PlayerAvatars.All));
+        Assert.All(avatars, avatar => Assert.Contains(avatar, Domain.Entities.PlayerAvatars.Emojis));
     }
 
     [Fact]

@@ -9,6 +9,7 @@ using ToJePrivela.Application.QuestionGeneration.Dtos;
 using ToJePrivela.Application.QuestionGeneration.Mapping;
 using ToJePrivela.Application.Questions.Dtos;
 using ToJePrivela.Application.Questions.Mapping;
+using ToJePrivela.Application.Rules.Mapping;
 using ToJePrivela.Application.Tests.Common;
 using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
@@ -27,6 +28,15 @@ public class MapperTests
         Assert.Equal(4, dto.Id);
         Assert.Equal("Brano", dto.Name);
         Assert.Equal("🦊", dto.Avatar);
+    }
+
+    [Fact]
+    public void AvatarMapper_CopiesEmojiAndColor()
+    {
+        var dto = AvatarMapper.ToDto(new PlayerAvatar("🦊", "#3ddc97"));
+
+        Assert.Equal("🦊", dto.Emoji);
+        Assert.Equal("#3ddc97", dto.Color);
     }
 
     [Fact]

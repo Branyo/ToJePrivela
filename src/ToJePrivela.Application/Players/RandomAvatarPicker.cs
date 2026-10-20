@@ -11,8 +11,8 @@ public sealed class RandomAvatarPicker : IAvatarPicker
             .GroupBy(avatar => avatar)
             .ToDictionary(group => group.Key, group => group.Count());
 
-        var fewestUses = PlayerAvatars.All.Min(avatar => uses.GetValueOrDefault(avatar));
-        var candidates = PlayerAvatars.All.Where(avatar => uses.GetValueOrDefault(avatar) == fewestUses).ToList();
+        var fewestUses = PlayerAvatars.Emojis.Min(avatar => uses.GetValueOrDefault(avatar));
+        var candidates = PlayerAvatars.Emojis.Where(avatar => uses.GetValueOrDefault(avatar) == fewestUses).ToList();
 
         return candidates[Random.Shared.Next(candidates.Count)];
     }

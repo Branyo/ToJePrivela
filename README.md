@@ -147,7 +147,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/auth/accounts` | Anonymous; body `{ name, password }`; creates a login (never an admin) and signs it in; 409 `Auth.NameTaken` |
 | GET | `/api/auth/me` | The signed-in login `{ id, name, isAdmin }` |
 | PUT | `/api/auth/password` | Body `{ currentPassword, newPassword }`; sets a new password, ends every other sign-in of the login and returns a fresh `{ accessToken, expiresAt, account }`; 400 `Auth.CurrentPasswordWrong` (not 401: the sign-in itself is fine) / `Auth.SamePassword`, 409 `Auth.AdminPasswordFromConfig` for an admin |
-| GET | `/api/rules` | Anonymous; includes `loginName`, `password` and `questionText` length limits |
+| GET | `/api/rules` | Anonymous; includes `loginName`, `password` and `questionText` length limits and the avatar pool as `avatars: [{ emoji, color }]` |
 | GET | `/api/info` | Anonymous; `{ title, version }` — `version` is `"unknown"` for an unversioned build |
 | GET | `/api/health` | Anonymous, plain HTTP allowed; `Healthy` (200) when the database answers a real query within 2 s, else 503; healthy answers are cached for 5 s |
 | GET | `/api/players` | |
@@ -243,6 +243,11 @@ a `CreatedAt` timestamp.
   for players),
   so duplicates are rejected by the database as well as by the use case. A duplicate that slips past
   the check (two concurrent creates) surfaces as `UniqueConstraintException` and becomes a 409.
+- **Player avatars.** A player is given an emoji from `PlayerAvatars.All` on creation (random among the least
+  used ones); `Players.Avatar` stores only the emoji. Each pool entry is a `PlayerAvatar(Emoji, Color)` record, so the
+  background colour an avatar is shown on lives in the backend next to its emoji and is changed there, one avatar at a
+  time; `/api/rules` serves the pool and the frontend only paints the colour it gets (a neutral grey for an emoji the
+  pool does not list).
 - **Questions belong to a category.** `Questions.CategoryId` is a foreign key with `ON DELETE CASCADE`.
 - **Least-viewed rotation.** `GET /api/questions/random` picks at random among the questions with the
   lowest `ViewCount` in the selected categories, so no question repeats until every one in the

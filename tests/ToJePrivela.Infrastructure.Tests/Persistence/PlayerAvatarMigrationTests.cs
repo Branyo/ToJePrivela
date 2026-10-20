@@ -35,7 +35,7 @@ public class PlayerAvatarMigrationTests : IDisposable
         var players = await context.Players.ToListAsync();
 
         Assert.Equal(7, players.Count);
-        Assert.All(players, player => Assert.Contains(player.Avatar, PlayerAvatars.All));
+        Assert.All(players, player => Assert.Contains(player.Avatar, PlayerAvatars.Emojis));
     }
 
     private ToJePrivelaDbContext CreateContext() =>
