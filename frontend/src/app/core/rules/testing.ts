@@ -10,7 +10,11 @@ export const TEST_RULES: GameRules = {
   maxPlayersPerAccount: 100,
   categoryName: { min: 2, max: 32 },
   maxAiQuestionCount: 200,
-  avatars: ['🦊', '🐸', '🐼'],
+  avatars: [
+    { emoji: '🦊', color: '#3ddc97' },
+    { emoji: '🐸', color: '#ff9f1c' },
+    { emoji: '🐼', color: '#4cc9f0' },
+  ],
   loginName: { min: 3, max: 30 },
   password: { min: 6, max: 128 },
   questionText: { min: 8, max: 512 },

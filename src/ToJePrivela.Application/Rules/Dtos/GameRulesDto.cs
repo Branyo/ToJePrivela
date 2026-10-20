@@ -3,12 +3,15 @@ namespace ToJePrivela.Application.Rules.Dtos;
 /// <summary>Inclusive bounds of a number or of a text's length.</summary>
 public sealed record LimitDto(int Min, int Max);
 
+/// <summary>An emoji a player can be given and the background colour (<c>#rrggbb</c>) it is shown on.</summary>
+public sealed record AvatarDto(string Emoji, string Color);
+
 /// <summary>
 /// The limits the domain enforces, served so clients validate and render with the same numbers instead of
 /// copies of them.
 /// </summary>
 /// <param name="MaxPlayersPerAccount">How many players one login may keep.</param>
-/// <param name="Avatars">Every avatar a player can be given, in a fixed order.</param>
+/// <param name="Avatars">Every avatar a player can be given with its background colour, in a fixed order.</param>
 /// <param name="LoginName">Length of a new login's name.</param>
 /// <param name="Password">Length of a new login's password.</param>
 /// <param name="QuestionText">Length of a question's text, in either language.</param>
@@ -21,7 +24,7 @@ public sealed record GameRulesDto(
     int MaxPlayersPerAccount,
     LimitDto CategoryName,
     int MaxAiQuestionCount,
-    IReadOnlyList<string> Avatars,
+    IReadOnlyList<AvatarDto> Avatars,
     LimitDto LoginName,
     LimitDto Password,
     LimitDto QuestionText);

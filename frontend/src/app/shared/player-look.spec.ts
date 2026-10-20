@@ -1,23 +1,28 @@
-import { playerLook } from './player-look';
+import { Avatar } from '../core/api/models';
+import { UNKNOWN_AVATAR_COLOR, playerLook } from './player-look';
 
-const POOL = ['🦊', '🐸', '🐼'];
+const POOL: Avatar[] = [
+  { emoji: '🦊', color: '#3ddc97' },
+  { emoji: '🐸', color: '#ff9f1c' },
+  { emoji: '🐼', color: '#4cc9f0' },
+];
 
 describe('playerLook', () => {
   it('shows the assigned animal', () => {
     expect(playerLook('🐼', POOL).animal).toBe('🐼');
   });
 
-  it('gives the same animal the same colour every time', () => {
-    expect(playerLook('🦊', POOL).color).toBe(playerLook('🦊', POOL).color);
-    expect(playerLook('🦊', POOL).color).not.toBe(playerLook('🐸', POOL).color);
+  it('uses the colour the server keeps with the animal', () => {
+    expect(playerLook('🦊', POOL).color).toBe('#3ddc97');
+    expect(playerLook('🐸', POOL).color).toBe('#ff9f1c');
   });
 
-  it('colours by the place in the server pool, not by the animal', () => {
-    expect(playerLook('🐸', ['🐸']).color).toBe(playerLook('🦊', ['🦊']).color);
+  it('follows the animal, not its place in the pool', () => {
+    expect(playerLook('🐼', [...POOL].reverse()).color).toBe('#4cc9f0');
   });
 
-  it('still colours an animal the pool does not list', () => {
-    expect(playerLook('🐲', POOL).color).toMatch(/^#[0-9a-f]{6}$/);
-    expect(playerLook('🐲', []).color).toMatch(/^#[0-9a-f]{6}$/);
+  it('falls back to a neutral colour for an animal the pool does not list', () => {
+    expect(playerLook('🐲', POOL).color).toBe(UNKNOWN_AVATAR_COLOR);
+    expect(playerLook('🐲', []).color).toBe(UNKNOWN_AVATAR_COLOR);
   });
 });

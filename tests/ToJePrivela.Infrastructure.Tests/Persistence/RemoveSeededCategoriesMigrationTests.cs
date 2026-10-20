@@ -53,7 +53,7 @@ public class RemoveSeededCategoriesMigrationTests : IDisposable
     {
         await using (var before = CreateContext())
         {
-            before.Players.Add(new Player(Account.ReservedId, "Peter", PlayerAvatars.All[0]));
+            before.Players.Add(new Player(Account.ReservedId, "Peter", PlayerAvatars.Emojis[0]));
             await before.SaveChangesAsync();
         }
 

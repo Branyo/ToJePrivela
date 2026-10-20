@@ -58,8 +58,20 @@ public class PlayerTests
     [Fact]
     public void Avatars_AreUnique()
     {
-        Assert.Equal(PlayerAvatars.All.Count, PlayerAvatars.All.Distinct().Count());
-        Assert.All(PlayerAvatars.All, avatar => Assert.InRange(avatar.Length, 1, PlayerAvatars.MaxLength));
+        Assert.Equal(PlayerAvatars.Emojis.Count, PlayerAvatars.Emojis.Distinct().Count());
+        Assert.All(PlayerAvatars.Emojis, avatar => Assert.InRange(avatar.Length, 1, PlayerAvatars.MaxLength));
+    }
+
+    [Fact]
+    public void Avatars_EachHaveACssColour()
+    {
+        Assert.All(PlayerAvatars.All, avatar => Assert.Matches("^#[0-9a-f]{6}$", avatar.Color));
+    }
+
+    [Fact]
+    public void AvatarEmojis_FollowThePoolOrder()
+    {
+        Assert.Equal(PlayerAvatars.All.Select(avatar => avatar.Emoji), PlayerAvatars.Emojis);
     }
 
     [Fact]

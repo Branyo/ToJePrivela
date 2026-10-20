@@ -18,7 +18,7 @@ public sealed class GameRulesService : IGameRulesService
         Account.MaxPlayers,
         new LimitDto(QuestionCategory.NameMinLength, QuestionCategory.NameMaxLength),
         QuestionGenerationOptions.MaxCount,
-        PlayerAvatars.All,
+        [.. PlayerAvatars.All.Select(avatar => new AvatarDto(avatar.Emoji, avatar.Color))],
         new LimitDto(Account.NameMinLength, Account.NameMaxLength),
         new LimitDto(PasswordRules.MinLength, PasswordRules.MaxLength),
         new LimitDto(Question.TextMinLength, Question.TextMaxLength));

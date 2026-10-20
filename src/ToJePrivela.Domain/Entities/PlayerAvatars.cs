@@ -1,21 +1,116 @@
 namespace ToJePrivela.Domain.Entities;
 
-/// <summary>The emojis (mostly animals) a player can be given. The donkey is reserved for bad cards, so it is not one of them.</summary>
+/// <summary>
+/// The emojis (mostly animals) a player can be given, each with the background colour it is shown on. The colour
+/// belongs to its emoji, so it can be changed for one avatar without touching the others; pick one the emoji stands
+/// out against. The donkey is reserved for bad cards, so it is not one of them.
+/// </summary>
 public static class PlayerAvatars
 {
     public const int MaxLength = 16;
 
-    public static readonly IReadOnlyList<string> All =
+    public static readonly IReadOnlyList<PlayerAvatar> All =
     [
-        "🦊", "🐸", "🐼", "🐯", "🐙", "🦄", "🐨", "🐧", "🦁", "🐵", "🐰", "🦉",
-        "🐶", "🐱", "🐻", "🐷", "🐮", "🐔", "🦋", "🐢", "🦀", "🐳", "🦒", "🦔",
-        "🐒", "🦍", "🐺", "🦝", "🐈", "🐈‍⬛", "🐅", "🐆", "🐴", "🫎", "🐎", "🦓",
-        "🦌", "🦬", "🐂", "🐃", "🐄", "🐏", "🐑", "🐐", "🐪", "🐫", "🦙", "🐘",
-        "🦣", "🦏", "🦛", "🐭", "🐹", "🐿️", "🦫", "🦇", "🐻‍❄️", "🦥", "🦦", "🐦",
-        "🐓", "🐣", "🐤", "🐥", "🦘", "🕊️", "🦅", "🦆", "🦢", "🦤", "🦩", "🦚",
-        "🦜", "🪿", "🐦‍🔥", "🐌", "🐛", "🐜", "🐝", "🐞", "🦗", "🐊", "🦎", "🐲",
-        "🦕", "🦖", "🐬", "🦭", "🐟", "🐡", "🦈", "🦞", "🦐", "🦑", "⛄", "🌛"
+        new("🦊", "#3ddc97"),
+        new("🐸", "#ff9f1c"),
+        new("🐼", "#4cc9f0"),
+        new("🐯", "#f15bb5"),
+        new("🐙", "#9b5de5"),
+        new("🦄", "#ff5d5d"),
+        new("🐨", "#ff9f1c"),
+        new("🐧", "#ff9f1c"),
+        new("🦁", "#80ed99"),
+        new("🐵", "#ffafcc"),
+        new("🐰", "#c77dff"),
+        new("🦉", "#00bbf9"),
+        new("🐶", "#00bbf9"),
+        new("🐱", "#3ddc97"),
+        new("🐻", "#4cc9f0"),
+        new("🐷", "#3ddc97"),
+        new("🐮", "#9b5de5"),
+        new("🐔", "#ff5d5d"),
+        new("🦋", "#f4a261"),
+        new("🐢", "#fee440"),
+        new("🦀", "#80ed99"),
+        new("🐳", "#ffafcc"),
+        new("🦒", "#c77dff"),
+        new("🦔", "#00bbf9"),
+        new("🐒", "#00bbf9"),
+        new("🦍", "#f4a261"),
+        new("🐺", "#4cc9f0"),
+        new("🦝", "#f15bb5"),
+        new("🐈", "#9b5de5"),
+        new("🐈‍⬛", "#ff5d5d"),
+        new("🐅", "#00bbf9"),
+        new("🐆", "#4cc9f0"),
+        new("🐴", "#80ed99"),
+        new("🫎", "#ffafcc"),
+        new("🐎", "#c77dff"),
+        new("🦓", "#f4a261"),
+        new("🦌", "#80ed99"),
+        new("🦬", "#3ddc97"),
+        new("🐂", "#4cc9f0"),
+        new("🐃", "#f15bb5"),
+        new("🐄", "#9b5de5"),
+        new("🐏", "#ff5d5d"),
+        new("🐑", "#ff9f1c"),
+        new("🐐", "#fee440"),
+        new("🐪", "#80ed99"),
+        new("🐫", "#ffafcc"),
+        new("🦙", "#c77dff"),
+        new("🐘", "#f4a261"),
+        new("🦣", "#ff9f1c"),
+        new("🦏", "#3ddc97"),
+        new("🦛", "#4cc9f0"),
+        new("🐭", "#f15bb5"),
+        new("🐹", "#9b5de5"),
+        new("🐿️", "#ff5d5d"),
+        new("🦫", "#00bbf9"),
+        new("🦇", "#fee440"),
+        new("🐻‍❄️", "#80ed99"),
+        new("🦥", "#ffafcc"),
+        new("🦦", "#c77dff"),
+        new("🐦", "#f4a261"),
+        new("🐓", "#fee440"),
+        new("🐣", "#3ddc97"),
+        new("🐤", "#4cc9f0"),
+        new("🐥", "#f15bb5"),
+        new("🦘", "#9b5de5"),
+        new("🕊️", "#ff5d5d"),
+        new("🦅", "#00bbf9"),
+        new("🦆", "#fee440"),
+        new("🦢", "#ff9f1c"),
+        new("🦤", "#ffafcc"),
+        new("🦩", "#3ddc97"),
+        new("🦚", "#f4a261"),
+        new("🦜", "#ff9f1c"),
+        new("🪿", "#c77dff"),
+        new("🐦‍🔥", "#4cc9f0"),
+        new("🐌", "#f15bb5"),
+        new("🐛", "#9b5de5"),
+        new("🐜", "#ff5d5d"),
+        new("🐝", "#00bbf9"),
+        new("🐞", "#fee440"),
+        new("🦗", "#ffafcc"),
+        new("🐊", "#ffafcc"),
+        new("🦎", "#c77dff"),
+        new("🐲", "#f4a261"),
+        new("🦕", "#ff9f1c"),
+        new("🦖", "#f15bb5"),
+        new("🐬", "#fee440"),
+        new("🦭", "#f15bb5"),
+        new("🐟", "#9b5de5"),
+        new("🐡", "#ff5d5d"),
+        new("🦈", "#f4a261"),
+        new("🦞", "#fee440"),
+        new("🦐", "#80ed99"),
+        new("🦑", "#80ed99"),
+        new("⛄", "#c77dff"),
+        new("🌛", "#3ddc97")
     ];
 
-    public static bool IsValid(string? avatar) => avatar is not null && All.Contains(avatar);
+    /// <summary>The emojis of <see cref="All"/>, in the same order.</summary>
+    public static readonly IReadOnlyList<string> Emojis = [.. All.Select(avatar => avatar.Emoji)];
+
+    public static bool IsValid(string? avatar) => avatar is not null && Emojis.Contains(avatar);
 }

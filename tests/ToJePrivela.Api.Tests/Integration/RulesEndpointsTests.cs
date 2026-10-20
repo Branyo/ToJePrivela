@@ -20,7 +20,7 @@ public class RulesEndpointsTests : IClassFixture<ApiFactory>
 
         Assert.Equal(new LimitDto(Game.MinPlayers, Game.MaxPlayers), rules!.Players);
         Assert.Equal(new LimitDto(Question.MinBadPoints, Question.MaxBadPoints), rules.BadPoints);
-        Assert.Equal(PlayerAvatars.All, rules.Avatars);
+        Assert.Equal(PlayerAvatars.All.Select(avatar => new AvatarDto(avatar.Emoji, avatar.Color)), rules.Avatars);
         Assert.Equal(new LimitDto(Question.TextMinLength, Question.TextMaxLength), rules.QuestionText);
     }
 }

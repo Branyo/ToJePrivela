@@ -133,6 +133,12 @@ export interface Limit {
   max: number;
 }
 
+/** An animal a player can be given and the background colour (`#rrggbb`) it is shown on. */
+export interface Avatar {
+  emoji: string;
+  color: string;
+}
+
 /** The limits the backend enforces (`GET /api/rules`); the client never keeps its own copies. */
 export interface GameRules {
   players: Limit;
@@ -144,8 +150,8 @@ export interface GameRules {
   maxPlayersPerAccount: number;
   categoryName: Limit;
   maxAiQuestionCount: number;
-  /** Every avatar a player can be given, in a fixed order. */
-  avatars: string[];
+  /** Every avatar a player can be given with its background colour, in a fixed order. */
+  avatars: Avatar[];
   /** Length of a new login's name. */
   loginName: Limit;
   /** Length of a new login's password. */

@@ -62,7 +62,7 @@ public class PlayersEndpointsTests : IClassFixture<ApiFactory>
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = await response.Content.ReadFromJsonAsync<PlayerDto>();
-        Assert.Contains(created!.Avatar, PlayerAvatars.All);
+        Assert.Contains(created!.Avatar, PlayerAvatars.Emojis);
     }
 
     [Fact]

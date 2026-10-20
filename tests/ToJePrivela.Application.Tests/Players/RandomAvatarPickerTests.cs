@@ -10,14 +10,14 @@ public class RandomAvatarPickerTests
     [Fact]
     public void Pick_ReturnsAnAvatarFromThePool()
     {
-        Assert.Contains(_sut.Pick([]), PlayerAvatars.All);
+        Assert.Contains(_sut.Pick([]), PlayerAvatars.Emojis);
     }
 
     [Fact]
     public void Pick_PrefersTheOnlyUnusedAvatar()
     {
-        var unused = PlayerAvatars.All[^1];
-        var inUse = PlayerAvatars.All.Where(avatar => avatar != unused).ToList();
+        var unused = PlayerAvatars.Emojis[^1];
+        var inUse = PlayerAvatars.Emojis.Where(avatar => avatar != unused).ToList();
 
         for (var i = 0; i < 20; i++)
         {
@@ -28,8 +28,8 @@ public class RandomAvatarPickerTests
     [Fact]
     public void Pick_PrefersTheLeastUsedAvatarsOnceAllAreTaken()
     {
-        var once = PlayerAvatars.All[0];
-        var inUse = PlayerAvatars.All.Concat(PlayerAvatars.All.Where(avatar => avatar != once)).ToList();
+        var once = PlayerAvatars.Emojis[0];
+        var inUse = PlayerAvatars.Emojis.Concat(PlayerAvatars.Emojis.Where(avatar => avatar != once)).ToList();
 
         Assert.Equal(once, _sut.Pick(inUse));
     }
