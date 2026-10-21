@@ -1,0 +1,34 @@
+<div class="json-input">
+  <label class="json-input__label" [for]="id">{{ label() }}</label>
+  <p class="muted json-input__hint">{{ 'admin.import.hint' | translate }}</p>
+  <div class="json-input__source">
+    <label class="btn btn--ghost json-input__pick" [class.json-input__pick--disabled]="disabled()">
+      {{ 'admin.import.pickFile' | translate }}
+      <input
+        class="json-input__file"
+        type="file"
+        accept=".json,application/json,text/plain"
+        [disabled]="disabled()"
+        (change)="onFile($event)"
+      />
+    </label>
+    <span class="muted json-input__or">
+      @if (fileName(); as name) {
+        {{ 'admin.import.fileLoaded' | translate: { name } }}
+      } @else {
+        {{ 'admin.import.orPaste' | translate }}
+      }
+    </span>
+  </div>
+  <textarea
+    class="json-input__text"
+    [id]="id"
+    rows="8"
+    spellcheck="false"
+    autocomplete="off"
+    placeholder='[{"questionSk": "…", "questionEn": "…", "answer": 42}]'
+    [value]="value()"
+    (input)="onInput($event)"
+    [disabled]="disabled()"
+  ></textarea>
+</div>

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using ToJePrivela.Api.Common;
 using ToJePrivela.Application.QuestionCategories;
 using ToJePrivela.Application.QuestionCategories.Dtos;
@@ -34,11 +33,14 @@ public sealed class QuestionCategoriesController : ControllerBase
     public async Task<ActionResult<QuestionCategoryDto>> GetQuestionCategory(int id, CancellationToken cancellationToken) =>
         (await _categories.GetByIdAsync(id, cancellationToken)).ToActionResult();
 
-    /// <summary>Creates the category and generates its AI questions; nothing is stored when generation fails.</summary>
+    /// <summary>
+    /// Creates the category and generates its AI questions or imports given ones; nothing is stored when generation fails.
+    /// Counts towards the AI limit only when it translates a name or generates questions.
+    /// </summary>
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.Admin)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [EnableRateLimiting(AiRateLimitOptions.PolicyName)]
+    [LimitAiUse]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -63,7 +65,7 @@ public sealed class QuestionCategoriesController : ControllerBase
     [HttpPost("{id:int}/ai-questions")]
     [Authorize(Policy = AuthorizationPolicies.Admin)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [EnableRateLimiting(AiRateLimitOptions.PolicyName)]
+    [LimitAiUse]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

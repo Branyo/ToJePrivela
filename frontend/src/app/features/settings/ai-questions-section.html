@@ -6,56 +6,106 @@
     <p class="error-banner" role="alert">{{ message | message }}</p>
   }
   @if (notice(); as message) {
-    <p class="notice" role="status">{{ message | message }}</p>
+    <div class="notice" role="status">
+      <p class="notice__text">{{ message | message }}</p>
+      @if (details().length > 0) {
+        <p class="notice__text">{{ 'admin.import.skipped' | translate }}</p>
+        <ul class="notice__details" [class.notice__details--long]="details().length > 8">
+          @for (detail of details(); track $index) {
+            <li>{{ detail | message }}</li>
+          }
+        </ul>
+      }
+    </div>
   }
 
-  <section class="panel">
-    <h2 class="panel__title">{{ 'setup.generator.title' | translate }}</h2>
-    <form class="generator" (submit)="$event.preventDefault(); create()">
-      <div class="name-language" role="group" [attr.aria-label]="'setup.generator.nameLanguage' | translate">
-        @for (code of i18n.languages; track code) {
-          <button
-            type="button"
-            class="chip"
-            [class.chip--on]="newNameLanguage() === code"
-            [attr.aria-pressed]="newNameLanguage() === code"
-            [title]="'languages.' + code | translate"
-            [disabled]="working() !== null"
-            (click)="newNameLanguage.set(code)"
-          >
-            {{ code.toUpperCase() }}
-          </button>
+  <section class="panel" aria-labelledby="new-category-title">
+    <h2 class="panel__title" id="new-category-title">{{ 'admin.newCategory.title' | translate }}</h2>
+    <form class="new-category" (submit)="$event.preventDefault(); create()">
+      <fieldset class="step" [disabled]="working() !== null">
+        <legend class="step__title"><span class="step-number">1</span> {{ 'admin.newCategory.nameStep' | translate }}</legend>
+        <div class="names">
+          @for (code of nameLanguages(); track code) {
+            <label class="name-field">
+              <span class="name-field__label">{{ 'admin.newCategory.nameIn.' + code | translate }}</span>
+              <input
+                class="text-input new-category__name"
+                [attr.data-language]="code"
+                [placeholder]="'admin.newCategory.namePlaceholder.' + code | translate"
+                [attr.lang]="code"
+                [attr.maxlength]="nameLimit()?.max ?? null"
+                [value]="newNames[code]()"
+                (input)="onNameInput(code, $event)"
+              />
+            </label>
+          }
+        </div>
+        <p class="muted hint">
+          @if (translatedLanguage(); as language) {
+            {{ 'admin.newCategory.translatedTo.' + language | translate }}
+          } @else {
+            {{ 'admin.newCategory.namesHint' | translate }}
+          }
+        </p>
+      </fieldset>
+
+      <fieldset class="step" [disabled]="working() !== null">
+        <legend class="step__title"><span class="step-number">2</span> {{ 'admin.newCategory.questionsStep' | translate }}</legend>
+        <div class="question-source" role="radiogroup" [attr.aria-label]="'admin.newCategory.questionsStep' | translate">
+          @for (source of questionSources; track source) {
+            <button
+              type="button"
+              role="radio"
+              class="chip"
+              [class.chip--on]="newSource() === source"
+              [attr.aria-checked]="newSource() === source"
+              (click)="newSource.set(source)"
+            >
+              {{ 'admin.newCategory.sources.' + source | translate }}
+            </button>
+          }
+        </div>
+
+        @switch (newSource()) {
+          @case ('none') {
+            <p class="muted hint">{{ 'admin.newCategory.noneHint' | translate }}</p>
+          }
+          @case ('ai') {
+            <label class="step__line count-line">
+              <span>{{ 'admin.newCategory.count' | translate }}</span>
+              <input
+                class="text-input count"
+                type="number"
+                [attr.min]="countLimit()?.min ?? null"
+                [attr.max]="countLimit()?.max ?? null"
+                [value]="newCount()"
+                (input)="onCountInput($event)"
+              />
+            </label>
+            <p class="muted hint">{{ 'admin.newCategory.aiHint' | translate }}</p>
+          }
+          @case ('json') {
+            <app-json-questions-input
+              [label]="'admin.newCategory.jsonLabel' | translate"
+              [disabled]="working() !== null"
+              [(value)]="newJson"
+              (unreadable)="onUnreadableFile()"
+              (tooLarge)="onTooLargeFile($event)"
+            />
+          }
         }
+      </fieldset>
+
+      <div class="new-category__submit">
+        <button type="submit" class="btn btn--sky" [disabled]="working() !== null || !canCreate()">
+          @if (working() === 'new') {
+            <span class="spinner" aria-hidden="true">🤔</span> {{ 'admin.newCategory.working' | translate }}
+          } @else {
+            {{ 'admin.newCategory.submit.' + newSource() | translate }}
+          }
+        </button>
       </div>
-      <input
-        class="text-input"
-        [placeholder]="'setup.generator.namePlaceholder' | translate"
-        [attr.aria-label]="'setup.generator.name' | translate"
-        [attr.lang]="newNameLanguage()"
-        [attr.maxlength]="nameLimit()?.max ?? null"
-        [value]="newName()"
-        (input)="onNameInput($event)"
-        [disabled]="working() !== null"
-      />
-      <input
-        class="text-input count"
-        type="number"
-        [attr.min]="countLimit()?.min ?? null"
-        [attr.max]="countLimit()?.max ?? null"
-        [attr.aria-label]="'setup.generator.count' | translate"
-        [value]="newCount()"
-        (input)="onCountInput($event)"
-        [disabled]="working() !== null"
-      />
-      <button type="submit" class="btn btn--sky" [disabled]="working() !== null || newName().trim().length === 0">
-        @if (working() === 'new') {
-          <span class="spinner" aria-hidden="true">🤔</span> {{ 'setup.generator.thinking' | translate }}
-        } @else {
-          {{ 'setup.generator.generate' | translate }}
-        }
-      </button>
     </form>
-    <p class="muted hint">{{ 'setup.generator.translated' | translate }}</p>
   </section>
 
   <section class="panel">
@@ -99,6 +149,28 @@
                 </button>
                 <button type="button" class="btn btn--ghost" (click)="cancelDelete()">{{ 'admin.keep' | translate }}</button>
               </div>
+            } @else if (importing() === category.id) {
+              <form class="row__import" (submit)="$event.preventDefault(); importQuestions(category)">
+                <app-json-questions-input
+                  [label]="'admin.import.label' | translate: { name: category.name }"
+                  [disabled]="working() !== null"
+                  [(value)]="importText"
+                  (unreadable)="onUnreadableFile()"
+                  (tooLarge)="onTooLargeFile($event)"
+                />
+                <div class="row__actions">
+                  <button type="submit" class="btn btn--sky" [disabled]="working() !== null || importText().trim().length === 0">
+                    @if (working() === category.id) {
+                      <span class="spinner" aria-hidden="true">🤔</span> {{ 'admin.newCategory.working' | translate }}
+                    } @else {
+                      {{ 'admin.import.submit' | translate }}
+                    }
+                  </button>
+                  <button type="button" class="btn btn--ghost" [disabled]="working() !== null" (click)="closeImport()">
+                    {{ 'admin.import.cancel' | translate }}
+                  </button>
+                </div>
+              </form>
             } @else {
               <form class="row__actions" (submit)="$event.preventDefault(); generateMore(category)">
                 <input
@@ -113,10 +185,18 @@
                 />
                 <button type="submit" class="btn btn--sky" [disabled]="working() !== null">
                   @if (working() === category.id) {
-                    <span class="spinner" aria-hidden="true">🤔</span> {{ 'setup.generator.thinking' | translate }}
+                    <span class="spinner" aria-hidden="true">🤔</span> {{ 'admin.newCategory.working' | translate }}
                   } @else {
                     {{ 'admin.generateMore' | translate }}
                   }
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost row__import-open"
+                  [disabled]="working() !== null"
+                  (click)="openImport(category.id)"
+                >
+                  {{ 'admin.importJson' | translate }}
                 </button>
                 <button
                   type="button"

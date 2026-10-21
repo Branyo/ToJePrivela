@@ -71,7 +71,7 @@ address added any other way stops it at once after startup (exit code 1).
 | `QuestionGeneration:MaxParallelRequests` | AI calls running at once (default 3) |
 | `QuestionGeneration:MaxRetryAttempts` | Extra calls allowed to top up a shortfall (default 3) |
 | `QuestionGeneration:MaxExcludedQuestions` | Known questions each call is told not to repeat (default 100) |
-| `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on the AI endpoints (default 5 per 60 s) |
+| `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on requests that call the AI (default 5 per 60 s) |
 | `Cors:AllowedOrigins` | Frontend origins; empty means "any origin" |
 | `Authentication:Jwt:SigningKey` | Signs the access tokens; at least 32 characters, required — user-secrets or `Authentication__Jwt__SigningKey` (Development has a dev-only key, which every other environment refuses to start with) |
 | `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 1440 minutes (24 h) by default |
@@ -170,9 +170,10 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/questions` | `textSk` and `textEn` required; `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
 | GET | `/api/question-categories` | Each category carries `questionCount` and `aiQuestionCount` (an edited AI question counts as manual) |
 | GET/DELETE | `/api/question-categories/{id}` | Get includes the counts; delete also removes every question in the category |
-| POST | `/api/question-categories` | `nameSk`, `nameEn` or both (the AI translates a missing one); `questionCount` (0–200) is required; the response carries the counts and the generation summary; 503 and nothing stored when translation or generation fails |
+| POST | `/api/question-categories` | `nameSk`, `nameEn` or both (the AI translates a missing one); `questionCount` (0–200) is required; optional `questionsJson` imports the first questions instead of generating them (then `questionCount` must be 0; the response's `questionImport` is the import summary, null without JSON); the response carries the counts and the generation summary; 503 and nothing stored when translation or generation fails |
 | POST | `/api/question-categories/{id}/ai-questions` | Body `{ "count": 1–200 }`; adds AI questions, skipping ones the category has |
 | DELETE | `/api/question-categories/{id}/ai-questions` | Removes the AI questions only; returns `{ "deleted": n }` |
+| POST | `/api/question-categories/{id}/imported-questions` | Body `{ "json": "<text>" }`: a JSON array in the AI generator's format (see below); returns `{ received, imported, rejected: [{ position, reason }], questions }` |
 
 Players and games belong to the login that created them: `/api/players…` and `/api/games…` only ever see the
 signed-in login's own, another login's id answers 404, and a game can seat only the login's players. A name is
@@ -184,7 +185,25 @@ Without a valid token every other route answers 401 `Auth.Unauthenticated`. Chan
 answers 403 `Auth.Forbidden` to everyone else; reading questions and recording views is open to every login.
 
 Categories are immutable — there is no PUT; delete the category and create a new one instead. The two
-AI-generating POSTs share one rate limit.
+AI-generating POSTs share one rate limit; creating a category counts towards it only when it translates a name or
+generates questions (both names given with `questionCount` 0, with or without imported JSON, is free). Requests
+refused by authorization or validation are never counted.
+
+Admins can also import questions into a category (the 📥 button on the categories tab: paste the JSON or pick a
+`.json` file), or start a new category with them (the 📥 JSON choice of the new-category form; bad JSON is refused
+before any AI translation, and nothing is created then). The text is the format the AI generator answers with — prose or markdown fences around the array are
+ignored, so a model's reply can be pasted as it is:
+
+```json
+[{ "questionSk": "V ktorom roku bol verejne spustený ChatGPT?", "questionEn": "Which year was ChatGPT publicly released?", "answer": 2022 }]
+```
+
+`answer` is a JSON number or a quoted one. Items are judged like generated questions (same filter, duplicates by
+Slovak text against the category and each other) and stored as `Ai` questions with random bad points; every item left
+out is reported by its 1-based `position` with a `reason` (`Malformed`, `InvalidText`, `InvalidAnswer`,
+`AnswerTooLarge`, `StatesAnswer`, `Duplicate` — the category already has it, `Repeated` — an earlier item has it).
+The answer reports these as `summary` (`received`, `imported`, `rejected`) beside the stored `questions`. One import takes at most 1000 items; text that is no JSON array is
+400 `QuestionImport.InvalidJson`, an empty array `QuestionImport.Empty`, too many items `QuestionImport.TooMany`.
 
 Every category is named in Slovak (`nameSk`) and English (`nameEn`); both names are unique. Creating one needs a name
 in one language at least: the AI translates it into the other with a single, simple prompt (409

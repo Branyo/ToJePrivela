@@ -14,6 +14,8 @@ export class AiQuestionsStore {
   /** `'new'` while a new category is generated, else the id of the category being worked on. */
   readonly working = signal<number | 'new' | null>(null);
   readonly notice = signal<Message | null>(null);
+  /** Lines listed under the notice, such as the questions an import left out. */
+  readonly details = signal<readonly Message[]>([]);
   readonly error = signal<Message | null>(null);
   /** Emits after every change that went through, so the tab shown then fetches the categories again. */
   readonly finished = new Subject<void>();
@@ -31,6 +33,7 @@ export class AiQuestionsStore {
       shownFor = id;
       untracked(() => {
         this.notice.set(null);
+        this.details.set([]);
         this.error.set(null);
       });
     });
@@ -38,16 +41,24 @@ export class AiQuestionsStore {
 
   /**
    * Runs one change to completion whether or not the tab still shows; `onSuccess` lets the tab that started it
-   * tidy up its own inputs.
+   * tidy up its own inputs; `toDetails` lists more about the result under the notice.
    */
-  run<T>(target: number | 'new', request: Observable<T>, toNotice: (result: T) => Message, onSuccess?: () => void): void {
+  run<T>(
+    target: number | 'new',
+    request: Observable<T>,
+    toNotice: (result: T) => Message,
+    onSuccess?: () => void,
+    toDetails?: (result: T) => readonly Message[],
+  ): void {
     this.working.set(target);
     this.error.set(null);
     this.notice.set(null);
+    this.details.set([]);
     request.subscribe({
       next: (result) => {
         this.working.set(null);
         this.notice.set(toNotice(result));
+        this.details.set(toDetails?.(result) ?? []);
         onSuccess?.();
         this.finished.next();
       },

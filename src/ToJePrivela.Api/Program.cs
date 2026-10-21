@@ -89,6 +89,7 @@ var aiRateLimit = builder.Configuration.GetSection(AiRateLimitOptions.SectionNam
 var signInRateLimit = builder.Configuration.GetSection(SignInRateLimitOptions.SectionName).Get<SignInRateLimitOptions>()
     ?? new SignInRateLimitOptions();
 
+builder.Services.AddSingleton(_ => new AiRateLimiter(aiRateLimit));
 builder.Services.AddSingleton(_ => new SignInAddressLimiter(signInRateLimit));
 
 // Behind a reverse proxy every connection comes from the proxy, so the sign-in limits would lump all clients into one
@@ -108,12 +109,6 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = (context, cancellationToken) =>
         RateLimitRejection.WriteAsync(context.HttpContext, context.Lease, cancellationToken);
-    options.AddFixedWindowLimiter(AiRateLimitOptions.PolicyName, limiter =>
-    {
-        limiter.PermitLimit = aiRateLimit.PermitLimit;
-        limiter.Window = TimeSpan.FromSeconds(aiRateLimit.WindowSeconds);
-        limiter.QueueLimit = 0;
-    });
     options.AddPolicy(
         SignInRateLimitOptions.PolicyName,
         httpContext => SignInRateLimiting.Partition(httpContext, signInRateLimit));

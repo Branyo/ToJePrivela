@@ -6,6 +6,7 @@ using ToJePrivela.Application.Games;
 using ToJePrivela.Application.Players;
 using ToJePrivela.Application.QuestionCategories;
 using ToJePrivela.Application.QuestionGeneration;
+using ToJePrivela.Application.QuestionImport;
 using ToJePrivela.Application.Questions;
 using ToJePrivela.Application.Rules;
 using ToJePrivela.Application.Statistics;
@@ -43,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IQuestionCategoryService, QuestionCategoryService>();
         services.AddScoped<IQuestionGenerationService, QuestionGenerationService>();
+        services.AddScoped<IQuestionImporter, QuestionImporter>();
+        services.AddScoped<IQuestionImportService, QuestionImportService>();
 
         return services;
     }

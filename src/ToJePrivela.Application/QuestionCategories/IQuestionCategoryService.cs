@@ -10,7 +10,7 @@ public interface IQuestionCategoryService
 
     Task<Result<QuestionCategoryDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default);
 
-    /// <summary>Creates the category together with its AI questions, or nothing at all.</summary>
+    /// <summary>Creates the category together with its generated or imported AI questions, or nothing at all.</summary>
     Task<Result<CreatedQuestionCategoryDto>> CreateAsync(CreateQuestionCategoryRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes the category and every question in it.</summary>

@@ -98,6 +98,8 @@ export interface QuestionGenerationSummary {
 
 export interface CreatedQuestionCategory extends QuestionCategory {
   questionGeneration: QuestionGenerationSummary;
+  /** What the import brought; `null` for a category created without JSON. */
+  questionImport: QuestionImportSummary | null;
 }
 
 export interface Question {
@@ -182,6 +184,35 @@ export interface GeneratedAiQuestions {
 
 export interface DeletedAiQuestions {
   deleted: number;
+}
+
+/** Why an imported question was not stored. */
+export type QuestionRejection =
+  | 'Malformed'
+  | 'InvalidText'
+  | 'InvalidAnswer'
+  | 'AnswerTooLarge'
+  | 'StatesAnswer'
+  | 'Duplicate'
+  | 'Repeated';
+
+export interface RejectedQuestion {
+  /** 1-based position of the item in the imported JSON array. */
+  position: number;
+  reason: QuestionRejection;
+}
+
+export interface QuestionImportSummary {
+  /** Items in the imported JSON array. */
+  received: number;
+  imported: number;
+  /** The items that were not stored, in array order. */
+  rejected: RejectedQuestion[];
+}
+
+export interface ImportedQuestions {
+  summary: QuestionImportSummary;
+  questions: Question[];
 }
 
 /** The player's final bad points in one game, with the game to link to. */

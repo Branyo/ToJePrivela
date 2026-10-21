@@ -2,13 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { CategoriesApi } from '../../core/api/categories-api';
-import { GameRules, Limit, QuestionCategory } from '../../core/api/models';
+import { CategoriesApi, CategoryNames } from '../../core/api/categories-api';
+import { GameRules, Limit, QuestionCategory, QuestionImportSummary } from '../../core/api/models';
 import { LanguageCode, LanguageService, Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { CategoryList } from '../../shared/category-list';
 import { AiQuestionsStore } from './ai-questions-store';
+import { JsonQuestionsInput } from './json-questions-input';
 
 /** The generator exists to make questions, so it asks for at least one (the API alone also allows 0). */
 const GENERATOR_MIN_QUESTIONS = 1;
@@ -17,16 +18,20 @@ const NEW_CATEGORY_COUNT = 100;
 /** How many more AI questions an existing category asks for, unless the admin changes it. */
 const MORE_COUNT = 20;
 
+/** Where a new category's first questions come from: none yet, the AI, or imported JSON. */
+type QuestionSource = 'none' | 'ai' | 'json';
+
 /** What waits for a second tap before it runs. */
 type PendingDelete = { id: number; what: 'ai' | 'category' };
 
 /**
- * Admins manage the questions every login plays with: categories and their AI questions; each category's questions
- * open in the questions tab. Shown to admins only; the API refuses everyone else anyway.
+ * Admins manage the questions every login plays with: categories and their AI questions, generated or imported as
+ * JSON in the generator's format; each category's questions open in the questions tab. Shown to admins only; the API
+ * refuses everyone else anyway.
  */
 @Component({
   selector: 'app-ai-questions-section',
-  imports: [RouterLink, TranslatePipe, MessagePipe],
+  imports: [RouterLink, TranslatePipe, MessagePipe, JsonQuestionsInput],
   templateUrl: './ai-questions-section.html',
   styleUrl: './ai-questions-section.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,17 +48,38 @@ export class AiQuestionsSection {
 
   private readonly categories = new CategoryList();
 
-  protected readonly newName = signal('');
-  /** The language the new name is typed in; the AI translates it to the other one. */
-  protected readonly newNameLanguage = signal<LanguageCode>(this.i18n.language());
+  /** The new category's name per language; at least one is needed, the AI translates a missing one. */
+  protected readonly newNames = { sk: signal(''), en: signal('') } as const;
+  /** The name fields in the order shown: the shown language first. */
+  protected readonly nameLanguages = computed<readonly LanguageCode[]>(() => (this.i18n.language() === 'en' ? ['en', 'sk'] : ['sk', 'en']));
+  /** The language the AI will translate the name into: only while exactly one name is given. */
+  protected readonly translatedLanguage = computed<LanguageCode | null>(() => {
+    const sk = this.newNames.sk().trim().length > 0;
+    const en = this.newNames.en().trim().length > 0;
+    return sk === en ? null : sk ? 'en' : 'sk';
+  });
+  protected readonly questionSources: readonly QuestionSource[] = ['none', 'ai', 'json'];
+  protected readonly newSource = signal<QuestionSource>('ai');
   protected readonly newCount = signal(NEW_CATEGORY_COUNT);
+  /** The new category's questions as JSON, when they are imported. */
+  protected readonly newJson = signal('');
+  /** Whether the new category has all it needs to be sent. */
+  protected readonly canCreate = computed(
+    () =>
+      (this.newNames.sk().trim().length > 0 || this.newNames.en().trim().length > 0) &&
+      (this.newSource() !== 'json' || this.newJson().trim().length > 0),
+  );
   /** Per category: how many AI questions to add. */
   protected readonly moreCounts = signal<ReadonlyMap<number, number>>(new Map());
 
   /** Kept in the store, so work still running shows again when the admin comes back to this tab. */
   protected readonly working = this.store.working;
   protected readonly pending = signal<PendingDelete | null>(null);
+  /** The category whose JSON import form is open, if any. */
+  protected readonly importing = signal<number | null>(null);
+  protected readonly importText = signal('');
   protected readonly notice = this.store.notice;
+  protected readonly details = this.store.details;
   /** What this visit of the tab found wrong with the inputs; it goes with the tab. */
   private readonly localError = signal<Message | null>(null);
   /** The tab's own problems first (inputs, then loading), else why the last change in the store failed. */
@@ -83,12 +109,52 @@ export class AiQuestionsSection {
     if (!rules) {
       return;
     }
-    const name = this.newName().trim();
-    const nameLimit = rules.categoryName;
-    if (name.length < nameLimit.min || name.length > nameLimit.max) {
-      this.localError.set({ key: 'setup.errors.categoryNameLength', params: { min: nameLimit.min, max: nameLimit.max } });
+    const names = this.namesToSend(rules.categoryName);
+    if (!names) {
       return;
     }
+
+    switch (this.newSource()) {
+      case 'none':
+        this.createEmpty(names);
+        return;
+      case 'ai':
+        this.createGenerated(names, rules);
+        return;
+      case 'json':
+        this.createImported(names);
+        return;
+    }
+  }
+
+  /** The given names, trimmed; `null` (and the error said) when none is given or one has the wrong length. */
+  private namesToSend(limit: Limit): CategoryNames | null {
+    const sk = this.newNames.sk().trim();
+    const en = this.newNames.en().trim();
+    const wrongLength = (name: string) => name.length > 0 && (name.length < limit.min || name.length > limit.max);
+    if ((sk.length === 0 && en.length === 0) || wrongLength(sk) || wrongLength(en)) {
+      this.localError.set({ key: 'setup.errors.categoryNameLength', params: { min: limit.min, max: limit.max } });
+      return null;
+    }
+    return sk.length === 0 ? { nameEn: en } : en.length === 0 ? { nameSk: sk } : { nameSk: sk, nameEn: en };
+  }
+
+  private clearNames(): void {
+    this.newNames.sk.set('');
+    this.newNames.en.set('');
+  }
+
+  private createEmpty(names: CategoryNames): void {
+    this.localError.set(null);
+    this.store.run(
+      'new',
+      this.categoriesApi.create(names, 0),
+      (category) => ({ key: 'admin.newCategory.createdEmpty', params: { name: category.name } }),
+      () => this.clearNames(),
+    );
+  }
+
+  private createGenerated(names: CategoryNames, rules: GameRules): void {
     const count = this.newCount();
     if (!this.isValidCount(count, rules)) {
       return;
@@ -97,9 +163,32 @@ export class AiQuestionsSection {
     this.localError.set(null);
     this.store.run(
       'new',
-      this.categoriesApi.create(name, this.newNameLanguage(), count),
+      this.categoriesApi.create(names, count),
       (category) => ({ key: 'admin.created', params: { name: category.name, count: category.questionGeneration.created } }),
-      () => this.newName.set(''),
+      () => this.clearNames(),
+    );
+  }
+
+  private createImported(names: CategoryNames): void {
+    const json = this.newJson();
+    if (json.trim().length === 0) {
+      this.localError.set({ key: 'admin.import.empty' });
+      return;
+    }
+
+    this.localError.set(null);
+    this.store.run(
+      'new',
+      this.categoriesApi.create(names, 0, json),
+      (category) => ({
+        key: 'admin.import.created',
+        params: { name: category.name, count: category.questionImport?.imported ?? 0, total: category.questionImport?.received ?? 0 },
+      }),
+      () => {
+        this.clearNames();
+        this.newJson.set('');
+      },
+      (category) => (category.questionImport ? rejectionsOf(category.questionImport) : []),
     );
   }
 
@@ -121,9 +210,48 @@ export class AiQuestionsSection {
     );
   }
 
+  protected openImport(id: number): void {
+    this.localError.set(null);
+    this.store.error.set(null);
+    this.pending.set(null);
+    this.importText.set('');
+    this.importing.set(id);
+  }
+
+  protected closeImport(): void {
+    this.importing.set(null);
+    this.importText.set('');
+  }
+
+  protected onUnreadableFile(): void {
+    this.localError.set({ key: 'admin.import.unreadable' });
+  }
+
+  protected onTooLargeFile(max: number): void {
+    this.localError.set({ key: 'admin.import.tooLarge', params: { max } });
+  }
+
+  protected importQuestions(category: QuestionCategory): void {
+    const json = this.importText();
+    if (json.trim().length === 0) {
+      this.localError.set({ key: 'admin.import.empty' });
+      return;
+    }
+
+    this.localError.set(null);
+    this.store.run(
+      category.id,
+      this.categoriesApi.importQuestions(category.id, json),
+      ({ summary }) => ({ key: 'admin.import.done', params: { name: category.name, count: summary.imported, total: summary.received } }),
+      () => this.closeImport(),
+      ({ summary }) => rejectionsOf(summary),
+    );
+  }
+
   protected askToDelete(id: number, what: PendingDelete['what']): void {
     this.localError.set(null);
     this.store.error.set(null);
+    this.importing.set(null);
     this.pending.set({ id, what });
   }
 
@@ -165,8 +293,8 @@ export class AiQuestionsSection {
     return this.moreCounts().get(id) ?? MORE_COUNT;
   }
 
-  protected onNameInput(event: Event): void {
-    this.newName.set((event.target as HTMLInputElement).value);
+  protected onNameInput(language: LanguageCode, event: Event): void {
+    this.newNames[language].set((event.target as HTMLInputElement).value);
   }
 
   protected onCountInput(event: Event): void {
@@ -200,6 +328,10 @@ export class AiQuestionsSection {
   private load(): void {
     this.categories.reload();
   }
+}
+
+function rejectionsOf(result: QuestionImportSummary): Message[] {
+  return result.rejected.map(({ position, reason }) => ({ key: `admin.import.reasons.${reason}`, params: { position } }));
 }
 
 function countLimitOf(rules: GameRules | null): Limit | null {

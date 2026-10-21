@@ -74,4 +74,20 @@ public class GeneratedQuestionFilterTests
     {
         Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, text, answer)));
     }
+
+    [Theory]
+    [InlineData("Short", "5", QuestionRejection.InvalidText)]
+    [InlineData(ValidQuestion, "3,5", QuestionRejection.InvalidAnswer)]
+    [InlineData(ValidQuestion, "1000000000001", QuestionRejection.AnswerTooLarge)]
+    [InlineData("In 1969, which year did Apollo 11 land on the Moon?", "1969", QuestionRejection.StatesAnswer)]
+    public void Check_SaysWhyAQuestionIsNotUsable(string text, string answer, QuestionRejection expected)
+    {
+        Assert.Equal(expected, GeneratedQuestionFilter.Check(new GeneratedQuestion(text, text, answer)));
+    }
+
+    [Fact]
+    public void Check_ReturnsNullForAUsableQuestion()
+    {
+        Assert.Null(GeneratedQuestionFilter.Check(new GeneratedQuestion(ValidSlovakQuestion, ValidQuestion, "2022")));
+    }
 }

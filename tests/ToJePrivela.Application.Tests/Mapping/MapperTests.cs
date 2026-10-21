@@ -139,7 +139,7 @@ public class MapperTests
     {
         var category = TestEntities.Category(4, "Hudba", "Music");
 
-        var dto = QuestionCategoryMapper.ToCreatedDto(category, new QuestionGenerationResult([], 10, 3), Language.En);
+        var dto = QuestionCategoryMapper.ToCreatedDto(category, new QuestionGenerationResult([], 10, 3), null, Language.En);
 
         Assert.Equal((0, 0), (dto.QuestionCount, dto.AiQuestionCount));
         Assert.Equal(4, dto.Id);

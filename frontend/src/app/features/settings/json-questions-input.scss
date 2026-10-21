@@ -1,0 +1,65 @@
+.json-input {
+  display: grid;
+  gap: 8px;
+}
+
+.json-input__label {
+  font-weight: 700;
+}
+
+.json-input__hint {
+  margin: 0;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.json-input__source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.json-input__pick {
+  position: relative;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.json-input__pick:focus-within {
+  outline: 4px solid var(--grape);
+  outline-offset: 2px;
+}
+
+.json-input__pick--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The label is the visible button; the input stays focusable for the keyboard. */
+.json-input__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.json-input__or {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+/* Not the pill-shaped .text-input: text in a big rounded corner would be cut off. */
+.json-input__text {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px 14px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  resize: vertical;
+}
