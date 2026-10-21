@@ -45,6 +45,12 @@ export class PlayStore {
   readonly chosenBadPoints = signal<number | null>(null);
   /** Who called "To je priveľa!" on the current question; `null` until somebody did. */
   readonly callerId = signal<number | null>(null);
+  /**
+   * Who starts the current round: the first player in the order of play, then whoever called "To je priveľa!" on the
+   * question before (a question skipped without a call keeps the same one). Kept on this device only, so a reloaded
+   * screen starts again with the first player.
+   */
+  readonly starterId = signal<number | null>(null);
 
   /**
    * The players to play with, in the order of play the server keeps (the order they were added in). Deleting a player
@@ -62,6 +68,11 @@ export class PlayStore {
   /** The player who called "To je priveľa!" on the current question, while it is being decided who takes the card. */
   readonly caller = computed(() => {
     const id = this.callerId();
+    return id === null ? null : (this.seats().find((p) => p.playerId === id) ?? null);
+  });
+  /** The player who starts the current round, called by name once its question is shown. */
+  readonly starter = computed(() => {
+    const id = this.starterId();
     return id === null ? null : (this.seats().find((p) => p.playerId === id) ?? null);
   });
   /**
@@ -112,6 +123,9 @@ export class PlayStore {
         return; // The game is being ended meanwhile; that request decides what comes next.
       }
       this.game.set(game);
+      if (this.starterId() === null) {
+        this.starterId.set(this.seats()[0]?.playerId ?? null);
+      }
     } catch (error) {
       if (this.phase() !== 'loading') {
         return;
@@ -148,6 +162,10 @@ export class PlayStore {
       }
       this.question.set(drawn);
       this.chosenBadPoints.set(null);
+      const callerId = this.callerId();
+      if (callerId !== null) {
+        this.starterId.set(callerId); // Who called "To je priveľa!" starts the next round.
+      }
       this.callerId.set(null);
       this.questionNumber.update((n) => n + 1);
       this.phase.set(this.choosesBadPoints() ? 'choosing' : 'asking');

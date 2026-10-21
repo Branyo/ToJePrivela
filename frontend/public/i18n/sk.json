@@ -156,6 +156,7 @@
     },
     "answer": "Správna odpoveď je",
     "callHint": "Kto zvolal „To je priveľa!“? Ťukni na jeho bublinu.",
+    "starts": "▶️ Kolo začína {{name}}",
     "call": {
       "text": "🤚 To je priveľa!",
       "label": "{{name}}: To je priveľa! Ukázať odpoveď",
@@ -201,6 +202,7 @@
     },
     "choose": {
       "title": "Začínajúci hráč: koľko somárov bude stáť táto otázka?",
+      "titleFor": "{{name}}, začínaš: koľko somárov bude stáť táto otázka?",
       "group": "Trestné body za túto otázku",
       "hint": "Zatiaľ je známa iba kategória. Ťukni na kartu a ukáže sa otázka."
     }

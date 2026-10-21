@@ -84,7 +84,13 @@
             </header>
 
             @if (store.phase() === 'choosing') {
-              <p class="question__text question__text--choosing">{{ 'play.choose.title' | translate }}</p>
+              <p class="question__text question__text--choosing">
+                @if (store.starter(); as starter) {
+                  {{ 'play.choose.titleFor' | translate: { name: starter.name } }}
+                } @else {
+                  {{ 'play.choose.title' | translate }}
+                }
+              </p>
             } @else {
               <p class="question__text">{{ question.text }}</p>
             }
@@ -115,6 +121,9 @@
                 <p class="muted hint">{{ 'play.choose.hint' | translate }}</p>
               }
               @case ('asking') {
+                @if (store.starter(); as starter) {
+                  <p class="prompt prompt--starter" role="status">{{ 'play.starts' | translate: { name: starter.name } }}</p>
+                }
                 <p class="muted hint">{{ 'play.callHint' | translate }}</p>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">
                   {{ 'play.skip' | translate }}
@@ -170,6 +179,7 @@
           #seatButton
           type="button"
           class="seat"
+          [class.seat--starter]="(store.phase() === 'choosing' || store.phase() === 'asking') && store.starterId() === player.playerId"
           [class.seat--hit]="hitPlayerId() === player.playerId"
           [class.seat--edge]="store.isOnTheEdge(player)"
           [class.seat--out]="player.badCards >= store.badCardLimit()"

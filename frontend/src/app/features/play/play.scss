@@ -204,6 +204,10 @@
     color: var(--tomato);
   }
 
+  &--starter {
+    color: var(--grape);
+  }
+
   .prompt__tap {
     display: inline-block;
     animation: float 1.2s ease-in-out infinite;
@@ -285,6 +289,12 @@
 
   &--hit {
     animation: hit 0.9s ease both;
+  }
+
+  /* Who starts the round, while its question is up for bidding. */
+  &--starter {
+    outline: 4px solid var(--grape);
+    outline-offset: 3px;
   }
 }
 

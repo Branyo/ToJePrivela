@@ -260,6 +260,30 @@ describe('PlayStore', () => {
     expect(store.callerId()).toBeNull();
   });
 
+  it('lets the first player start, then whoever called "too much" on the question before', async () => {
+    await startWithQuestion();
+    expect(store.starter()?.name).toBe('Bo'); // first in the order of play
+
+    const skipped = store.skip(); // nobody called: the same player starts again
+    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 43 });
+    await flush();
+    http.expectOne('/api/questions/43/views').flush(question);
+    await skipped;
+    expect(store.starterId()).toBe(2);
+
+    store.reveal(1);
+    expect(store.starterId()).toBe(2); // not before the next question is shown
+    const awarded = store.award(2);
+    http.expectOne('/api/games/5/bad-cards').flush(game());
+    await flush();
+    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
+    await flush();
+    http.expectOne('/api/questions/44/views').flush(question);
+    await awarded;
+
+    expect(store.starter()?.name).toBe('Ana');
+  });
+
   it('hands the saved game to onSaved once the card is counted', async () => {
     await startWithQuestion();
     store.reveal(1);
