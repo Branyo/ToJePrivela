@@ -44,10 +44,10 @@ public class QuestionImportEndpointsTests : IClassFixture<ApiFactory>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var imported = (await response.Content.ReadFromJsonAsync<ImportedQuestionsDto>(JsonOptions))!;
-        Assert.Equal((4, 2), (imported.Received, imported.Imported));
+        Assert.Equal((4, 2), (imported.Summary.Received, imported.Summary.Imported));
         Assert.Equal(
-            [new RejectedQuestionDto(3, QuestionRejection.Duplicate), new RejectedQuestionDto(4, QuestionRejection.InvalidText)],
-            imported.Rejected);
+            [new RejectedQuestionDto(3, QuestionRejection.Repeated), new RejectedQuestionDto(4, QuestionRejection.InvalidText)],
+            imported.Summary.Rejected);
 
         var stored = await _client.GetFromJsonAsync<List<QuestionDto>>($"/api/questions?categoryId={category.Id}");
         Assert.Equal(["2022", "330"], stored!.Select(question => question.Answer).Order());
@@ -61,7 +61,7 @@ public class QuestionImportEndpointsTests : IClassFixture<ApiFactory>
 
         var response = await _client.PostAsJsonAsync($"/api/question-categories/{category.Id}/imported-questions", new { json = Questions });
 
-        Assert.Contains("\"reason\":\"Duplicate\"", await response.Content.ReadAsStringAsync());
+        Assert.Contains("\"reason\":\"Repeated\"", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

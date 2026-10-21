@@ -337,6 +337,7 @@
       "cancel": "Zrušiť",
       "empty": "Najprv vlož JSON alebo vyber súbor.",
       "unreadable": "Súbor sa nepodarilo prečítať.",
+      "tooLarge": "Súbor je na import príliš veľký; jeden import má najviac {{max}} znakov.",
       "done": "Do kategórie „{{name}}“ pribudlo otázok: {{count}} z {{total}}. 📥",
       "skipped": "Vynechané:",
       "reasons": {
@@ -345,7 +346,8 @@
         "InvalidAnswer": "Položka {{position}}: odpoveď nie je obyčajné číslo.",
         "AnswerTooLarge": "Položka {{position}}: odpoveď je väčšia ako 1 000 000 000 000.",
         "StatesAnswer": "Položka {{position}}: otázka prezrádza svoju odpoveď.",
-        "Duplicate": "Položka {{position}}: kategória už túto otázku má."
+        "Duplicate": "Položka {{position}}: kategória už túto otázku má.",
+        "Repeated": "Položka {{position}}: opakuje skoršiu položku tohto JSON-u."
       },
       "created": "Kategória „{{name}}“ je pripravená, importovaných otázok: {{count}} z {{total}}! 📥",
       "pickFile": "📂 Vybrať súbor",

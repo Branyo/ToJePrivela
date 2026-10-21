@@ -187,7 +187,14 @@ export interface DeletedAiQuestions {
 }
 
 /** Why an imported question was not stored. */
-export type QuestionRejection = 'Malformed' | 'InvalidText' | 'InvalidAnswer' | 'AnswerTooLarge' | 'StatesAnswer' | 'Duplicate';
+export type QuestionRejection =
+  | 'Malformed'
+  | 'InvalidText'
+  | 'InvalidAnswer'
+  | 'AnswerTooLarge'
+  | 'StatesAnswer'
+  | 'Duplicate'
+  | 'Repeated';
 
 export interface RejectedQuestion {
   /** 1-based position of the item in the imported JSON array. */
@@ -203,7 +210,8 @@ export interface QuestionImportSummary {
   rejected: RejectedQuestion[];
 }
 
-export interface ImportedQuestions extends QuestionImportSummary {
+export interface ImportedQuestions {
+  summary: QuestionImportSummary;
   questions: Question[];
 }
 

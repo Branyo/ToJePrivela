@@ -227,6 +227,10 @@ export class AiQuestionsSection {
     this.localError.set({ key: 'admin.import.unreadable' });
   }
 
+  protected onTooLargeFile(max: number): void {
+    this.localError.set({ key: 'admin.import.tooLarge', params: { max } });
+  }
+
   protected importQuestions(category: QuestionCategory): void {
     const json = this.importText();
     if (json.trim().length === 0) {
@@ -238,9 +242,9 @@ export class AiQuestionsSection {
     this.store.run(
       category.id,
       this.categoriesApi.importQuestions(category.id, json),
-      (result) => ({ key: 'admin.import.done', params: { name: category.name, count: result.imported, total: result.received } }),
+      ({ summary }) => ({ key: 'admin.import.done', params: { name: category.name, count: summary.imported, total: summary.received } }),
       () => this.closeImport(),
-      rejectionsOf,
+      ({ summary }) => rejectionsOf(summary),
     );
   }
 

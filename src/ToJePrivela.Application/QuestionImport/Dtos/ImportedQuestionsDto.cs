@@ -3,14 +3,8 @@ using ToJePrivela.Application.Questions.Dtos;
 
 namespace ToJePrivela.Application.QuestionImport.Dtos;
 
-/// <param name="Received">Items in the JSON array.</param>
-/// <param name="Rejected">The items that were not stored, in array order.</param>
 /// <param name="Questions">The stored questions.</param>
-public sealed record ImportedQuestionsDto(
-    int Received,
-    int Imported,
-    IReadOnlyList<RejectedQuestionDto> Rejected,
-    IReadOnlyList<QuestionDto> Questions);
+public sealed record ImportedQuestionsDto(QuestionImportSummaryDto Summary, IReadOnlyList<QuestionDto> Questions);
 
 /// <summary>What an import brought, without the questions themselves.</summary>
 /// <param name="Received">Items in the JSON array.</param>

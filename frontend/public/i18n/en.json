@@ -327,6 +327,7 @@
       "cancel": "Cancel",
       "empty": "Paste the JSON or pick a file first.",
       "unreadable": "The file could not be read.",
+      "tooLarge": "The file is too large to import; one import takes at most {{max}} characters.",
       "done": "{{count}} of {{total}} questions imported into \"{{name}}\". 📥",
       "skipped": "Left out:",
       "reasons": {
@@ -335,7 +336,8 @@
         "InvalidAnswer": "Item {{position}}: the answer is not a plain number.",
         "AnswerTooLarge": "Item {{position}}: the answer is larger than 1 000 000 000 000.",
         "StatesAnswer": "Item {{position}}: the question gives its answer away.",
-        "Duplicate": "Item {{position}}: the category already has this question."
+        "Duplicate": "Item {{position}}: the category already has this question.",
+        "Repeated": "Item {{position}}: repeats an earlier item of this JSON."
       },
       "created": "\"{{name}}\" is ready with {{count}} of {{total}} imported questions! 📥",
       "pickFile": "📂 Choose a file",

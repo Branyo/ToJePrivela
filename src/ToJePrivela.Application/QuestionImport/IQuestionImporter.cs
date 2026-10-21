@@ -1,6 +1,6 @@
 using ToJePrivela.Application.Abstractions.Ai;
 using ToJePrivela.Application.Common;
-using ToJePrivela.Application.QuestionGeneration;
+using ToJePrivela.Application.QuestionImport.Dtos;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.QuestionImport;
@@ -27,7 +27,4 @@ public interface IQuestionImporter
 /// <param name="Received">Items in the JSON array.</param>
 /// <param name="Questions">New, not yet stored questions.</param>
 /// <param name="Rejected">The items left out, in array order.</param>
-public sealed record QuestionImportOutcome(int Received, IReadOnlyList<Question> Questions, IReadOnlyList<RejectedQuestion> Rejected);
-
-/// <param name="Position">The item's 1-based position in the JSON array.</param>
-public sealed record RejectedQuestion(int Position, QuestionRejection Reason);
+public sealed record QuestionImportOutcome(int Received, IReadOnlyList<Question> Questions, IReadOnlyList<RejectedQuestionDto> Rejected);

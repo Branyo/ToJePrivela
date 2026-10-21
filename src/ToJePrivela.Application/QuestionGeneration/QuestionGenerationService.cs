@@ -56,11 +56,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
             return QuestionGenerationResult.Nothing;
         }
 
-        // A category that is not saved yet has no questions to collide with.
-        IReadOnlyList<string> existing = category.Id == 0
-            ? []
-            : await _questions.GetTextsAsync(category.Id, cancellationToken);
-        var knownTexts = existing.Select(QuestionTextNormalizer.Normalize).ToHashSet(StringComparer.Ordinal);
+        var knownTexts = await KnownQuestionTexts.LoadAsync(_questions, category, cancellationToken);
 
         var plannedCalls = (count + _options.QuestionsPerRequest - 1) / _options.QuestionsPerRequest;
         var callBudget = plannedCalls + _options.MaxRetryAttempts;
@@ -87,7 +83,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
         while (accepted.Count < count && callsMade < callBudget && !providerUnavailable)
         {
             var excluded = accepted.Select(q => q.TextSk).Reverse()
-                .Concat(existing)
+                .Concat(knownTexts.Stored)
                 .Take(_options.MaxExcludedQuestions)
                 .ToList();
 
@@ -114,7 +110,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
                 // Unusable items are dropped before anything else, as if the provider never sent them.
                 foreach (var question in reply.Where(GeneratedQuestionFilter.IsUsable))
                 {
-                    if (accepted.Count < count && knownTexts.Add(QuestionTextNormalizer.Normalize(question.TextSk)))
+                    if (accepted.Count < count && knownTexts.TryTake(question.TextSk) is null)
                     {
                         accepted.Add(question);
                     }
@@ -130,7 +126,7 @@ public sealed class QuestionGenerationService : IQuestionGenerationService
 
         var createdAt = _timeProvider.GetUtcNow().UtcDateTime;
         var questions = accepted
-            .Select(q => new Question(q.TextSk, q.TextEn, q.Answer, category, _badPoints.Pick(), QuestionSource.Ai, createdAt))
+            .Select(q => AiQuestionFactory.Create(q, category, _badPoints, createdAt))
             .ToList();
 
         return new QuestionGenerationResult(questions, count, discarded, providerUnavailable);

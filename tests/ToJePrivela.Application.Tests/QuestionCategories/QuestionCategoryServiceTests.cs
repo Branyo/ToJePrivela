@@ -161,7 +161,7 @@ public class QuestionCategoryServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal((1, 1), (result.Value.QuestionCount, result.Value.AiQuestionCount));
         Assert.Equal(
-            new QuestionImportSummaryDto(3, 1, [new(2, QuestionRejection.Duplicate), new(3, QuestionRejection.InvalidText)]),
+            new QuestionImportSummaryDto(3, 1, [new(2, QuestionRejection.Repeated), new(3, QuestionRejection.InvalidText)]),
             result.Value.QuestionImport,
             new ImportSummaryComparer());
         await _categories.Received(1).AddAsync(Arg.Any<QuestionCategory>(), Arg.Any<CancellationToken>());

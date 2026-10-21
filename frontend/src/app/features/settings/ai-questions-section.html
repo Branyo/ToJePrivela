@@ -90,6 +90,7 @@
               [disabled]="working() !== null"
               [(value)]="newJson"
               (unreadable)="onUnreadableFile()"
+              (tooLarge)="onTooLargeFile($event)"
             />
           }
         }
@@ -155,6 +156,7 @@
                   [disabled]="working() !== null"
                   [(value)]="importText"
                   (unreadable)="onUnreadableFile()"
+                  (tooLarge)="onTooLargeFile($event)"
                 />
                 <div class="row__actions">
                   <button type="submit" class="btn btn--sky" [disabled]="working() !== null || importText().trim().length === 0">

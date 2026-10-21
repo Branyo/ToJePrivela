@@ -18,6 +18,9 @@ public enum QuestionRejection
     /// <summary>A text gives the answer away.</summary>
     StatesAnswer,
 
-    /// <summary>The category, or an earlier item, already has the question.</summary>
-    Duplicate
+    /// <summary>The category already has the question.</summary>
+    Duplicate,
+
+    /// <summary>An earlier item of the same import has the question.</summary>
+    Repeated
 }

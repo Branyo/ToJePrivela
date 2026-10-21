@@ -71,7 +71,7 @@ address added any other way stops it at once after startup (exit code 1).
 | `QuestionGeneration:MaxParallelRequests` | AI calls running at once (default 3) |
 | `QuestionGeneration:MaxRetryAttempts` | Extra calls allowed to top up a shortfall (default 3) |
 | `QuestionGeneration:MaxExcludedQuestions` | Known questions each call is told not to repeat (default 100) |
-| `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on the AI endpoints (default 5 per 60 s) |
+| `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on requests that call the AI (default 5 per 60 s) |
 | `Cors:AllowedOrigins` | Frontend origins; empty means "any origin" |
 | `Authentication:Jwt:SigningKey` | Signs the access tokens; at least 32 characters, required — user-secrets or `Authentication__Jwt__SigningKey` (Development has a dev-only key, which every other environment refuses to start with) |
 | `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 1440 minutes (24 h) by default |
@@ -185,7 +185,9 @@ Without a valid token every other route answers 401 `Auth.Unauthenticated`. Chan
 answers 403 `Auth.Forbidden` to everyone else; reading questions and recording views is open to every login.
 
 Categories are immutable — there is no PUT; delete the category and create a new one instead. The two
-AI-generating POSTs share one rate limit.
+AI-generating POSTs share one rate limit; creating a category counts towards it only when it translates a name or
+generates questions (both names given with `questionCount` 0, with or without imported JSON, is free). Requests
+refused by authorization or validation are never counted.
 
 Admins can also import questions into a category (the 📥 button on the categories tab: paste the JSON or pick a
 `.json` file), or start a new category with them (the 📥 JSON choice of the new-category form; bad JSON is refused
@@ -199,7 +201,8 @@ ignored, so a model's reply can be pasted as it is:
 `answer` is a JSON number or a quoted one. Items are judged like generated questions (same filter, duplicates by
 Slovak text against the category and each other) and stored as `Ai` questions with random bad points; every item left
 out is reported by its 1-based `position` with a `reason` (`Malformed`, `InvalidText`, `InvalidAnswer`,
-`AnswerTooLarge`, `StatesAnswer`, `Duplicate`). One import takes at most 1000 items; text that is no JSON array is
+`AnswerTooLarge`, `StatesAnswer`, `Duplicate` — the category already has it, `Repeated` — an earlier item has it).
+The answer reports these as `summary` (`received`, `imported`, `rejected`) beside the stored `questions`. One import takes at most 1000 items; text that is no JSON array is
 400 `QuestionImport.InvalidJson`, an empty array `QuestionImport.Empty`, too many items `QuestionImport.TooMany`.
 
 Every category is named in Slovak (`nameSk`) and English (`nameEn`); both names are unique. Creating one needs a name

@@ -33,3 +33,38 @@ public class AiRateLimitTests : IClassFixture<SingleAiPermitApiFactory>
         Assert.Equal(HttpStatusCode.OK, unlimited.StatusCode);
     }
 }
+
+public class AiRateLimitSkipTests : IClassFixture<SingleAiPermitApiFactory>
+{
+    private readonly HttpClient _client;
+
+    public AiRateLimitSkipTests(SingleAiPermitApiFactory factory)
+    {
+        _client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task CreatingACategoryWithoutAiCallsDoesNotCountTowardsTheLimit()
+    {
+        const string json = """[{"questionSk": "Koľko metrov meria Eiffelova veža?", "questionEn": "How many meters tall is the Eiffel Tower?", "answer": 330}]""";
+
+        var imported = await _client.PostAsJsonAsync(
+            "/api/question-categories",
+            new { nameSk = NewName(), nameEn = NewName(), questionCount = 0, questionsJson = json });
+        var empty = await _client.PostAsJsonAsync(
+            "/api/question-categories",
+            new { nameSk = NewName(), nameEn = NewName(), questionCount = 0 });
+        var generated = await _client.PostAsJsonAsync("/api/question-categories/1/ai-questions", new { count = 1 });
+        var translated = await _client.PostAsJsonAsync(
+            "/api/question-categories",
+            new { nameSk = NewName(), questionCount = 0 });
+
+        Assert.Equal(HttpStatusCode.Created, imported.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, empty.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, generated.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, translated.StatusCode);
+        Assert.True(translated.Headers.Contains("Retry-After"));
+    }
+
+    private static string NewName() => $"Cat{Guid.NewGuid():N}"[..12];
+}

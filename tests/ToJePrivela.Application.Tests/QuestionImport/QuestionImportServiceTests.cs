@@ -44,8 +44,8 @@ public class QuestionImportServiceTests
             Item("V ktorom roku vznikla OSN?", "Which year was the UN founded?", "1945")));
 
         Assert.True(result.IsSuccess);
-        Assert.Equal((2, 2), (result.Value.Received, result.Value.Imported));
-        Assert.Empty(result.Value.Rejected);
+        Assert.Equal((2, 2), (result.Value.Summary.Received, result.Value.Summary.Imported));
+        Assert.Empty(result.Value.Summary.Rejected);
         await _questions.Received(1).AddRangeAsync(
             Arg.Is<IEnumerable<Question>>(questions => questions.All(q =>
                 q.Category == _category && q.Source == QuestionSource.Ai && q.BadPoints == 3 && q.CreatedAt == Now.UtcDateTime)),
@@ -66,7 +66,7 @@ public class QuestionImportServiceTests
             Item("V roku 1969 pristálo Apollo 11 na Mesiaci, v ktorom roku?", "Which year did Apollo 11 land?", "1969"),
             Item(" koľko HRÁČOV je na futbalovom ihrisku ", "How many football players are there?", "22")));
 
-        Assert.Equal((7, 1), (result.Value.Received, result.Value.Imported));
+        Assert.Equal((7, 1), (result.Value.Summary.Received, result.Value.Summary.Imported));
         Assert.Equal(
             [
                 new RejectedQuestionDto(2, QuestionRejection.Malformed),
@@ -74,9 +74,9 @@ public class QuestionImportServiceTests
                 new RejectedQuestionDto(4, QuestionRejection.InvalidAnswer),
                 new RejectedQuestionDto(5, QuestionRejection.AnswerTooLarge),
                 new RejectedQuestionDto(6, QuestionRejection.StatesAnswer),
-                new RejectedQuestionDto(7, QuestionRejection.Duplicate),
+                new RejectedQuestionDto(7, QuestionRejection.Repeated),
             ],
-            result.Value.Rejected);
+            result.Value.Summary.Rejected);
     }
 
     [Fact]
@@ -86,8 +86,8 @@ public class QuestionImportServiceTests
 
         var result = await _sut.ImportAsync(4, Request(Item(TextSk, TextEn, "22")));
 
-        Assert.Equal(new RejectedQuestionDto(1, QuestionRejection.Duplicate), Assert.Single(result.Value.Rejected));
-        Assert.Equal(0, result.Value.Imported);
+        Assert.Equal(new RejectedQuestionDto(1, QuestionRejection.Duplicate), Assert.Single(result.Value.Summary.Rejected));
+        Assert.Equal(0, result.Value.Summary.Imported);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

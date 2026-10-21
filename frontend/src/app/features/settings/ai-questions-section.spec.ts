@@ -10,6 +10,7 @@ import { LanguageService } from '../../core/i18n/language';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { TEST_RULES } from '../../core/rules/testing';
 import { AiQuestionsSection } from './ai-questions-section';
+import { MAX_JSON_LENGTH } from './json-questions-input';
 
 const CATEGORIES: QuestionCategory[] = [
   { id: 2, name: 'Šport', nameSk: 'Šport', nameEn: 'Sport', questionCount: 1, aiQuestionCount: 1 },
@@ -220,12 +221,14 @@ describe('AiQuestionsSection', () => {
     const request = http.expectOne({ method: 'POST', url: '/api/question-categories/1/imported-questions' });
     expect(request.request.body).toEqual({ json });
     request.flush({
-      received: 3,
-      imported: 1,
-      rejected: [
-        { position: 2, reason: 'Duplicate' },
-        { position: 3, reason: 'InvalidAnswer' },
-      ],
+      summary: {
+        received: 3,
+        imported: 1,
+        rejected: [
+          { position: 2, reason: 'Duplicate' },
+          { position: 3, reason: 'InvalidAnswer' },
+        ],
+      },
       questions: [],
     });
     flushLoad();
@@ -251,6 +254,25 @@ describe('AiQuestionsSection', () => {
     await fixture.whenStable();
 
     expect(page.querySelector<HTMLTextAreaElement>('.row__import .json-input__text')!.value).toBe(json);
+    http.expectNone({ method: 'POST' });
+  });
+
+  it('refuses a picked file too large to import without reading it', async () => {
+    const { fixture, page } = await render();
+
+    const text = await openImport(fixture, page);
+    const file = page.querySelector<HTMLInputElement>('.row__import .json-input__file')!;
+    const huge = new File(['[]'], 'huge.json', { type: 'application/json' });
+    Object.defineProperty(huge, 'size', { value: MAX_JSON_LENGTH * 4 + 1 });
+    const read = vi.spyOn(huge, 'text');
+    Object.defineProperty(file, 'files', { value: [huge] });
+    file.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+
+    expect(read).not.toHaveBeenCalled();
+    expect(text.value).toBe('');
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('admin.import.tooLarge');
     http.expectNone({ method: 'POST' });
   });
 
