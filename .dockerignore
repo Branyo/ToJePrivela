@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.angular/
+**/logs/
+**/*.db*
+.git/
+.vs/
+.env
+tests/
+Claude outputs/
