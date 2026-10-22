@@ -1,0 +1,17 @@
+# SITE_ADDRESS is ":80" (plain HTTP on any address) until a domain is set in .env; with a domain such as
+# "tojeprivela.sk", Caddy gets and renews its HTTPS certificate by itself.
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# Caddy adds X-Forwarded-For, which the API trusts from this container only (ForwardedHeaders:KnownProxies).
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# The Angular router owns every other path, so an unknown file falls back to index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
