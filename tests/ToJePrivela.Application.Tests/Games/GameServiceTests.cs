@@ -35,6 +35,101 @@ public class GameServiceTests
         Assert.Equal([1, 2], Assert.Single(result.Value).PlayerIds);
     }
 
+    [Theory]
+    [InlineData(GameHistoryStatus.All)]
+    [InlineData(GameHistoryStatus.Running)]
+    [InlineData(GameHistoryStatus.Finished)]
+    public async Task GetHistoryAsync_ContinuesAfterTheLastListedGameAndAsksForOneMore(GameHistoryStatus status)
+    {
+        // Sent as "…+02:00", the start arrives as local time; the position is the stored UTC one.
+        var before = new DateTimeOffset(Now.UtcDateTime).ToOffset(TimeSpan.FromHours(2)).LocalDateTime;
+        _games.GetRecentAsync(TestAccountId, status, new GamePosition(Now.UtcDateTime, 6), 3, Arg.Any<CancellationToken>())
+            .Returns([
+                TestEntities.Game(5, [1, 2], Now.UtcDateTime),
+                TestEntities.Game(4, [1, 2], Now.UtcDateTime),
+                TestEntities.Game(3, [1, 2], Now.UtcDateTime),
+            ]);
+
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { Status = status, Before = before, BeforeId = 6, Take = 2 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal([5, 4], result.Value.Games.Select(g => g.Id));
+        Assert.True(result.Value.HasMore);
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_WithoutBefore_ContinuesFromWhereTheGameStandsNow()
+    {
+        _games.GetPositionAsync(TestAccountId, 6, Arg.Any<CancellationToken>()).Returns(new GamePosition(Now.UtcDateTime, 6));
+        _games.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(Now.UtcDateTime, 6), 21, Arg.Any<CancellationToken>())
+            .Returns([TestEntities.Game(5, [1, 2], Now.UtcDateTime)]);
+
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { BeforeId = 6 });
+
+        Assert.Equal([5], result.Value.Games.Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_WithoutBefore_TakesAGameDeletedMeanwhileToHaveHadNoStart()
+    {
+        _games.GetPositionAsync(TestAccountId, 6, Arg.Any<CancellationToken>()).Returns((GamePosition?)null);
+        _games.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(null, 6), 21, Arg.Any<CancellationToken>())
+            .Returns([TestEntities.Game(5, [1, 2], Now.UtcDateTime)]);
+
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { BeforeId = 6 });
+
+        Assert.Equal([5], result.Value.Games.Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_WithBefore_NeverLooksTheGameUp()
+    {
+        await _sut.GetHistoryAsync(new GameHistoryFilter { Before = Now.UtcDateTime, BeforeId = 6 });
+
+        await _games.DidNotReceiveWithAnyArgs().GetPositionAsync(default, default, default);
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_HasNoMoreWhenThePageIsNotFull()
+    {
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
+        _games.GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, GameHistoryFilter.DefaultTake + 1, Arg.Any<CancellationToken>())
+            .Returns([game]);
+
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter());
+
+        Assert.False(result.Value.HasMore);
+        var listed = Assert.Single(result.Value.Games);
+        Assert.Equal([1, 2], listed.Players.Select(p => p.PlayerId));
+        Assert.Equal(1, listed.Players.Single(p => p.PlayerId == 2).BadCards);
+    }
+
+    public static TheoryData<GameHistoryFilter> InvalidPages => new()
+    {
+        new GameHistoryFilter { Take = 0 },
+        new GameHistoryFilter { Take = GameHistoryFilter.MaxTake + 1 },
+        new GameHistoryFilter { BeforeId = 0 },
+        new GameHistoryFilter { Before = Now.UtcDateTime },
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidPages))]
+    public async Task GetHistoryAsync_ValidatesThePage(GameHistoryFilter filter)
+    {
+        var result = await _sut.GetHistoryAsync(filter);
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _games.DidNotReceiveWithAnyArgs().GetRecentAsync(default, default, default, default, default);
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_RejectsAnUnknownStatus()
+    {
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { Status = (GameHistoryStatus)7 });
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+    }
+
     [Fact]
     public async Task GetByIdAsync_ReturnsNotFoundForUnknownGame()
     {

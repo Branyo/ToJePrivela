@@ -6,7 +6,8 @@
     "menu": "Menu",
     "signOut": "Odhlásiť",
     "settings": "Nastavenia",
-    "statistics": "Štatistiky"
+    "statistics": "Štatistiky",
+    "history": "História"
   },
   "languages": {
     "sk": "Slovenčina",
@@ -22,7 +23,8 @@
     "players": "Hráči",
     "categories": "Kategórie",
     "password": "Heslo",
-    "statistics": "Štatistiky"
+    "statistics": "Štatistiky",
+    "history": "História"
   },
   "common": {
     "dateTime": "d. M. HH:mm",
@@ -611,5 +613,32 @@
         "hint": "Najviac správnych odhalení v jednej hre."
       }
     }
+  },
+  "history": {
+    "title": "🕘 História hier",
+    "filters": "Ktoré hry ukázať",
+    "status": {
+      "All": "Všetky",
+      "Running": "Rozohrané",
+      "Finished": "Dohrané"
+    },
+    "state": {
+      "running": "⏳ Rozohraná",
+      "finished": "🏁 Dohraná",
+      "cancelled": "🚫 Zrušená"
+    },
+    "lost": "prehra",
+    "badPoints": "trestné body: {{points}}",
+    "continue": "Pokračovať →",
+    "results": "Výsledky →",
+    "loading": "Načítavam…",
+    "more": "Ukázať staršie",
+    "empty": {
+      "All": "Zatiaľ ste nehrali žiadnu hru.",
+      "Running": "Žiadna rozohraná hra.",
+      "Finished": "Zatiaľ žiadna dohraná hra."
+    },
+    "start": "🎉 Nová hra",
+    "retry": "Skúsiť znova"
   }
 }

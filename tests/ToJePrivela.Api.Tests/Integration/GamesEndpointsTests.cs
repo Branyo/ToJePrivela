@@ -369,6 +369,66 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         Assert.Null((await _client.GetFromJsonAsync<GameDto>($"/api/games/{game.Id}"))!.Finished);
     }
 
+    [Fact]
+    public async Task GetHistory_ListsTheNewestGamesFirstWithTheirScores()
+    {
+        var finished = await CreateGameAsync();
+        await GiveABadCardAsync(finished, playerId: 2);
+        (await _client.PostAsync($"/api/games/{finished.Id}/finish", null)).EnsureSuccessStatusCode();
+        var running = await CreateGameAsync();
+
+        var all = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=2");
+        var runningOnly = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?status=Running&take=1");
+        var finishedOnly = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?status=finished&take=1");
+
+        Assert.Equal([running.Id, finished.Id], all!.Games.Select(g => g.Id));
+        Assert.Equal([2], all.Games[1].Players.Where(p => p.IsLoser).Select(p => p.PlayerId));
+        Assert.Equal(running.Id, Assert.Single(runningOnly!.Games).Id);
+        Assert.Equal(finished.Id, Assert.Single(finishedOnly!.Games).Id);
+    }
+
+    [Fact]
+    public async Task GetHistory_ContinuesAfterTheLastListedGame()
+    {
+        var older = await CreateGameAsync();
+        var newer = await CreateGameAsync();
+        var firstPage = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=1");
+        await CreateGameAsync(); // started meanwhile on another device
+
+        var last = firstPage!.Games[^1];
+        var before = Uri.EscapeDataString(last.Started!.Value.ToString("O"));
+        var nextPage = await _client.GetFromJsonAsync<GameHistoryDto>($"/api/games/history?take=1&before={before}&beforeId={last.Id}");
+
+        Assert.Equal(newer.Id, last.Id);
+        Assert.True(firstPage.HasMore);
+        Assert.Equal(older.Id, Assert.Single(nextPage!.Games).Id);
+    }
+
+    [Fact]
+    public async Task GetHistory_ContinuesAfterAGameGivenByItsIdAlone()
+    {
+        var older = await CreateGameAsync();
+        var newer = await CreateGameAsync();
+
+        var page = await _client.GetFromJsonAsync<GameHistoryDto>($"/api/games/history?take=1&beforeId={newer.Id}");
+
+        Assert.Equal(older.Id, Assert.Single(page!.Games).Id);
+        Assert.True(page.HasMore);
+    }
+
+    [Theory]
+    [InlineData("take=0")]
+    [InlineData("take=51")]
+    [InlineData("beforeId=0")]
+    [InlineData("before=2026-10-01T18:00:00Z")]
+    [InlineData("status=Lost")]
+    public async Task GetHistory_RejectsABadPage(string query)
+    {
+        var response = await _client.GetAsync($"/api/games/history?{query}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private async Task GiveABadCardAsync(GameDto game, int playerId)
     {
         var question = await CreateQuestionAsync(badPoints: 2);

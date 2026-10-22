@@ -101,7 +101,7 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccountId");
+                    b.HasIndex("AccountId", "Started", "Id");
 
                     b.ToTable("Games");
                 });

@@ -3,6 +3,7 @@ using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Application.Games.Mapping;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Games;
@@ -40,6 +41,28 @@ public sealed class GameService : IGameService
     {
         var games = await _games.GetAllAsync(_currentAccount.Id, cancellationToken);
         return Result.Success(GameMapper.ToDtos(games));
+    }
+
+    public async Task<Result<GameHistoryDto>> GetHistoryAsync(GameHistoryFilter filter, CancellationToken cancellationToken = default)
+    {
+        if (RequestValidator.Validate(filter) is { } invalid)
+        {
+            return Result.Failure<GameHistoryDto>(invalid);
+        }
+
+        var after = filter.BeforeId is not int beforeId ? null
+            // The start the client listed the game at, so a game moved meanwhile neither skips nor repeats the others.
+            : filter.Before is DateTime before ? new GamePosition(UtcTime.Normalize(before), beforeId)
+            // Without one, where the game stands now. A game deleted meanwhile is taken to have had no start: the client
+            // sends "before" whenever the game it listed had one.
+            : await _games.GetPositionAsync(_currentAccount.Id, beforeId, cancellationToken) ?? new GamePosition(null, beforeId);
+
+        // One game past the page tells whether older ones follow, without counting them all.
+        var games = await _games.GetRecentAsync(_currentAccount.Id, filter.Status, after, filter.Take + 1, cancellationToken);
+
+        return Result.Success(new GameHistoryDto(
+            games.Take(filter.Take).Select(GameMapper.ToDetailsDto).ToList(),
+            games.Count > filter.Take));
     }
 
     public async Task<Result<GameDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)

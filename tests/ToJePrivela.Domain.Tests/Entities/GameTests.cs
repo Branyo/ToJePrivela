@@ -19,6 +19,21 @@ public class GameTests
     }
 
     [Fact]
+    public void FinishedGameAndRunningGame_SplitGamesAsIsFinishedDoes_ACancelledOneCountingAsFinished()
+    {
+        var running = new Game(TestAccountId, [1, 2], Start);
+        var finished = WithABadCard(new Game(TestAccountId, [1, 2], Start));
+        finished.Finish(Now);
+        var cancelled = new Game(TestAccountId, [1, 2], Start);
+        cancelled.ForgetPlayer(2, Now);
+        Game[] games = [running, finished, cancelled];
+
+        Assert.Equal([finished, cancelled], games.AsQueryable().Where(Game.FinishedGame));
+        Assert.Equal([running], games.AsQueryable().Where(Game.RunningGame));
+        Assert.Equal([false, true, true], games.Select(g => g.IsFinished));
+    }
+
+    [Fact]
     public void Constructor_CreatesOneEntryPerPlayer()
     {
         var game = new Game(TestAccountId, [1, 2, 3], Start);

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using ToJePrivela.Domain.Common;
 
 namespace ToJePrivela.Domain.Entities;
@@ -9,6 +10,17 @@ public class Game
     public const int MinBadCardLimit = 2;
     public const int MaxBadCardLimit = 10;
     public const int DefaultBadCardLimit = 3;
+
+    /// <summary>
+    /// What makes a game finished: it has an end, cancelled or not. The one definition every query that filters games
+    /// by it builds on (the history, <c>PlayerStatistics.CountedGame</c>); <see cref="IsFinished"/> says the same in
+    /// plain code, held to it by a test.
+    /// </summary>
+    public static readonly Expression<Func<Game, bool>> FinishedGame = g => g.Finished != null;
+
+    /// <summary>Exactly the games <see cref="FinishedGame"/> leaves out.</summary>
+    public static readonly Expression<Func<Game, bool>> RunningGame =
+        Expression.Lambda<Func<Game, bool>>(Expression.Not(FinishedGame.Body), FinishedGame.Parameters);
 
     private readonly List<GamePlayer> _gamePlayers = [];
 
