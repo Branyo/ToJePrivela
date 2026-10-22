@@ -12,16 +12,15 @@ public class Game
     public const int DefaultBadCardLimit = 3;
 
     /// <summary>
-    /// What makes a game finished: it has an end, cancelled or not. The one definition, shared by
-    /// <see cref="IsFinished"/> and the database queries that filter by it.
+    /// What makes a game finished: it has an end, cancelled or not. The one definition every query that filters games
+    /// by it builds on (the history, <c>PlayerStatistics.CountedGame</c>); <see cref="IsFinished"/> says the same in
+    /// plain code, held to it by a test.
     /// </summary>
     public static readonly Expression<Func<Game, bool>> FinishedGame = g => g.Finished != null;
 
     /// <summary>Exactly the games <see cref="FinishedGame"/> leaves out.</summary>
     public static readonly Expression<Func<Game, bool>> RunningGame =
         Expression.Lambda<Func<Game, bool>>(Expression.Not(FinishedGame.Body), FinishedGame.Parameters);
-
-    private static readonly Func<Game, bool> IsFinishedGame = FinishedGame.Compile();
 
     private readonly List<GamePlayer> _gamePlayers = [];
 
@@ -79,7 +78,7 @@ public class Game
     /// <summary>The players in the order of play (<see cref="GamePlayer.Seat"/>), the one order every view and rule uses.</summary>
     public IEnumerable<GamePlayer> PlayersInSeatOrder => _gamePlayers.OrderBy(gp => gp.Seat).ThenBy(gp => gp.Id);
 
-    public bool IsFinished => IsFinishedGame(this);
+    public bool IsFinished => Finished is not null;
 
     /// <summary>Ended without a result because one of its players was deleted; nobody lost it.</summary>
     public bool IsCancelled { get; private set; }

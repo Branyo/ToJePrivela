@@ -58,15 +58,35 @@ public class GameServiceTests
     }
 
     [Fact]
-    public async Task GetHistoryAsync_ContinuesAfterAGameWithoutAStart()
+    public async Task GetHistoryAsync_WithoutBefore_ContinuesFromWhereTheGameStandsNow()
     {
-        _games.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(null, 6), 21, Arg.Any<CancellationToken>())
-            .Returns([]);
+        _games.GetPositionAsync(TestAccountId, 6, Arg.Any<CancellationToken>()).Returns(new GamePosition(Now.UtcDateTime, 6));
+        _games.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(Now.UtcDateTime, 6), 21, Arg.Any<CancellationToken>())
+            .Returns([TestEntities.Game(5, [1, 2], Now.UtcDateTime)]);
 
         var result = await _sut.GetHistoryAsync(new GameHistoryFilter { BeforeId = 6 });
 
-        Assert.True(result.IsSuccess);
-        Assert.Empty(result.Value.Games);
+        Assert.Equal([5], result.Value.Games.Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_WithoutBefore_TakesAGameDeletedMeanwhileToHaveHadNoStart()
+    {
+        _games.GetPositionAsync(TestAccountId, 6, Arg.Any<CancellationToken>()).Returns((GamePosition?)null);
+        _games.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(null, 6), 21, Arg.Any<CancellationToken>())
+            .Returns([TestEntities.Game(5, [1, 2], Now.UtcDateTime)]);
+
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { BeforeId = 6 });
+
+        Assert.Equal([5], result.Value.Games.Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_WithBefore_NeverLooksTheGameUp()
+    {
+        await _sut.GetHistoryAsync(new GameHistoryFilter { Before = Now.UtcDateTime, BeforeId = 6 });
+
+        await _games.DidNotReceiveWithAnyArgs().GetPositionAsync(default, default, default);
     }
 
     [Fact]

@@ -404,6 +404,18 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal(older.Id, Assert.Single(nextPage!.Games).Id);
     }
 
+    [Fact]
+    public async Task GetHistory_ContinuesAfterAGameGivenByItsIdAlone()
+    {
+        var older = await CreateGameAsync();
+        var newer = await CreateGameAsync();
+
+        var page = await _client.GetFromJsonAsync<GameHistoryDto>($"/api/games/history?take=1&beforeId={newer.Id}");
+
+        Assert.Equal(older.Id, Assert.Single(page!.Games).Id);
+        Assert.True(page.HasMore);
+    }
+
     [Theory]
     [InlineData("take=0")]
     [InlineData("take=51")]

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ToJePrivela.Application.Abstractions.Persistence;
 
 namespace ToJePrivela.Application.Games.Dtos;
 
@@ -15,7 +16,10 @@ public sealed class GameHistoryFilter : IValidatableObject
     [EnumDataType(typeof(GameHistoryStatus), ErrorMessage = "Status should be All, Running or Finished.")]
     public GameHistoryStatus Status { get; init; } = GameHistoryStatus.All;
 
-    /// <summary>The last listed game's <c>started</c>; left out when that game has none.</summary>
+    /// <summary>
+    /// The last listed game's <c>started</c> as it was listed; left out when that game has none. Without it the page
+    /// continues from where <see cref="BeforeId"/> stands now (a game deleted meanwhile is taken to have had no start).
+    /// </summary>
     public DateTime? Before { get; init; }
 
     /// <summary>The last listed game's id; the page continues after it.</summary>

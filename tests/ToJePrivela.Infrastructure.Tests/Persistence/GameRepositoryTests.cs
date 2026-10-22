@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
-using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence;
 using ToJePrivela.Infrastructure.Persistence.Repositories;
@@ -236,6 +235,35 @@ public class GameRepositoryTests : IDisposable
         Assert.Equal(
             [withoutStart],
             (await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(null, withoutStartToo), 10)).Select(g => g.Id));
+        Assert.Equal(
+            [started, withoutStartToo],
+            (await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, 2)).Select(g => g.Id));
+        Assert.Equal(
+            [withoutStartToo],
+            (await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.Running, new GamePosition(Start.AddDays(-5), started), 1)).Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task GetRecentAsync_RefusesAnUnknownStatus()
+    {
+        await using var lookup = _database.CreateContext();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => new GameRepository(lookup).GetRecentAsync(TestAccountId, (GameHistoryStatus)7, null, 10));
+    }
+
+    [Fact]
+    public async Task GetPositionAsync_ReadsTheStoredStart_OnlyOfTheAccountsOwnGame()
+    {
+        var gameId = await SeedGameAsync([1, 2], started: Start.AddDays(-1));
+
+        await using var lookup = _database.CreateContext();
+        var sut = new GameRepository(lookup);
+
+        Assert.Equal(new GamePosition(Start.AddDays(-1), gameId), await sut.GetPositionAsync(TestAccountId, gameId));
+        Assert.Equal(DateTimeKind.Utc, (await sut.GetPositionAsync(TestAccountId, gameId))!.Started!.Value.Kind);
+        Assert.Null(await sut.GetPositionAsync(TestAccountId + 1, gameId));
+        Assert.Null(await sut.GetPositionAsync(TestAccountId, 404));
     }
 
     [Fact]

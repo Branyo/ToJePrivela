@@ -50,20 +50,23 @@ export class History {
 
   constructor() {
     // Another filter starts over from its newest game (a late page of the previous one is dropped); "show older" (and
-    // "try again") asks for the page after the last listed game, ignored while a page is on its way.
+    // "try again") asks for the page after the last game received, ignored while a page is on its way.
     toObservable(this.status)
       .pipe(
         switchMap((status) => {
           this.games.set([]);
           this.hasMore.set(false);
           this.error.set(null);
+          // The last game the server sent, not the last one listed: a page may end with games already listed (moved
+          // since), and continuing from an earlier one would fetch them again, page after page.
+          let after: GameDetails | null = null;
 
           return this.more.pipe(
             startWith(undefined),
             exhaustMap(() => {
               this.loading.set(true);
               this.error.set(null);
-              return this.gamesApi.getHistory(status, this.games().at(-1) ?? null, PAGE_SIZE).pipe(
+              return this.gamesApi.getHistory(status, after, PAGE_SIZE).pipe(
                 catchError((error) => {
                   this.error.set(toProblem(error).message);
                   this.loading.set(false);
@@ -71,6 +74,7 @@ export class History {
                 }),
               );
             }),
+            tap((page) => (after = page.games.at(-1) ?? after)),
           );
         }),
         tap((page) => {

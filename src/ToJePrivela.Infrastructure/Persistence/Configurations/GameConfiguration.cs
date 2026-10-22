@@ -29,7 +29,7 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
             .IsRequired()
             .IsConcurrencyToken();
 
-        // The history pages through an account's games newest first; this index covers that order.
+        // The history pages through an account's games newest first, as ranges of this index (see GameRepository).
         builder.HasIndex(g => new { g.AccountId, g.Started, g.Id });
 
         builder.HasOne<Account>()

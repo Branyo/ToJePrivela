@@ -191,6 +191,52 @@ describe('History', () => {
     expectPage('All', last).flush({ games: [], hasMore: false });
   });
 
+  it('continues after the last game received even when it was already listed', async () => {
+    const fixture = await render({ games: [game(9), game(8)], hasMore: true });
+    const more = () => (fixture.nativeElement.querySelector('.history__more') as HTMLButtonElement).click();
+
+    // Game 9's start was moved back meanwhile: it ends the next page, where it is not listed again.
+    const moved = game(9, { started: '2026-10-19T08:00:00Z' });
+    more();
+    fixture.detectChanges();
+    expectPage('All', game(8)).flush({ games: [finished, moved], hasMore: true });
+    await settle(fixture);
+
+    more();
+    fixture.detectChanges();
+    expectPage('All', moved).flush({ games: [game(2)], hasMore: false });
+    await settle(fixture);
+
+    expect(links(fixture.nativeElement)).toEqual(['/games/9', '/games/8', '/games/4/summary', '/games/2']);
+  });
+
+  it('keeps its place after an empty page', async () => {
+    const fixture = await render({ games: [game(9)], hasMore: true });
+    const more = () => (fixture.nativeElement.querySelector('.history__more') as HTMLButtonElement).click();
+
+    more();
+    fixture.detectChanges();
+    expectPage('All', game(9)).flush({ games: [], hasMore: true });
+    await settle(fixture);
+
+    more();
+    fixture.detectChanges();
+    expectPage('All', game(9)).flush({ games: [], hasMore: false });
+  });
+
+  it('starts the next filter from its newest game, not after the last game of the previous one', async () => {
+    const fixture = await render({ games: [game(9)], hasMore: true });
+
+    fixture.componentRef.setInput('status', 'running');
+    fixture.detectChanges();
+    expectPage('Running').flush({ games: [game(7)], hasMore: true });
+    await settle(fixture);
+
+    (fixture.nativeElement.querySelector('.history__more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expectPage('Running', game(7)).flush({ games: [], hasMore: false });
+  });
+
   it('lists a game that comes again on a later page once', async () => {
     const fixture = await render({ games: [game(9), game(8)], hasMore: true });
 

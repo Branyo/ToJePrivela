@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using ToJePrivela.Application.Abstractions.Persistence;
-using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Domain.Statistics;
 
@@ -18,7 +17,9 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
 
     /// <summary>
     /// Read only, like <see cref="GetCountedByPlayerAsync"/>: the history never saves what it lists. A page continues
-    /// after a position, not after a count, so it reads a range of the (AccountId, Started, Id) index.
+    /// after a position, not after a count, and is read as at most two ranges of the (AccountId, Started, Id) index,
+    /// each walked newest first and stopped at the page's end: the games with a start after the position, then, should
+    /// the page not be full, those without one (newest first puts them last, SQLite sorting NULL lowest).
     /// </summary>
     public async Task<IReadOnlyList<Game>> GetRecentAsync(
         int accountId,
@@ -29,28 +30,56 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
     {
         var games = status switch
         {
+            GameHistoryStatus.All => Owned(accountId),
             GameHistoryStatus.Running => Owned(accountId).Where(Game.RunningGame),
             GameHistoryStatus.Finished => Owned(accountId).Where(Game.FinishedGame),
-            _ => Owned(accountId),
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown game history status."),
         };
+        games = games.AsNoTracking();
 
-        // Newest first puts a game without a start (SQLite sorts NULL lowest) after every game with one.
-        if (after is { Started: DateTime started, Id: var id })
+        var page = new List<Game>(take);
+
+        if (after is null || after.Started is not null)
         {
-            games = games.Where(g => g.Started < started || g.Started == null || (g.Started == started && g.Id < id));
-        }
-        else if (after is not null)
-        {
-            games = games.Where(g => g.Started == null && g.Id < after.Id);
+            var started = games.Where(g => g.Started != null);
+
+            if (after is { Started: DateTime start, Id: var id })
+            {
+                // "Started <= start" bounds the index range; the rest only drops the games at that very start whose id is
+                // not below the position's (the position itself and those listed before it).
+                started = started.Where(g => g.Started <= start && (g.Started < start || g.Id < id));
+            }
+
+            page.AddRange(await started
+                .OrderByDescending(g => g.Started)
+                .ThenByDescending(g => g.Id)
+                .Take(take)
+                .ToListAsync(cancellationToken));
         }
 
-        return await games
-            .AsNoTracking()
-            .OrderByDescending(g => g.Started)
-            .ThenByDescending(g => g.Id)
-            .Take(take)
-            .ToListAsync(cancellationToken);
+        if (page.Count < take)
+        {
+            var withoutStart = games.Where(g => g.Started == null);
+
+            if (after is { Started: null, Id: var id })
+            {
+                withoutStart = withoutStart.Where(g => g.Id < id);
+            }
+
+            page.AddRange(await withoutStart
+                .OrderByDescending(g => g.Id)
+                .Take(take - page.Count)
+                .ToListAsync(cancellationToken));
+        }
+
+        return page;
     }
+
+    public async Task<GamePosition?> GetPositionAsync(int accountId, int gameId, CancellationToken cancellationToken = default) =>
+        await base.Owned(accountId)
+            .Where(g => g.Id == gameId)
+            .Select(g => new GamePosition(g.Started, g.Id))
+            .FirstOrDefaultAsync(cancellationToken);
 
     /// <summary>
     /// The scores are all statistics read, so the seats come without their <see cref="GamePlayer.Player"/>: loading

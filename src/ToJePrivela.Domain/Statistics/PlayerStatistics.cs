@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Domain.Statistics;
@@ -23,8 +24,8 @@ public sealed class PlayerStatistics
     /// before anybody held a bad card, possible before <c>Game.NoBadCardsYet</c>, has none). The one definition,
     /// shared by <see cref="For"/> and the database query that loads the games.
     /// </summary>
-    public static readonly Expression<Func<Game, bool>> CountedGame =
-        g => g.Started != null && g.Finished != null && !g.IsCancelled && g.GamePlayers.Any(gp => gp.IsLoser);
+    public static readonly Expression<Func<Game, bool>> CountedGame = Game.FinishedGame.And(
+        g => g.Started != null && !g.IsCancelled && g.GamePlayers.Any(gp => gp.IsLoser));
 
     private static readonly Func<Game, bool> IsCounted = CountedGame.Compile();
 
