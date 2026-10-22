@@ -71,7 +71,7 @@
         @if (store.question(); as question) {
           <article
             class="question"
-            [class.question--revealed]="store.phase() === 'revealed' || store.phase() === 'awarding'"
+            [class.question--revealed]="store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling'"
             aria-live="polite"
           >
             <header class="question__head">
@@ -84,12 +84,18 @@
             </header>
 
             @if (store.phase() === 'choosing') {
-              <p class="question__text question__text--choosing">{{ 'play.choose.title' | translate }}</p>
+              <p class="question__text question__text--choosing">
+                @if (store.starter(); as starter) {
+                  {{ 'play.choose.titleFor' | translate: { name: starter.name } }}
+                } @else {
+                  {{ 'play.choose.title' | translate }}
+                }
+              </p>
             } @else {
               <p class="question__text">{{ question.text }}</p>
             }
 
-            @if (store.phase() === 'revealed' || store.phase() === 'awarding') {
+            @if (store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling') {
               <div class="answer">
                 <span class="answer__label">{{ 'play.answer' | translate }}</span>
                 <span class="answer__value">{{ formatAnswer(question.answer, i18n.locale()) }}</span>
@@ -115,6 +121,9 @@
                 <p class="muted hint">{{ 'play.choose.hint' | translate }}</p>
               }
               @case ('asking') {
+                @if (store.starter(); as starter) {
+                  <p class="prompt prompt--starter" role="status">{{ 'play.starts' | translate: { name: starter.name } }}</p>
+                }
                 <p class="muted hint">{{ 'play.callHint' | translate }}</p>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">
                   {{ 'play.skip' | translate }}
@@ -130,6 +139,9 @@
                 <button type="button" class="btn btn--ghost" (click)="store.back()">{{ 'play.back' | translate }}</button>
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">{{ 'play.nobody' | translate }}</button>
                 <p class="muted hint">{{ 'play.cardRule' | translate }}</p>
+              }
+              @case ('calling') {
+                <p class="prompt">{{ 'play.loading' | translate }}</p>
               }
               @case ('awarding') {
                 <p class="prompt">{{ 'play.incoming' | translate }}</p>
@@ -153,7 +165,7 @@
           >
             {{ 'play.call.text' | translate }}
           </button>
-        } @else if (store.callerId() === player.playerId && (store.phase() === 'revealed' || store.phase() === 'awarding')) {
+        } @else if (store.callerId() === player.playerId && (store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling')) {
           <span class="call call--made" aria-hidden="true">
             {{ 'play.call.text' | translate }}
           </span>
@@ -170,6 +182,7 @@
           #seatButton
           type="button"
           class="seat"
+          [class.seat--starter]="store.highlightedStarterId() === player.playerId"
           [class.seat--hit]="hitPlayerId() === player.playerId"
           [class.seat--edge]="store.isOnTheEdge(player)"
           [class.seat--out]="player.badCards >= store.badCardLimit()"
@@ -226,7 +239,7 @@
     @if (verdict(); as shown) {
       {{ (shown.kind === 'false-alarm' ? 'play.verdict.falseAlarm' : 'play.verdict.tooMuch') | translate }}
     } @else if (store.caller(); as caller) {
-      @if (store.phase() === 'revealed' || store.phase() === 'awarding') {
+      @if (store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling') {
         {{ 'play.call.made' | translate: { name: caller.name } }}
       }
     }

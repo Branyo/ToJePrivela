@@ -167,6 +167,19 @@ public sealed class GameService : IGameService
                 request.PlayerId,
                 cancellationToken);
 
+    public async Task<Result<GameDetailsDto>> RecordCallAsync(
+        int id,
+        RecordCallRequest request,
+        CancellationToken cancellationToken = default) =>
+        RequestValidator.Validate(request) is { } invalid
+            ? Result.Failure<GameDetailsDto>(invalid)
+            : await ChangeAsync(
+                id,
+                game => game.CheckRecordCall(request.PlayerId),
+                game => game.RecordCall(request.PlayerId),
+                request.PlayerId,
+                cancellationToken);
+
     public Task<Result<GameDetailsDto>> RemoveDoubleAsync(
         int id,
         int playerId,

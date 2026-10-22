@@ -300,9 +300,10 @@ input {
   50% { transform: translateY(-12px) rotate(3deg); }
 }
 
+/* A glow pulsing out of the element; `--ring` (an `r g b` triplet) sets its colour, bubblegum by default. */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgb(241 91 181 / 0.7), var(--shadow-sm); }
-  100% { box-shadow: 0 0 0 16px rgb(241 91 181 / 0), var(--shadow-sm); }
+  0% { box-shadow: 0 0 0 0 rgb(var(--ring, 241 91 181) / 0.7), var(--shadow-sm); }
+  100% { box-shadow: 0 0 0 16px rgb(var(--ring, 241 91 181) / 0), var(--shadow-sm); }
 }
 
 @keyframes slide-up {

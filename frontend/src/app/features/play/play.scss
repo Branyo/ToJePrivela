@@ -204,6 +204,10 @@
     color: var(--tomato);
   }
 
+  &--starter {
+    color: var(--grape);
+  }
+
   .prompt__tap {
     display: inline-block;
     animation: float 1.2s ease-in-out infinite;
@@ -283,6 +287,13 @@
     background: #ffd6d6;
   }
 
+  /* Who starts the round glows like the seats that may take a card, in sky instead of bubblegum. */
+  &--starter {
+    --ring: 76 201 240;
+    animation: pulse-ring 1.5s ease-out infinite;
+  }
+
+  /* After the starter's glow, so a card landing on the starter still shakes the seat. */
   &--hit {
     animation: hit 0.9s ease both;
   }

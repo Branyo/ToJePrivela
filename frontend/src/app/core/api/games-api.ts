@@ -44,6 +44,11 @@ export class GamesApi {
     return this.http.post<GameDetails>(`/api/games/${id}/doubles`, { playerId });
   }
 
+  /** A "To je priveľa!" call nobody took a card for: its caller starts the next round; no score changes. */
+  recordCall(id: number, playerId: number): Observable<GameDetails> {
+    return this.http.post<GameDetails>(`/api/games/${id}/calls`, { playerId });
+  }
+
   /** Takes back one double tapped by mistake; 409 when the player has none. */
   removeDouble(id: number, playerId: number): Observable<GameDetails> {
     return this.http.delete<GameDetails>(`/api/games/${id}/doubles/${playerId}`);

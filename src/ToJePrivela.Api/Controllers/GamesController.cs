@@ -76,6 +76,18 @@ public sealed class GamesController : ControllerBase
         CancellationToken cancellationToken) =>
         (await _games.AwardDoubleAsync(id, request, cancellationToken)).ToActionResult();
 
+    /// <summary>A "To je priveľa!" call nobody took a card for: its caller starts the next round; no score changes.</summary>
+    [HttpPost("{id:int}/calls")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<GameDetailsDto>> RecordCall(
+        int id,
+        [FromBody] RecordCallRequest request,
+        CancellationToken cancellationToken) =>
+        (await _games.RecordCallAsync(id, request, cancellationToken)).ToActionResult();
+
     /// <summary>Takes back one double tapped by mistake; 409 when the player has none left.</summary>
     [HttpDelete("{id:int}/doubles/{playerId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]

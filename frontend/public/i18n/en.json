@@ -148,6 +148,7 @@
     },
     "answer": "The answer is",
     "callHint": "Who called \"That's too much!\"? Tap their bubble.",
+    "starts": "▶️ {{name}} starts the round",
     "call": {
       "text": "🤚 That's too much!",
       "label": "{{name}}: That's too much! Show the answer",
@@ -193,6 +194,7 @@
     },
     "choose": {
       "title": "Starting player: how many donkeys is this question worth?",
+      "titleFor": "{{name}}, you start: how many donkeys is this question worth?",
       "group": "Bad points for this question",
       "hint": "Only the category is known so far. Tap a card and the question appears."
     }

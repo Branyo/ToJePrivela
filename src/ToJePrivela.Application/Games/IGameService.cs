@@ -21,6 +21,9 @@ public interface IGameService
     /// <summary>Credits the player with a double that held (one bad point off); never finishes the game.</summary>
     Task<Result<GameDetailsDto>> AwardDoubleAsync(int id, AwardDoubleRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>A "To je priveľa!" call nobody took a card for: its caller starts the next round; no score changes.</summary>
+    Task<Result<GameDetailsDto>> RecordCallAsync(int id, RecordCallRequest request, CancellationToken cancellationToken = default);
+
     /// <summary>Takes back one double tapped by mistake; a conflict when the player has none.</summary>
     Task<Result<GameDetailsDto>> RemoveDoubleAsync(int id, int playerId, CancellationToken cancellationToken = default);
 

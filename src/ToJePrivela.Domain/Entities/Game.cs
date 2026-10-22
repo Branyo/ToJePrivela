@@ -79,6 +79,20 @@ public class Game
     public long Version { get; private set; }
 
     /// <summary>
+    /// Who called "To je priveľa!" last, so starts the next round; null until somebody did. Stored, so a reloaded screen
+    /// and every other device name the same starter. Read it through <see cref="StarterId"/>.
+    /// </summary>
+    public int? LastCallerId { get; private set; }
+
+    /// <summary>
+    /// Who starts the next round: whoever called "To je priveľa!" on the question before (<see cref="LastCallerId"/>,
+    /// whether a card went out or not), else the first player in the order of play. A question skipped without a call
+    /// keeps the same starter. Null only when no caller is known and the first seat's player has been deleted.
+    /// </summary>
+    public int? StarterId =>
+        LastCallerId is int caller && HasPlayer(caller) ? caller : PlayersInSeatOrder.FirstOrDefault()?.PlayerId;
+
+    /// <summary>
     /// Somebody holds a bad card, the one precondition of a result: until then the game can only be played on or
     /// deleted, not finished (<see cref="GameRuleViolation.NoBadCardsYet"/>).
     /// </summary>
@@ -141,6 +155,9 @@ public class Game
 
     public GameRuleViolation? CheckAwardDouble(int playerId) => CheckRunningPlayer(playerId);
 
+    /// <summary>A call nobody took a card for still makes its caller the next round's starter.</summary>
+    public GameRuleViolation? CheckRecordCall(int callerId) => CheckRunningPlayer(callerId);
+
     public GameRuleViolation? CheckRemoveDouble(int playerId) =>
         CheckRunningPlayer(playerId)
         ?? (FindPlayer(playerId)!.Doubles == 0 ? GameRuleViolation.NoDoubleToRemove : null);
@@ -168,7 +185,8 @@ public class Game
     /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. <paramref name="callerId"/>, who
     /// called "To je priveľa!" in that round, is credited with the call (<see cref="GamePlayer.TooMuchCalls"/>); taking
     /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>), otherwise the player before
-    /// them, whose bid it was, takes it and was caught overdoing it (<see cref="GamePlayer.Caught"/>).
+    /// them, whose bid it was, takes it and was caught overdoing it (<see cref="GamePlayer.Caught"/>). The caller starts
+    /// the next round (<see cref="StarterId"/>).
     /// </summary>
     public GamePlayer AwardBadCard(int playerId, int callerId, Question question, int? chosenBadPoints, DateTime awardedAt)
     {
@@ -179,6 +197,7 @@ public class Game
 
         gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
         FindPlayer(callerId)!.AddTooMuchCall(falseAlarm: callerId == playerId);
+        LastCallerId = callerId;
         if (callerId != playerId)
         {
             gamePlayer.AddCaught();
@@ -194,6 +213,18 @@ public class Game
         }
 
         return gamePlayer;
+    }
+
+    /// <summary>
+    /// The player called "To je priveľa!" but nobody took a card (the question was let go): no score changes, the
+    /// caller only starts the next round (<see cref="StarterId"/>). A call ending with a card is
+    /// <see cref="AwardBadCard"/>, which does the same.
+    /// </summary>
+    public void RecordCall(int callerId)
+    {
+        ThrowIfBroken(CheckRecordCall(callerId));
+
+        LastCallerId = callerId;
     }
 
     /// <summary>
