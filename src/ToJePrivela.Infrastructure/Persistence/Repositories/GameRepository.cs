@@ -6,6 +6,16 @@ using ToJePrivela.Domain.Statistics;
 
 namespace ToJePrivela.Infrastructure.Persistence.Repositories;
 
+/// <summary>
+/// Reads whole games (<see cref="Owned"/>) as split queries: the games, then their seats with each seat's player, the
+/// seats found through their index. As one query EF would join the seats to their players in a subquery on the right
+/// of a LEFT JOIN, which SQLite cannot flatten, so it would build that from every seat of every game first. The two
+/// queries of one split read still see one snapshot, so a game never pairs its row with newer seats: EF keeps the games
+/// query's reader open while the seats query runs, and SQLite keeps a connection's read snapshot as long as one of its
+/// statements is open (GameReadSnapshotTests holds it to that). That holds per split read, not across several:
+/// <see cref="GetRecentAsync"/> reads its two ranges one after the other, so a game moved between them by a change saved
+/// meanwhile (a start given to a game without one) can be missing from that page or show up twice, each game whole.
+/// </summary>
 public sealed class GameRepository : AccountScopedRepository<Game>, IGameRepository
 {
     public GameRepository(ToJePrivelaDbContext context) : base(context)
@@ -83,7 +93,8 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
 
     /// <summary>
     /// The scores are all statistics read, so the seats come without their <see cref="GamePlayer.Player"/>: loading
-    /// one per seat of every game would grow with the account's history for nothing.
+    /// one per seat of every game would grow with the account's history for nothing. Without the players it is one
+    /// query, whose seats SQLite reads through their index.
     /// </summary>
     public async Task<IReadOnlyList<Game>> GetCountedByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
         await ByPlayer(WithSeats(accountId), playerId)
@@ -92,7 +103,8 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
             .ToListAsync(cancellationToken);
 
     /// <summary>Always whole: with the players, so the game's rules never run on half an aggregate.</summary>
-    protected override IQueryable<Game> Owned(int accountId) => WithSeats(accountId).ThenInclude(gp => gp.Player);
+    protected override IQueryable<Game> Owned(int accountId) =>
+        WithSeats(accountId).ThenInclude(gp => gp.Player).AsSplitQuery();
 
     /// <summary>
     /// The account's games (scoped by the base <see cref="AccountScopedRepository{TEntity}.Owned"/>, like every other
