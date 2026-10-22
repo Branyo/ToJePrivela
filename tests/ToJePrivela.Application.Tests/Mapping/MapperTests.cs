@@ -173,8 +173,6 @@ public class MapperTests
         Assert.Equal(4, dto.BadPoints);
         Assert.Equal("Ai", dto.Source);
         Assert.Equal(TestEntities.CreatedAt, dto.CreatedAt);
-        Assert.Equal(0, dto.ViewCount);
-        Assert.Null(dto.LastViewedAt);
     }
 
     [Theory]

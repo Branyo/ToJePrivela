@@ -101,7 +101,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
         var response = await _member.PostAsync($"/api/questions/{question!.Id}/views", null);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     private sealed record IdOnly(int Id);

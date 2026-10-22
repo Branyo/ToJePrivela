@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Abstractions.Localization;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
@@ -8,14 +9,12 @@ namespace ToJePrivela.Application.Questions;
 
 public sealed class QuestionService : IQuestionService
 {
-    /// <summary>How many times a view is saved before a steady stream of concurrent changes wins.</summary>
-    public const int MaxViewAttempts = 5;
-
     private readonly IQuestionRepository _questions;
     private readonly IQuestionCategoryRepository _categories;
     private readonly IBadPointsPicker _badPoints;
     private readonly TimeProvider _timeProvider;
     private readonly ICurrentLanguage _language;
+    private readonly ICurrentAccount _currentAccount;
     private readonly IUnitOfWork _unitOfWork;
 
     public QuestionService(
@@ -24,6 +23,7 @@ public sealed class QuestionService : IQuestionService
         IBadPointsPicker badPoints,
         TimeProvider timeProvider,
         ICurrentLanguage language,
+        ICurrentAccount currentAccount,
         IUnitOfWork unitOfWork)
     {
         _questions = questions;
@@ -31,6 +31,7 @@ public sealed class QuestionService : IQuestionService
         _badPoints = badPoints;
         _timeProvider = timeProvider;
         _language = language;
+        _currentAccount = currentAccount;
         _unitOfWork = unitOfWork;
     }
 
@@ -80,44 +81,17 @@ public sealed class QuestionService : IQuestionService
             }
         }
 
-        var question = await _questions.GetRandomLeastViewedAsync(categoryIds, cancellationToken);
+        var question = await _questions.GetRandomLeastViewedAsync(_currentAccount.Id, categoryIds, cancellationToken);
 
         return question is null
             ? Result.Failure<QuestionDto>(QuestionErrors.NoneAvailable())
             : Result.Success(QuestionMapper.ToDto(question, _language.Language));
     }
 
-    public async Task<Result<QuestionDto>> RecordViewAsync(int id, CancellationToken cancellationToken = default)
-    {
-        for (var attempt = 1; ; attempt++)
-        {
-            var question = await _questions.GetByIdAsync(id, cancellationToken);
-
-            if (question is null)
-            {
-                return Result.Failure<QuestionDto>(QuestionErrors.NotFound(id));
-            }
-
-            question.MarkViewed(_timeProvider.GetUtcNow().UtcDateTime);
-
-            try
-            {
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-                return Result.Success(QuestionMapper.ToDto(question, _language.Language));
-            }
-            catch (ConcurrencyConflictException)
-            {
-                if (attempt == MaxViewAttempts)
-                {
-                    return Result.Failure<QuestionDto>(QuestionErrors.ViewConflict(id));
-                }
-
-                // Someone else changed the row: forget this attempt, read their values (and version) and
-                // count on top of them.
-                _unitOfWork.DiscardChanges();
-            }
-        }
-    }
+    public async Task<Result> RecordViewAsync(int id, CancellationToken cancellationToken = default) =>
+        await _questions.RecordViewAsync(_currentAccount.Id, id, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken)
+            ? Result.Success()
+            : Result.Failure(QuestionErrors.NotFound(id));
 
     public async Task<Result<QuestionDto>> CreateAsync(CreateQuestionRequest request, CancellationToken cancellationToken = default)
     {

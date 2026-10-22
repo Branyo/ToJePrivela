@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Infrastructure.Persistence.Repositories;
@@ -35,20 +36,54 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
             .ToListAsync(cancellationToken);
 
     /// <summary>
-    /// The lowest view count is a subquery of the same statement and SQLite shuffles the candidates itself, so no list
-    /// of ids travels to the client however many questions share that count.
+    /// The account's view count of each candidate and the lowest of them are subqueries of the same statement (found
+    /// through the views' key), and SQLite shuffles the candidates itself, so no list of ids travels to the client
+    /// however many questions share that count.
     /// </summary>
     public async Task<Question?> GetRandomLeastViewedAsync(
+        int accountId,
         IReadOnlyCollection<int> categoryIds,
         CancellationToken cancellationToken = default)
     {
-        var candidates = categoryIds.Count == 0 ? Set : Set.Where(q => categoryIds.Contains(q.CategoryId));
+        var views = Context.QuestionViews.Where(v => v.AccountId == accountId);
+        var candidates = (categoryIds.Count == 0 ? Set : Set.Where(q => categoryIds.Contains(q.CategoryId)))
+            .Select(q => new
+            {
+                Question = q,
+                Views = views.Where(v => v.QuestionId == q.Id).Select(v => v.Count).FirstOrDefault()
+            });
 
         return await candidates
-            .Where(q => q.ViewCount == candidates.Min(c => c.ViewCount))
+            .Where(c => c.Views == candidates.Min(other => other.Views))
             .OrderBy(_ => EF.Functions.Random())
+            .Select(c => c.Question)
             .Include(q => q.Category)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// SQLite's upsert: the first view inserts the row, every later one adds to it, in one statement either way. The
+    /// insert reads nothing when the question does not exist, so no row changes and no foreign key is broken.
+    /// </summary>
+    public async Task<bool> RecordViewAsync(
+        int accountId,
+        int questionId,
+        DateTime viewedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var at = UtcTime.Normalize(viewedAt);
+
+        var changed = await Context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            INSERT INTO "QuestionViews" ("AccountId", "QuestionId", "Count", "LastViewedAt")
+            SELECT {accountId}, {questionId}, 1, {at}
+            WHERE EXISTS (SELECT 1 FROM "Questions" WHERE "Id" = {questionId})
+            ON CONFLICT ("AccountId", "QuestionId")
+            DO UPDATE SET "Count" = "Count" + 1, "LastViewedAt" = excluded."LastViewedAt"
+            """,
+            cancellationToken);
+
+        return changed > 0;
     }
 
     public async Task AddRangeAsync(IEnumerable<Question> questions, CancellationToken cancellationToken = default) =>

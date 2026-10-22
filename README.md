@@ -163,8 +163,8 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | DELETE | `/api/games/{id}/doubles/{playerId}` | Takes back one double tapped by mistake; 409 when the player has none or the game is finished |
 | POST | `/api/games/{id}/finish` | Ends a running game now, its result counted as it stands; 409 when already finished, and 409 `Game.NoBadCardsYet` while nobody holds a bad card (keep playing or delete it) |
 | GET | `/api/questions?categoryId=&source=` | One category's questions: `categoryId` is required (400 without it), `source` (`Manual` or `Ai`) optional |
-| GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none), drawn in one database query; 400 for unknown ids, 404 when they hold no questions; does not count a view |
-| POST | `/api/questions/{id}/views` | Records that the question was shown; returns it with the new `viewCount` |
+| GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among those the signed-in login has seen least in the given categories (all when none), drawn in one database query; 400 for unknown ids, 404 when they hold no questions; does not count a view |
+| POST | `/api/questions/{id}/views` | Records that the question was shown to the signed-in login (204); 404 for an unknown question |
 | GET/DELETE | `/api/questions/{id}` | |
 | PUT | `/api/questions/{id}` | `textSk` required; omitted `textEn` and `badPoints` are kept; an edited AI question becomes `Manual` |
 | POST | `/api/questions` | `textSk` and `textEn` required; `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
@@ -268,16 +268,18 @@ a `CreatedAt` timestamp.
   time; `/api/rules` serves the pool and the frontend only paints the colour it gets (a neutral grey for an emoji the
   pool does not list).
 - **Questions belong to a category.** `Questions.CategoryId` is a foreign key with `ON DELETE CASCADE`.
-- **Least-viewed rotation.** `GET /api/questions/random` picks at random among the questions with the
-  lowest `ViewCount` in the selected categories, so no question repeats until every one in the
-  selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`.
-  **For now the view counts are shared between the logins**, like the questions themselves: a question shown in one
-  login's game counts as viewed for every login, so one login's games change which questions the others draw next.
+- **Least-viewed rotation, per login.** `GET /api/questions/random` picks at random among the questions the signed-in
+  login was shown least often in the selected categories, so no question repeats for that login until every one in the
+  selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`. The questions
+  are shared, but the counts are not: they live in `QuestionViews` (one row per login and question, `Count` and
+  `LastViewedAt`), so one login's games never change which questions another login draws. A view is one atomic SQLite
+  upsert (`INSERT … ON CONFLICT DO UPDATE`), so devices showing a question at once all count, and it never touches the
+  question row. The `TrackQuestionViewsPerAccount` migration gave every login the shared counts it had played under.
 - **Optimistic concurrency on questions and games.** `Question.Version` and `Game.Version` are row versions (SQLite
   has no native rowversion) that EF checks as a concurrency token. A question bumps its own on every change; a game's
   is bumped by the `DbContext`, once per save that changes the game or any of its players, so no domain method can
-  forget it. A lost race surfaces as `ConcurrencyConflictException`; recording a view rereads the row and retries
-  (up to 5 attempts, then 409). A game change (card, double, finish, reschedule, delete) and a player deletion reread
+  forget it. A lost race surfaces as `ConcurrencyConflictException` (views are counted elsewhere, so they never race an
+  edit of the question). A game change (card, double, finish, reschedule, delete) and a player deletion reread
   the game and make the change again on it (`ConcurrencyRetry`, up to 3 attempts), so two devices tapping at once both
   count, a game deleted while another device saves a double is still deleted, and a card or double
   for a game finished meanwhile gets the usual 409 `Game.AlreadyFinished`; only a conflict that outlasts the attempts

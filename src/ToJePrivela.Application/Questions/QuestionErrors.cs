@@ -18,7 +18,4 @@ public static class QuestionErrors
 
     public static Error NoneAvailable() =>
         Error.NotFound("Question.NoneAvailable", "The selected categories contain no questions.");
-
-    public static Error ViewConflict(int id) =>
-        Error.Conflict("Question.ViewConflict", $"The view of question {id} could not be recorded because of concurrent changes. Try again.");
 }

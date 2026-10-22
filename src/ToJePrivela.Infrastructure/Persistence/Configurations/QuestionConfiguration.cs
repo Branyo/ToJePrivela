@@ -32,8 +32,6 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
 
         builder.Property(q => q.CreatedAt).IsRequired();
 
-        builder.Property(q => q.ViewCount).IsRequired();
-
         // Updates are guarded by WHERE "Version" = <the value read>, so a lost update surfaces as a conflict.
         builder.Property(q => q.Version)
             .IsRequired()
@@ -47,6 +45,5 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(q => new { q.CategoryId, q.Source });
-        builder.HasIndex(q => new { q.CategoryId, q.ViewCount });
     }
 }

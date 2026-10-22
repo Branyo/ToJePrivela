@@ -17,7 +17,7 @@ export class QuestionsApi {
     return this.http.get<Question>(`/api/questions/${id}`);
   }
 
-  /** One of the least viewed questions in the categories (all when empty); does not count a view. */
+  /** One of the questions this login has seen least in the categories (all when empty); does not count a view. */
   getRandom(categoryIds: readonly number[]): Observable<Question> {
     let params = new HttpParams();
     for (const id of categoryIds) {
@@ -26,8 +26,9 @@ export class QuestionsApi {
     return this.http.get<Question>('/api/questions/random', { params });
   }
 
-  recordView(id: number): Observable<Question> {
-    return this.http.post<Question>(`/api/questions/${id}/views`, null);
+  /** Counts the question as shown to this login; its least viewed questions are drawn next. */
+  recordView(id: number): Observable<void> {
+    return this.http.post<void>(`/api/questions/${id}/views`, null);
   }
 
   /** Adds a manual question to the category. */

@@ -457,8 +457,7 @@
         "UnknownCategory": "This category does not exist.",
         "InvalidCategoryIds": "The category selection is not valid.",
         "UnknownCategories": "Some of the chosen categories do not exist.",
-        "NoneAvailable": "The selected categories contain no questions.",
-        "ViewConflict": "The question could not be recorded. Please try again."
+        "NoneAvailable": "The selected categories contain no questions."
       },
       "Auth": {
         "Unauthenticated": "Please sign in again.",

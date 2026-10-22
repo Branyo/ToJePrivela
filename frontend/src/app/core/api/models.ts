@@ -132,8 +132,6 @@ export interface Question {
   badPoints: number;
   source: 'Manual' | 'Ai';
   createdAt: string;
-  viewCount: number;
-  lastViewedAt: string | null;
 }
 
 /** What an admin writes for a manual question, when adding one or editing any. */

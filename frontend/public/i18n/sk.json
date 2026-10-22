@@ -467,8 +467,7 @@
         "UnknownCategory": "Táto kategória neexistuje.",
         "InvalidCategoryIds": "Neplatný výber kategórií.",
         "UnknownCategories": "Niektoré vybraté kategórie neexistujú.",
-        "NoneAvailable": "Vo vybratých kategóriách nie sú žiadne otázky.",
-        "ViewConflict": "Otázku sa nepodarilo zaznamenať. Skús to znova."
+        "NoneAvailable": "Vo vybratých kategóriách nie sú žiadne otázky."
       },
       "Auth": {
         "Unauthenticated": "Prihlás sa, prosím, znova.",
