@@ -32,6 +32,7 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   badPointsMode: 'Question',
   cancelled: false,
   hasResult: false,
+  starterId: null,
   players: [seat(1, 'Ana'), seat(2, 'Bo')],
   ...overrides,
 });

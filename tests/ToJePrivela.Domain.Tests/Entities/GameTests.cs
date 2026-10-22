@@ -417,6 +417,50 @@ public class GameTests
     }
 
     [Fact]
+    public void StarterId_IsTheFirstPlayerUntilSomebodyCalled()
+    {
+        var game = new Game(TestAccountId, [3, 1, 2], Start);
+
+        Assert.Null(game.LastCallerId);
+        Assert.Equal(3, game.StarterId);
+    }
+
+    [Fact]
+    public void AwardBadCard_MakesTheCallerTheNextStarter()
+    {
+        var game = new Game(TestAccountId, [1, 2, 3], Start);
+
+        game.AwardBadCard(2, 3, QuestionWorth(2), null, Start.AddMinutes(5));
+
+        Assert.Equal(3, game.StarterId);
+    }
+
+    [Fact]
+    public void RecordCall_MakesTheCallerTheNextStarterWithoutScoring()
+    {
+        var game = new Game(TestAccountId, [1, 2, 3], Start);
+
+        game.RecordCall(2);
+
+        Assert.Equal(2, game.StarterId);
+        Assert.All(game.GamePlayers, gp => Assert.Equal((0, 0, 0), (gp.BadCards, gp.TooMuchCalls, gp.Caught)));
+    }
+
+    [Fact]
+    public void RecordCall_RejectsAFinishedGameAndAPlayerOutsideIt()
+    {
+        var game = WithABadCard(new Game(TestAccountId, [1, 2], Start));
+
+        Assert.Equal(GameRuleViolation.PlayerNotInGame, game.CheckRecordCall(9));
+        Assert.Throws<DomainException>(() => game.RecordCall(9));
+
+        game.Finish(Start.AddMinutes(5));
+
+        Assert.Equal(GameRuleViolation.AlreadyFinished, game.CheckRecordCall(1));
+        Assert.Throws<DomainException>(() => game.RecordCall(1));
+    }
+
+    [Fact]
     public void AwardDouble_TakesOneBadPointOffTheFinalScore()
     {
         var game = new Game(TestAccountId, [1, 2], Start);

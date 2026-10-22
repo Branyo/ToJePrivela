@@ -5,6 +5,9 @@ namespace ToJePrivela.Application.Games.Dtos;
 /// Somebody holds a bad card (<c>Game.HasResult</c>): only then can the game be finished; clients follow it instead of
 /// deciding themselves.
 /// </param>
+/// <param name="StarterId">
+/// Who starts the next round (<c>Game.StarterId</c>): whoever called "To je priveľa!" last, else the first player.
+/// </param>
 public sealed record GameDetailsDto(
     int Id,
     DateTime? Started,
@@ -13,6 +16,7 @@ public sealed record GameDetailsDto(
     string BadPointsMode,
     bool Cancelled,
     bool HasResult,
+    int? StarterId,
     IReadOnlyList<GamePlayerDto> Players);
 
 /// <summary>

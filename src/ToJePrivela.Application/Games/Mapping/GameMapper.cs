@@ -32,6 +32,7 @@ public static class GameMapper
             game.BadPointsMode.ToString(),
             game.IsCancelled,
             game.HasResult,
+            game.StarterId,
             game.PlayersInSeatOrder.Select(gp => ToDto(standings[gp], game)).ToList());
     }
 

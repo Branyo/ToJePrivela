@@ -45,12 +45,6 @@ export class PlayStore {
   readonly chosenBadPoints = signal<number | null>(null);
   /** Who called "To je priveľa!" on the current question; `null` until somebody did. */
   readonly callerId = signal<number | null>(null);
-  /**
-   * Who starts the current round: the first player in the order of play, then whoever called "To je priveľa!" on the
-   * question before (a question skipped without a call keeps the same one). Kept on this device only, so a reloaded
-   * screen starts again with the first player.
-   */
-  readonly starterId = signal<number | null>(null);
 
   /**
    * The players to play with, in the order of play the server keeps (the order they were added in). Deleting a player
@@ -66,15 +60,17 @@ export class PlayStore {
     this.choosesBadPoints() ? (this.chosenBadPoints() ?? 0) : (this.question()?.badPoints ?? 0),
   );
   /** The player who called "To je priveľa!" on the current question, while it is being decided who takes the card. */
-  readonly caller = computed(() => {
-    const id = this.callerId();
-    return id === null ? null : (this.seats().find((p) => p.playerId === id) ?? null);
-  });
-  /** The player who starts the current round, called by name once its question is shown. */
-  readonly starter = computed(() => {
-    const id = this.starterId();
-    return id === null ? null : (this.seats().find((p) => p.playerId === id) ?? null);
-  });
+  readonly caller = computed(() => this.seatOf(this.callerId()));
+  /**
+   * Who starts the round: whoever called "To je priveľa!" on the question before, card or not (a question skipped
+   * without a call keeps the same one), else the first player. The server stores it (`starterId`), so a reloaded
+   * screen and every other device name the same player; a call only counts once it was saved.
+   */
+  readonly starter = computed(() => this.seatOf(this.game()?.starterId ?? null) ?? this.seats()[0] ?? null);
+  /** The starter's seat glows while their round is being set up and bid on, and while it is being dealt. */
+  readonly highlightedStarterId = computed(() =>
+    ['loading', 'choosing', 'asking'].includes(this.phase()) ? (this.starter()?.playerId ?? null) : null,
+  );
   /**
    * Who may take the card once somebody called "To je priveľa!": the caller (a false alarm) or the player before them
    * in the order of play, whose bid was called. Who that is comes from the server (`previousPlayerId`), which holds
@@ -123,9 +119,6 @@ export class PlayStore {
         return; // The game is being ended meanwhile; that request decides what comes next.
       }
       this.game.set(game);
-      if (this.starterId() === null) {
-        this.starterId.set(this.seats()[0]?.playerId ?? null);
-      }
     } catch (error) {
       if (this.phase() !== 'loading') {
         return;
@@ -162,10 +155,6 @@ export class PlayStore {
       }
       this.question.set(drawn);
       this.chosenBadPoints.set(null);
-      const callerId = this.callerId();
-      if (callerId !== null) {
-        this.starterId.set(callerId); // Who called "To je priveľa!" starts the next round.
-      }
       this.callerId.set(null);
       this.questionNumber.update((n) => n + 1);
       this.phase.set(this.choosesBadPoints() ? 'choosing' : 'asking');
@@ -256,11 +245,38 @@ export class PlayStore {
     }
   }
 
-  /** Too easy or nobody wants it: nobody takes a card. */
+  /**
+   * Too easy or nobody wants it: nobody takes a card. A call made on it ("Nikto") is saved first, once every double
+   * tapped before it is, so its caller starts the next round; should the server refuse it, the game is reloaded as for
+   * a refused card.
+   */
   async skip(): Promise<void> {
-    if (this.phase() === 'asking' || this.phase() === 'revealed') {
+    const callerId = this.callerId();
+    if (this.phase() === 'asking') {
       await this.nextQuestion();
+      return;
     }
+    if (this.phase() !== 'revealed' || callerId === null) {
+      return;
+    }
+
+    this.phase.set('loading');
+    if (this.doubles) {
+      await this.doubles;
+    }
+
+    try {
+      const game = await firstValueFrom(this.gamesApi.recordCall(this.gameId, callerId));
+      if (this.phase() !== 'loading') {
+        return; // The game is being ended meanwhile; that request decides what comes next.
+      }
+      this.game.set(game);
+    } catch (error) {
+      await this.reloadAfterRefusal(error);
+      return;
+    }
+
+    await this.nextQuestion();
   }
 
   /**
@@ -343,12 +359,7 @@ export class PlayStore {
       this.game.set(game);
       onSaved?.(game);
     } catch (error) {
-      // e.g. the game was finished from another device: reload the real state instead of guessing.
-      const message = toProblem(error).message;
-      await this.start(this.gameId, this.categoryIds);
-      if (!this.isEnding()) {
-        this.error.set(message); // Once the game is being ended, that request's outcome is what counts.
-      }
+      await this.reloadAfterRefusal(error);
       return;
     }
 
@@ -426,6 +437,22 @@ export class PlayStore {
       goBack();
       return { ok: false };
     }
+  }
+
+  /**
+   * A card or call the server refused, e.g. the game was finished from another device: reload the real state instead
+   * of guessing, and say why. Nothing of the refused round counts, so its caller does not start the next one.
+   */
+  private async reloadAfterRefusal(error: unknown): Promise<void> {
+    const message = toProblem(error).message;
+    await this.start(this.gameId, this.categoryIds);
+    if (!this.isEnding()) {
+      this.error.set(message); // Once the game is being ended, that request's outcome is what counts.
+    }
+  }
+
+  private seatOf(playerId: number | null): GamePlayer | null {
+    return playerId === null ? null : (this.seats().find((p) => p.playerId === playerId) ?? null);
   }
 
   /** No card, double or end of this device is on its way, so a reloaded game is not older than what it shows. */

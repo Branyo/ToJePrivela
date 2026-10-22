@@ -32,7 +32,7 @@ const VERDICT_MS = 1700;
  * How long after a call the seats ignore taps: the call bubble swaps for one that grows in, so the second tap of a
  * quick double tap would otherwise land on the seat underneath and hand the card out.
  */
-const CALL_GUARD_MS = 400;
+const CALL_GUARD_MS = 600;
 
 /** How a round's call turned out: the caller took the card themselves, or caught somebody overdoing it. */
 export type Verdict = 'false-alarm' | 'too-much';

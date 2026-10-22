@@ -89,6 +89,9 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(false);
 
+                    b.Property<int?>("LastCallerId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("Started")
                         .HasColumnType("TEXT");
 

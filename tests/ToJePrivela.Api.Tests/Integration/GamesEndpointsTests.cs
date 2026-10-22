@@ -293,6 +293,32 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task StarterId_IsStoredFromTheLastCallWithOrWithoutACard()
+    {
+        var game = await CreateGameAsync();
+        var question = await CreateQuestionAsync(badPoints: 3);
+        Assert.Equal(1, (await _client.GetFromJsonAsync<GameDetailsDto>($"/api/games/{game.Id}/details"))!.StarterId);
+
+        var called = await _client.PostAsJsonAsync($"/api/games/{game.Id}/calls", new { playerId = 2 });
+        Assert.Equal(HttpStatusCode.OK, called.StatusCode);
+        Assert.Equal(2, (await called.Content.ReadFromJsonAsync<GameDetailsDto>())!.StarterId);
+
+        await _client.PostAsJsonAsync($"/api/games/{game.Id}/bad-cards", new { playerId = 2, calledByPlayerId = 1, questionId = question.Id });
+
+        Assert.Equal(1, (await _client.GetFromJsonAsync<GameDetailsDto>($"/api/games/{game.Id}/details"))!.StarterId);
+    }
+
+    [Fact]
+    public async Task PostCall_RejectsAPlayerOutsideTheGame()
+    {
+        var game = await CreateGameAsync();
+
+        var response = await _client.PostAsJsonAsync($"/api/games/{game.Id}/calls", new { playerId = 3 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task DeleteDouble_TakesBackOneDoubleUntilNoneAreLeft()
     {
         var game = await CreateGameAsync();

@@ -478,6 +478,40 @@ public class GameServiceTests
     }
 
     [Fact]
+    public async Task RecordCallAsync_MakesTheCallerTheNextStarter()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.RecordCallAsync(1, new RecordCallRequest { PlayerId = 2 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value.StarterId);
+        Assert.All(result.Value.Players, p => Assert.Equal(0, p.TooMuchCalls));
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordCallAsync_RejectsAPlayerOutsideTheGame()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime));
+
+        var result = await _sut.RecordCallAsync(1, new RecordCallRequest { PlayerId = 9 });
+
+        Assert.Equal("Game.PlayerNotInGame", result.Error.Code);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordCallAsync_RejectsAMissingPlayerId()
+    {
+        var result = await _sut.RecordCallAsync(1, new RecordCallRequest());
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        await _games.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task RemoveDoubleAsync_TakesBackOneDouble()
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime);

@@ -14,6 +14,7 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   badPointsMode: 'Question',
   cancelled: false,
   hasResult: false,
+  starterId: null,
   players: [
     { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
     { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
@@ -260,28 +261,131 @@ describe('PlayStore', () => {
     expect(store.callerId()).toBeNull();
   });
 
-  it('lets the first player start, then whoever called "too much" on the question before', async () => {
+  /** Draws the next question once the round's own request is answered. */
+  async function drawNext(id: number): Promise<void> {
+    await flush();
+    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id });
+    await flush();
+    http.expectOne(`/api/questions/${id}/views`).flush(question);
+  }
+
+  it('names the starter the server keeps, and the first player until somebody called', async () => {
     await startWithQuestion();
     expect(store.starter()?.name).toBe('Bo'); // first in the order of play
+    expect(store.highlightedStarterId()).toBe(2);
 
     const skipped = store.skip(); // nobody called: the same player starts again
-    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 43 });
-    await flush();
-    http.expectOne('/api/questions/43/views').flush(question);
+    http.expectNone('/api/games/5/calls');
+    await drawNext(43);
     await skipped;
-    expect(store.starterId()).toBe(2);
+    expect(store.starter()?.name).toBe('Bo');
+  });
 
+  it('keeps the starter of a reloaded screen, as the server stored it', async () => {
+    await startWithQuestion([], game({ starterId: 1 }));
+
+    expect(store.starter()?.name).toBe('Ana');
+    expect(store.highlightedStarterId()).toBe(1);
+  });
+
+  it('lets the caller start the next round once their card is saved, and glows only while the round is set up', async () => {
+    await startWithQuestion();
     store.reveal(1);
-    expect(store.starterId()).toBe(2); // not before the next question is shown
+    expect(store.highlightedStarterId()).toBeNull(); // the takers glow now
+
     const awarded = store.award(2);
-    http.expectOne('/api/games/5/bad-cards').flush(game());
+    http.expectOne('/api/games/5/bad-cards').flush(game({ starterId: 1 }));
     await flush();
-    http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
-    await flush();
-    http.expectOne('/api/questions/44/views').flush(question);
+    expect(store.phase()).toBe('loading');
+    expect(store.highlightedStarterId()).toBe(1); // already while the next question is dealt
+    await drawNext(44);
     await awarded;
 
     expect(store.starter()?.name).toBe('Ana');
+  });
+
+  it('saves a call nobody took a card for ("Nikto"), so its caller starts the next round', async () => {
+    await startWithQuestion();
+    store.reveal(1);
+
+    const skipped = store.skip();
+    const request = http.expectOne('/api/games/5/calls');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ playerId: 1 });
+    http.expectNone('/api/games/5/bad-cards');
+    request.flush(game({ starterId: 1 }));
+    await drawNext(43);
+    await skipped;
+
+    expect(store.phase()).toBe('asking');
+    expect(store.callerId()).toBeNull();
+    expect(store.starter()?.name).toBe('Ana');
+  });
+
+  it('saves no call that was taken back before skipping', async () => {
+    await startWithQuestion();
+    store.reveal(1);
+    store.back();
+
+    const skipped = store.skip();
+    http.expectNone('/api/games/5/calls');
+    await drawNext(43);
+    await skipped;
+
+    expect(store.starter()?.name).toBe('Bo');
+  });
+
+  it('saves the call only after the doubles tapped before it', async () => {
+    await startWithQuestion();
+    store.reveal(1);
+    void store.awardDouble(2);
+
+    const skipped = store.skip();
+    await flush();
+    http.expectNone('/api/games/5/calls');
+    http.expectOne('/api/games/5/doubles').flush(game());
+    await flush();
+    http.expectOne('/api/games/5/calls').flush(game({ starterId: 1 }));
+    await drawNext(43);
+    await skipped;
+
+    expect(store.starter()?.name).toBe('Ana');
+  });
+
+  it('keeps the starter when the card is refused, since that round never counted', async () => {
+    await startWithQuestion();
+    store.reveal(1);
+
+    const awarded = store.award(2);
+    http.expectOne('/api/games/5/bad-cards').flush({ detail: 'Not now.' }, { status: 409, statusText: 'Conflict' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game());
+    await drawNext(43);
+    await awarded;
+
+    expect(store.starter()?.name).toBe('Bo');
+    expect(store.error()).not.toBeNull();
+  });
+
+  it('reloads the game when the call is refused, e.g. finished from another device', async () => {
+    await startWithQuestion();
+    store.reveal(1);
+
+    const skipped = store.skip();
+    http.expectOne('/api/games/5/calls').flush({ detail: 'Gone.' }, { status: 409, statusText: 'Conflict' });
+    await flush();
+    http.expectOne('/api/games/5/details').flush(game({ finished: '2026-09-25T19:00:00Z' }));
+    await skipped;
+
+    expect(store.phase()).toBe('finished');
+  });
+
+  it('in a chooser game names the starter while they choose the worth', async () => {
+    await startWithQuestion([], game({ badPointsMode: 'Chooser', starterId: 1 }));
+
+    expect(store.phase()).toBe('choosing');
+    expect(store.starter()?.name).toBe('Ana');
+    expect(store.highlightedStarterId()).toBe(1);
   });
 
   it('hands the saved game to onSaved once the card is counted', async () => {
