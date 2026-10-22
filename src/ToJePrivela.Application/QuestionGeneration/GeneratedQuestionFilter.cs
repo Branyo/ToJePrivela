@@ -45,13 +45,42 @@ public static partial class GeneratedQuestionFilter
 
     /// <summary>A question that states its own answer gives it away ("In 1969, which year did Apollo 11 land?").</summary>
     private static bool StatesNumber(string text, decimal value) =>
-        NumberInText().Matches(text).Any(match => decimal.TryParse(
-            string.Concat(match.Value.Where(character => !char.IsWhiteSpace(character))).Replace(',', '.'),
-            NumberStyles.AllowDecimalPoint,
-            CultureInfo.InvariantCulture,
-            out var number) && number == value);
+        NumberInText().Matches(text).Any(match => Readings(match.Value).Contains(value));
 
-    /// <summary>Plain numbers, decimals with either separator and space-grouped thousands ("1 000 000").</summary>
-    [GeneratedRegex(@"\d{1,3}(?:\s\d{3})+|\d+(?:[.,]\d+)?")]
+    /// <summary>
+    /// Every value a number in the text may stand for, since "1,000" is a thousand in English but one in Slovak: all its
+    /// separators as thousands ones, and its last separator as the decimal point when it is the only one of its kind
+    /// ("3,5", "1,000.5", but not "1,000,000"). Leaving out a good question costs less than keeping a giveaway.
+    /// </summary>
+    private static IEnumerable<decimal> Readings(string number)
+    {
+        var digits = string.Concat(number.Where(character => !char.IsWhiteSpace(character)));
+        var last = digits.LastIndexOfAny(Separators);
+
+        if (Parse(WithoutSeparators(digits)) is { } grouped)
+        {
+            yield return grouped;
+        }
+
+        if (last >= 0
+            && digits.IndexOf(digits[last], StringComparison.Ordinal) == last
+            && Parse($"{WithoutSeparators(digits[..last])}.{digits[(last + 1)..]}") is { } withDecimals)
+        {
+            yield return withDecimals;
+        }
+    }
+
+    private static readonly char[] Separators = [',', '.'];
+
+    private static string WithoutSeparators(string digits) => string.Concat(digits.Where(character => !Separators.Contains(character)));
+
+    private static decimal? Parse(string digits) =>
+        decimal.TryParse(digits, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var number) ? number : null;
+
+    /// <summary>
+    /// Plain numbers, decimals with either separator and thousands grouped by spaces, commas or dots ("1 000 000",
+    /// "1,000,000", "1.000,5").
+    /// </summary>
+    [GeneratedRegex(@"\d{1,3}(?:[,.\s]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?")]
     private static partial Regex NumberInText();
 }

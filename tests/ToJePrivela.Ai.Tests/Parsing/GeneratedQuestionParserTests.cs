@@ -52,6 +52,30 @@ public class GeneratedQuestionParserTests
     }
 
     [Fact]
+    public void Parse_PassesOverBracketsInTheProse()
+    {
+        const string reply = """
+            Here are [1] question (see [notes]):
+            [{"questionSk": "V ktorom roku vyšiel ChatGPT?", "questionEn": "Which year was ChatGPT released?", "answer": 2022}]
+            Sources: [1] OpenAI.
+            """;
+
+        Assert.Single(_sut.Parse(reply));
+    }
+
+    [Fact]
+    public void Parse_SkipsABooleanAnswer()
+    {
+        Assert.Empty(_sut.Parse("""[{"questionSk": "Je to pravda?", "questionEn": "Is it true?", "answer": true}]"""));
+    }
+
+    [Fact]
+    public void ParseSubtopics_PassesOverBracketsInTheProse()
+    {
+        Assert.Equal(["Football"], _sut.ParseSubtopics("""Split into [1] subtopic: ["Football"]"""));
+    }
+
+    [Fact]
     public void Parse_KeepsUsableItemsAndSkipsBrokenOnes()
     {
         const string reply = """

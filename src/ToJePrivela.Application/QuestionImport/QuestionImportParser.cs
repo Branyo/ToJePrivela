@@ -1,12 +1,13 @@
 using System.Text.Json;
 using ToJePrivela.Application.Abstractions.Ai;
+using ToJePrivela.Application.Common;
 
 namespace ToJePrivela.Application.QuestionImport;
 
 /// <summary>
 /// Reads questions in the format the AI generator answers with: a JSON array of
 /// <c>{"questionSk": "…", "questionEn": "…", "answer": 42}</c> objects, the answer a JSON number or a quoted one.
-/// Prose or markdown fences around the array are ignored, so a model's reply can be pasted as it is.
+/// Prose or markdown fences around the array are ignored (<see cref="JsonArrayText"/>), so a model's reply can be pasted as it is.
 /// </summary>
 public static class QuestionImportParser
 {
@@ -14,23 +15,9 @@ public static class QuestionImportParser
     /// text when it holds no readable JSON array.</returns>
     public static IReadOnlyList<GeneratedQuestion?>? Parse(string? json)
     {
-        var array = ExtractJsonArray(json);
+        using var document = JsonArrayText.Find(json, JsonValueKind.Object);
 
-        if (array is null)
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(array);
-
-            return document.RootElement.EnumerateArray().Select(ToQuestion).ToList();
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return document?.RootElement.EnumerateArray().Select(ToQuestion).ToList();
     }
 
     private static GeneratedQuestion? ToQuestion(JsonElement element)
@@ -40,42 +27,12 @@ public static class QuestionImportParser
             return null;
         }
 
-        var questionSk = ReadString(element, "questionSk");
-        var questionEn = ReadString(element, "questionEn");
-        var answer = ReadString(element, "answer");
+        var questionSk = JsonArrayText.ReadScalar(element, "questionSk");
+        var questionEn = JsonArrayText.ReadScalar(element, "questionEn");
+        var answer = JsonArrayText.ReadScalar(element, "answer");
 
         return string.IsNullOrWhiteSpace(questionSk) || string.IsNullOrWhiteSpace(questionEn) || string.IsNullOrWhiteSpace(answer)
             ? null
             : new GeneratedQuestion(questionSk.Trim(), questionEn.Trim(), answer.Trim());
-    }
-
-    private static string? ReadString(JsonElement element, string propertyName)
-    {
-        if (!element.TryGetProperty(propertyName, out var value))
-        {
-            return null;
-        }
-
-        return value.ValueKind switch
-        {
-            JsonValueKind.String => value.GetString(),
-            JsonValueKind.Number => value.GetRawText(),
-            _ => null
-        };
-    }
-
-    private static string? ExtractJsonArray(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        var start = json.IndexOf('[', StringComparison.Ordinal);
-        var end = json.LastIndexOf(']');
-
-        return start >= 0 && end > start
-            ? json[start..(end + 1)]
-            : null;
     }
 }

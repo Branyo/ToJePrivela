@@ -9,11 +9,10 @@ public class GamePlayer
     }
 
     /// <param name="seat">Where the player sits in the order of play, from 0: the order they were added to the game.</param>
-    public GamePlayer(int playerId, int seat, int badPoints = 0)
+    public GamePlayer(int playerId, int seat)
     {
         PlayerId = playerId;
         Seat = Guard.AgainstNegative(seat, nameof(seat));
-        BadPoints = Guard.AgainstNegative(badPoints, nameof(badPoints));
     }
 
     public int Id { get; private set; }
@@ -96,13 +95,6 @@ public class GamePlayer
         Player = null;
     }
 
-    internal void RemoveDouble()
-    {
-        if (Doubles == 0)
-        {
-            throw new DomainException("Player has no double to take back.");
-        }
-
-        Doubles--;
-    }
+    /// <summary>Only after <see cref="Game.CheckRemoveDouble"/>, which refuses it at zero.</summary>
+    internal void RemoveDouble() => Doubles--;
 }

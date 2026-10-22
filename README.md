@@ -71,13 +71,13 @@ address added any other way stops it at once after startup (exit code 1).
 | `QuestionGeneration:MaxParallelRequests` | AI calls running at once (default 3) |
 | `QuestionGeneration:MaxRetryAttempts` | Extra calls allowed to top up a shortfall (default 3) |
 | `QuestionGeneration:MaxExcludedQuestions` | Known questions each call is told not to repeat (default 100) |
-| `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on requests that call the AI (default 5 per 60 s) |
+| `RateLimiting:AiGeneration:PermitLimit`, `WindowSeconds` | Shared fixed-window limit on requests that call the AI (default 5 per 60 s; 1–10000 permits, 1–86400 s, checked on startup) |
 | `Cors:AllowedOrigins` | Frontend origins; empty means "any origin" |
 | `Authentication:Jwt:SigningKey` | Signs the access tokens; at least 32 characters, required — user-secrets or `Authentication__Jwt__SigningKey` (Development has a dev-only key, which every other environment refuses to start with) |
 | `Authentication:Jwt:LifetimeMinutes`, `Issuer`, `Audience` | One sign-in lasts 1440 minutes (24 h) by default |
 | `Authentication:Admins` | `[{ "Name": "Brano", "Password": "…" }, …]` — the admin logins, synced on startup; passwords via user-secrets or environment variables only |
 | `RateLimiting:SignIn:PermitLimit`, `WindowSeconds` | Limit per client address and login name on signing in and creating logins (default 10 per 60 s) |
-| `RateLimiting:SignIn:AddressPermitLimit` | Cap per client address on attempts at the same endpoints, whatever the names, over the same window; successful sign-ins do not count (default 60) |
+| `RateLimiting:SignIn:AddressPermitLimit` | Cap per client address on attempts at the same endpoints, whatever the names, over the same window; successful sign-ins do not count (default 60); all three sign-in values are checked on startup like the AI limit |
 | `ForwardedHeaders:KnownProxies` | IP addresses of reverse proxies whose `X-Forwarded-For` is trusted (loopback always is) |
 
 ```bash
@@ -151,21 +151,20 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | GET | `/api/info` | Anonymous; `{ title, version }` — `version` is `"unknown"` for an unversioned build |
 | GET | `/api/health` | Anonymous, plain HTTP allowed; `Healthy` (200) when the database answers a real query within 2 s, else 503; healthy answers are cached for 5 s |
 | GET | `/api/players` | |
-| GET/PUT/DELETE | `/api/players/{id}` | |
+| GET/PUT/DELETE | `/api/players/{id}` | PUT `{ name }` renames the player (the *Players* settings tab does it); 409 `Player.NameTaken` |
 | POST | `/api/players` | 409 `Player.NameTaken` when the login already has the name (case-insensitive); 409 `Player.LimitReached` at 100 players per login |
 | GET | `/api/players/{id}/statistics` | The player's record over finished, not cancelled games with a loser (see *Player statistics* below); 404 for another login's player |
-| GET | `/api/games` | |
 | GET | `/api/games/history` | `?status=All\|Running\|Finished&take=` (1–50, default 20), continued after the last listed game with `&before=<its started>&beforeId=<its id>` (`beforeId` alone continues from where that game stands now): the login's games newest first (by start), each as in `details`, plus `hasMore`; a cancelled game counts as finished. The frontend's `/history` page lists them with a "show older" button |
-| GET/PUT/DELETE | `/api/games/{id}` | DELETE removes the game (finished or not) with its scores; players stay. Unlike a player deletion, which marks running games `cancelled`, nothing remains |
+| GET/PUT/DELETE | `/api/games/{id}` | PUT `{ started, finished }` corrects the times: neither may lie in the future (400 `Game.StartsInFuture` / `Game.FinishesInFuture`). DELETE removes the game (finished or not) with its scores; players stay. Unlike a player deletion, which marks running games `cancelled`, nothing remains |
 | GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
 | POST | `/api/games` | 2–12 known, distinct players in the order of play (stored as `GamePlayer.Seat`; every game screen shows them in it); optional `badCardLimit` (2–10, default 3) |
-| POST | `/api/games/{id}/bad-cards` | Body `{ playerId, calledByPlayerId, questionId }`; `calledByPlayerId` is who called "To je priveľa!" (the taker included: a false alarm), counted on the seats as `tooMuchCalls` / `falseAlarms` (caller) and `caught` (taker, unless a false alarm); only the caller or the player before them in the order of play, whose bid was called, can take it (400 `Game.TakerNotCallerOrBidder`; each seat in the game details carries that player as `previousPlayerId`); the card is worth the question's bad points; finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
+| POST | `/api/games/{id}/bad-cards` | Body `{ playerId, calledByPlayerId, questionId }`; `calledByPlayerId` is who called "To je priveľa!" (the taker included: a false alarm), counted on the seats as `tooMuchCalls` / `falseAlarms` (caller) and `caught` (taker, unless a false alarm); only the caller or the player before them in the order of play, whose bid was called, can take it (400 `Game.TakerNotCallerOrBidder`; each seat in the game details carries that player as `previousPlayerId`); the card is worth the question's bad points (in a `Chooser` game the required `badPoints`, and the question is not looked up, so one deleted since it was shown still gives its card); finishes the game when the player reaches `badCardLimit`; 409 on a finished game |
 | POST | `/api/games/{id}/doubles` | Body `{ playerId }`; credits a double that held (one bad point off at the end); never finishes the game; 409 on a finished game |
 | DELETE | `/api/games/{id}/doubles/{playerId}` | Takes back one double tapped by mistake; 409 when the player has none or the game is finished |
 | POST | `/api/games/{id}/finish` | Ends a running game now, its result counted as it stands; 409 when already finished, and 409 `Game.NoBadCardsYet` while nobody holds a bad card (keep playing or delete it) |
-| GET | `/api/questions?categoryId=&source=` | Both filters optional; `source` is `Manual` or `Ai` |
-| GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among the least viewed in the given categories (all when none); 400 for unknown ids, 404 when they hold no questions; does not count a view |
-| POST | `/api/questions/{id}/views` | Records that the question was shown; returns it with the new `viewCount` |
+| GET | `/api/questions?categoryId=&source=` | One category's questions: `categoryId` is required (400 without it), `source` (`Manual` or `Ai`) optional |
+| GET | `/api/questions/random?categoryIds=1&categoryIds=3` | Random question among those the signed-in login has seen least in the given categories (all when none), drawn in one database query; 400 for unknown ids, 404 when they hold no questions; does not count a view |
+| POST | `/api/questions/{id}/views` | Records that the question was shown to the signed-in login (204); 404 for an unknown question |
 | GET/DELETE | `/api/questions/{id}` | |
 | PUT | `/api/questions/{id}` | `textSk` required; omitted `textEn` and `badPoints` are kept; an edited AI question becomes `Manual` |
 | POST | `/api/questions` | `textSk` and `textEn` required; `categoryId` must exist; omitted `badPoints` (1–5) are picked at random |
@@ -269,16 +268,18 @@ a `CreatedAt` timestamp.
   time; `/api/rules` serves the pool and the frontend only paints the colour it gets (a neutral grey for an emoji the
   pool does not list).
 - **Questions belong to a category.** `Questions.CategoryId` is a foreign key with `ON DELETE CASCADE`.
-- **Least-viewed rotation.** `GET /api/questions/random` picks at random among the questions with the
-  lowest `ViewCount` in the selected categories, so no question repeats until every one in the
-  selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`.
-  **For now the view counts are shared between the logins**, like the questions themselves: a question shown in one
-  login's game counts as viewed for every login, so one login's games change which questions the others draw next.
+- **Least-viewed rotation, per login.** `GET /api/questions/random` picks at random among the questions the signed-in
+  login was shown least often in the selected categories, so no question repeats for that login until every one in the
+  selection has been shown. The client reports a shown question with `POST /api/questions/{id}/views`. The questions
+  are shared, but the counts are not: they live in `QuestionViews` (one row per login and question, `Count` and
+  `LastViewedAt`), so one login's games never change which questions another login draws. A view is one atomic SQLite
+  upsert (`INSERT … ON CONFLICT DO UPDATE`), so devices showing a question at once all count, and it never touches the
+  question row. The `TrackQuestionViewsPerAccount` migration gave every login the shared counts it had played under.
 - **Optimistic concurrency on questions and games.** `Question.Version` and `Game.Version` are row versions (SQLite
   has no native rowversion) that EF checks as a concurrency token. A question bumps its own on every change; a game's
   is bumped by the `DbContext`, once per save that changes the game or any of its players, so no domain method can
-  forget it. A lost race surfaces as `ConcurrencyConflictException`; recording a view rereads the row and retries
-  (up to 5 attempts, then 409). A game change (card, double, finish, reschedule, delete) and a player deletion reread
+  forget it. A lost race surfaces as `ConcurrencyConflictException` (views are counted elsewhere, so they never race an
+  edit of the question). A game change (card, double, finish, reschedule, delete) and a player deletion reread
   the game and make the change again on it (`ConcurrencyRetry`, up to 3 attempts), so two devices tapping at once both
   count, a game deleted while another device saves a double is still deleted, and a card or double
   for a game finished meanwhile gets the usual 409 `Game.AlreadyFinished`; only a conflict that outlasts the attempts

@@ -24,36 +24,17 @@ public class QuestionTests
         Assert.Equal(4, question.BadPoints);
         Assert.Equal(QuestionSource.Ai, question.Source);
         Assert.Equal(CreatedAt, question.CreatedAt);
-        Assert.Equal(0, question.ViewCount);
-        Assert.Null(question.LastViewedAt);
     }
 
     [Fact]
-    public void MarkViewed_CountsTheViewAndRemembersWhen()
-    {
-        var question = Create();
-        var firstView = CreatedAt.AddHours(1);
-        var secondView = CreatedAt.AddHours(2);
-
-        question.MarkViewed(firstView);
-        question.MarkViewed(secondView);
-
-        Assert.Equal(2, question.ViewCount);
-        Assert.Equal(secondView, question.LastViewedAt);
-    }
-
-    [Fact]
-    public void EveryChangeBumpsTheVersion()
+    public void UpdateBumpsTheVersion()
     {
         var question = Create();
         var initial = question.Version;
 
-        question.MarkViewed(CreatedAt);
-        var afterView = question.Version;
         question.Update(ValidTextSk, ValidText, "2023", History, 3);
 
-        Assert.True(afterView > initial);
-        Assert.True(question.Version > afterView);
+        Assert.True(question.Version > initial);
     }
 
     [Fact]

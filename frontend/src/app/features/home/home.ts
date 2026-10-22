@@ -2,18 +2,19 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
 import { GamesApi } from '../../core/api/games-api';
-import { Game, Player } from '../../core/api/models';
-import { PlayersApi } from '../../core/api/players-api';
+import { GameDetails } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
 import { badPointsParams } from '../../core/rules/bad-points-params';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 
+/** How many running games the home screen offers to go back to; the history lists them all. */
+export const RUNNING_SHOWN = 5;
+
 interface RunningGame {
-  game: Game;
+  game: GameDetails;
   names: string[];
 }
 
@@ -37,32 +38,23 @@ const RULES = [
 })
 export class Home {
   private readonly gamesApi = inject(GamesApi);
-  private readonly playersApi = inject(PlayersApi);
   protected readonly i18n = inject(LanguageService);
   protected readonly rules = RULES;
   private readonly gameRules = inject(GameRulesStore).rules;
   protected readonly badPoints = computed(() => badPointsParams(this.gameRules()));
 
-  private readonly games = signal<Game[]>([]);
-  private readonly players = signal<Player[]>([]);
+  private readonly games = signal<GameDetails[]>([]);
   protected readonly error = signal<Message | null>(null);
 
-  /** Unfinished games, newest first, so a refreshed browser can jump back in. */
-  protected readonly running = computed<RunningGame[]>(() => {
-    const names = new Map(this.players().map((p) => [p.id, p.name]));
-    return this.games()
-      .filter((game) => game.finished === null)
-      .sort((a, b) => b.id - a.id)
-      .slice(0, 5)
-      .map((game) => ({ game, names: game.playerIds.map((id) => (id === null ? undefined : names.get(id)) ?? '?') }));
-  });
+  /** The newest unfinished games as the server lists them (newest start first), so a refreshed browser can jump back in. */
+  protected readonly running = computed<RunningGame[]>(() =>
+    this.games().map((game) => ({ game, names: game.players.map((player) => player.name ?? '?') })),
+  );
 
   constructor() {
-    forkJoin([this.gamesApi.getAll(), this.playersApi.getAll()]).subscribe({
-      next: ([games, players]) => {
-        this.games.set(games);
-        this.players.set(players);
-      },
+    // Only the few games shown are fetched, however long the login's history grows.
+    this.gamesApi.getHistory('Running', null, RUNNING_SHOWN).subscribe({
+      next: (page) => this.games.set(page.games),
       error: (error) => this.error.set(toProblem(error).message),
     });
   }

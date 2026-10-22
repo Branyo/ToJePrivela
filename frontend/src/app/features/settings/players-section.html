@@ -46,7 +46,32 @@
         @for (player of sorted(); track player.id) {
           <li class="row" [class.row--confirming]="confirmingId() === player.id">
             <app-player-avatar [avatar]="player.avatar" />
-            <span class="row__name">{{ player.name }}</span>
+
+            @if (renamingId() === player.id) {
+              <form class="rename" (submit)="$event.preventDefault(); rename(player)">
+                <input
+                  class="text-input rename__input"
+                  [attr.aria-label]="'players.newName' | translate: { name: player.name }"
+                  [attr.maxlength]="nameLimit()?.max ?? null"
+                  [value]="renameName()"
+                  (input)="onRenameInput($event)"
+                  (keydown.escape)="cancelRename()"
+                  [disabled]="renaming()"
+                />
+                <button
+                  type="submit"
+                  class="btn btn--primary row__action"
+                  [disabled]="renaming() || renameName().trim().length === 0"
+                >
+                  {{ 'players.save' | translate }}
+                </button>
+                <button type="button" class="btn btn--ghost row__action" (click)="cancelRename()">
+                  {{ 'players.cancel' | translate }}
+                </button>
+              </form>
+            } @else {
+              <span class="row__name">{{ player.name }}</span>
+            }
 
             @if (confirmingId() === player.id) {
               <span class="row__question">{{ 'players.confirm' | translate }}</span>
@@ -61,7 +86,15 @@
               <button type="button" class="btn btn--ghost row__action" (click)="cancelDelete()">
                 {{ 'players.keep' | translate }}
               </button>
-            } @else {
+            } @else if (renamingId() !== player.id) {
+              <button
+                type="button"
+                class="icon-btn row__rename"
+                [attr.aria-label]="'players.renameName' | translate: { name: player.name }"
+                (click)="startRename(player)"
+              >
+                ✏️
+              </button>
               <button
                 type="button"
                 class="icon-btn row__remove"

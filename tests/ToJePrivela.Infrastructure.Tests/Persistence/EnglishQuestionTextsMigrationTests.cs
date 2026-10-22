@@ -40,7 +40,7 @@ public class EnglishQuestionTextsMigrationTests : IDisposable
         Assert.Equal("V ktorom roku bola založená spoločnosť LEGO?", question.TextSk);
         Assert.Null(question.TextEn);
         Assert.Equal(question.TextSk, question.TextIn(Language.En));
-        Assert.Equal(("1932", 2, 4L), (question.Answer, question.ViewCount, question.Version));
+        Assert.Equal(("1932", 4L), (question.Answer, question.Version));
     }
 
     private ToJePrivelaDbContext CreateContext() =>

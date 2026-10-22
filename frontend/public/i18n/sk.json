@@ -276,6 +276,10 @@
     "delete": "Vymazať",
     "keep": "Ponechať",
     "deleteName": "Vymazať hráča {{name}}",
+    "renameName": "Premenovať hráča {{name}}",
+    "newName": "Nové meno pre {{name}}",
+    "save": "Uložiť",
+    "cancel": "Zrušiť",
     "count": "{{count}} / {{max}}",
     "full": "Máš {{max}} hráčov, viac jedno prihlásenie mať nemôže. Ak chceš pridať ďalšieho, jedného vymaž."
   },
@@ -435,6 +439,7 @@
         "UnknownQuestion": "Táto otázka neexistuje.",
         "NoDoubleToRemove": "Tento hráč nemá žiadny Double na ubratie.",
         "StartsInFuture": "Hra nemôže začať neskôr, ako je teraz.",
+        "FinishesInFuture": "Hra nemôže skončiť neskôr, ako je teraz.",
         "NoBadCardsYet": "Nikto ešte nemá somársku kartu, takže hra nemá výsledok. Hraj ďalej alebo ju vymaž."
       },
       "Player": {
@@ -462,8 +467,7 @@
         "UnknownCategory": "Táto kategória neexistuje.",
         "InvalidCategoryIds": "Neplatný výber kategórií.",
         "UnknownCategories": "Niektoré vybraté kategórie neexistujú.",
-        "NoneAvailable": "Vo vybratých kategóriách nie sú žiadne otázky.",
-        "ViewConflict": "Otázku sa nepodarilo zaznamenať. Skús to znova."
+        "NoneAvailable": "Vo vybratých kategóriách nie sú žiadne otázky."
       },
       "Auth": {
         "Unauthenticated": "Prihlás sa, prosím, znova.",

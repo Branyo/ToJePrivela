@@ -49,8 +49,8 @@ public class QuestionImportEndpointsTests : IClassFixture<ApiFactory>
             [new RejectedQuestionDto(3, QuestionRejection.Repeated), new RejectedQuestionDto(4, QuestionRejection.InvalidText)],
             imported.Summary.Rejected);
 
-        var stored = await _client.GetFromJsonAsync<List<QuestionDto>>($"/api/questions?categoryId={category.Id}");
-        Assert.Equal(["2022", "330"], stored!.Select(question => question.Answer).Order());
+        var stored = (await _client.GetFromJsonAsync<List<QuestionDto>>($"/api/questions?categoryId={category.Id}"))!;
+        Assert.Equal(["2022", "330"], stored.Select(question => question.Answer).Order());
         Assert.All(stored, question => Assert.Equal("Ai", question.Source));
     }
 

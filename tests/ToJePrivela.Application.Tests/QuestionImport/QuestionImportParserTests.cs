@@ -31,6 +31,15 @@ public class QuestionImportParserTests
         Assert.Equal("-3.5", Assert.Single(items!)!.Answer);
     }
 
+    [Fact]
+    public void Parse_PassesOverBracketsInTheProse()
+    {
+        var items = QuestionImportParser.Parse(
+            """Here are [1] question [see below]: [{"questionSk": "Otázka?", "questionEn": "Question?", "answer": 7}] [end]""");
+
+        Assert.Equal("7", Assert.Single(items!)!.Answer);
+    }
+
     [Theory]
     [InlineData("""[{"questionEn": "Question?", "answer": 1}]""")]
     [InlineData("""[{"questionSk": "Otázka?", "questionEn": " ", "answer": 1}]""")]

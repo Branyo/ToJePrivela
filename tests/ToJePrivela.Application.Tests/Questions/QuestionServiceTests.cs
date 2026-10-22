@@ -14,6 +14,7 @@ public class QuestionServiceTests
     private const string ValidText = "Which year was ChatGPT publicly released?";
     private const string ValidTextSk = "V ktorom roku bol verejne spustený ChatGPT?";
     private const int PickedBadPoints = 2;
+    private const int TestAccountId = 7;
 
     private static readonly DateTimeOffset Now = new(2026, 9, 24, 12, 30, 0, TimeSpan.Zero);
 
@@ -23,7 +24,6 @@ public class QuestionServiceTests
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly IQuestionCategoryRepository _categories = Substitute.For<IQuestionCategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly FixedQuestionPicker _questionPicker = new();
     private readonly QuestionService _sut;
 
     public QuestionServiceTests()
@@ -37,9 +37,9 @@ public class QuestionServiceTests
             _questions,
             _categories,
             new FixedBadPointsPicker(PickedBadPoints),
-            _questionPicker,
             new FixedTimeProvider(Now),
             _language,
+            new FixedCurrentAccount(TestAccountId),
             _unitOfWork);
     }
 
@@ -58,20 +58,18 @@ public class QuestionServiceTests
     }
 
     [Fact]
-    public async Task GetRandomAsync_PicksAmongTheLeastViewedQuestionsOfTheSelectedCategories()
+    public async Task GetRandomAsync_DrawsFromTheSelectedCategoriesEachOnce()
     {
-        _questions.GetLeastViewedIdsAsync(
+        _questions.GetRandomLeastViewedAsync(
+                TestAccountId,
                 Arg.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 3, 2 })),
                 Arg.Any<CancellationToken>())
-            .Returns([4, 8]);
-        _questions.GetByIdAsync(8, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(8, ValidText, "2022", _history));
 
         var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3, 2, 3] });
 
         Assert.True(result.IsSuccess);
         Assert.Equal(8, result.Value.Id);
-        Assert.Equal([4, 8], _questionPicker.Offered);
     }
 
     [Fact]
@@ -87,21 +85,18 @@ public class QuestionServiceTests
     public async Task GetRandomAsync_DoesNotCountAView()
     {
         var question = TestEntities.Question(8, ValidText, "2022", _history);
-        _questions.GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns([8]);
-        _questions.GetByIdAsync(8, Arg.Any<CancellationToken>()).Returns(question);
+        _questions.GetRandomLeastViewedAsync(TestAccountId, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns(question);
 
         await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3] });
 
-        Assert.Equal(0, question.ViewCount);
+        await _questions.DidNotReceive().RecordViewAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task GetRandomAsync_WithoutCategoriesChoosesFromAllOfThem()
     {
-        _questions.GetLeastViewedIdsAsync(Arg.Is<IReadOnlyCollection<int>>(ids => ids.Count == 0), Arg.Any<CancellationToken>())
-            .Returns([5]);
-        _questions.GetByIdAsync(5, Arg.Any<CancellationToken>())
+        _questions.GetRandomLeastViewedAsync(TestAccountId, Arg.Is<IReadOnlyCollection<int>>(ids => ids.Count == 0), Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(5, ValidText, "2022", _sport));
 
         var result = await _sut.GetRandomAsync(new RandomQuestionFilter());
@@ -130,13 +125,14 @@ public class QuestionServiceTests
         Assert.Equal("Question.UnknownCategories", result.Error.Code);
         Assert.Contains("99", result.Error.Message);
         Assert.Contains("98", result.Error.Message);
-        await _questions.DidNotReceive().GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
+        await _questions.DidNotReceive().GetRandomLeastViewedAsync(Arg.Any<int>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task GetRandomAsync_ReturnsNotFoundWhenTheCategoriesHaveNoQuestions()
     {
-        _questions.GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns([]);
+        _questions.GetRandomLeastViewedAsync(TestAccountId, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns((Question?)null);
 
         var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [2] });
 
@@ -146,75 +142,39 @@ public class QuestionServiceTests
     }
 
     [Fact]
-    public async Task RecordViewAsync_CountsTheViewAndSaves()
+    public async Task RecordViewAsync_CountsTheViewForTheSignedInAccountAtOnce()
     {
-        var question = TestEntities.Question(1, ValidText, "2022", _history);
-        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
+        _questions.RecordViewAsync(TestAccountId, 1, Now.UtcDateTime, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _sut.RecordViewAsync(1);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(1, result.Value.ViewCount);
-        Assert.Equal(Now.UtcDateTime, result.Value.LastViewedAt);
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _questions.Received(1).RecordViewAsync(TestAccountId, 1, Now.UtcDateTime, Arg.Any<CancellationToken>());
+        // One atomic statement: nothing waits in the unit of work, so nothing can conflict there.
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task RecordViewAsync_ReturnsNotFoundForUnknownQuestion()
     {
-        _questions.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns((Question?)null);
+        _questions.RecordViewAsync(TestAccountId, 7, Arg.Any<DateTime>(), Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await _sut.RecordViewAsync(7);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
+        Assert.Equal("Question.NotFound", result.Error.Code);
     }
 
     [Fact]
-    public async Task RecordViewAsync_RereadsAndRetriesAfterAConcurrentChange()
+    public async Task GetAsync_RequiresACategory()
     {
-        var question = TestEntities.Question(1, ValidText, "2022", _history);
-        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns(_ => throw Conflict(), _ => throw Conflict(), _ => Task.FromResult(1));
-
-        var result = await _sut.RecordViewAsync(1);
-
-        Assert.True(result.IsSuccess);
-        _unitOfWork.Received(2).DiscardChanges();
-        await _questions.Received(3).GetByIdAsync(1, Arg.Any<CancellationToken>());
-        await _unitOfWork.Received(3).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RecordViewAsync_GivesUpWithAConflictAfterTheLastAttempt()
-    {
-        var question = TestEntities.Question(1, ValidText, "2022", _history);
-        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question);
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
-
-        var result = await _sut.RecordViewAsync(1);
+        var result = await _sut.GetAsync(new QuestionFilter { Source = QuestionSource.Ai });
 
         Assert.True(result.IsFailure);
-        Assert.Equal(ErrorType.Conflict, result.Error.Type);
-        await _unitOfWork.Received(QuestionService.MaxViewAttempts).SaveChangesAsync(Arg.Any<CancellationToken>());
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _questions.DidNotReceive().FindAsync(Arg.Any<int>(), Arg.Any<QuestionSource?>(), Arg.Any<CancellationToken>());
     }
-
-    [Fact]
-    public async Task RecordViewAsync_ReturnsNotFoundWhenTheQuestionWasDeletedMeanwhile()
-    {
-        var question = TestEntities.Question(1, ValidText, "2022", _history);
-        _questions.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(question, (Question?)null);
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
-
-        var result = await _sut.RecordViewAsync(1);
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(ErrorType.NotFound, result.Error.Type);
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    private static ConcurrencyConflictException Conflict() => new("A row changed since it was read.", new Exception());
 
     [Fact]
     public async Task GetAsync_PassesTheFilterToTheRepository()

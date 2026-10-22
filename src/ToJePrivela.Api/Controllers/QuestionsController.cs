@@ -27,7 +27,7 @@ public sealed class QuestionsController : ControllerBase
         (await _questions.GetAsync(filter, cancellationToken)).ToActionResult();
 
     /// <summary>
-    /// A random question among the least viewed ones in the given categories (every category when none
+    /// A random question among the signed-in login's least viewed ones in the given categories (every category when none
     /// are given). Does not count as a view — POST to <c>{id}/views</c> once the question is shown.
     /// </summary>
     [HttpGet("random")]
@@ -39,12 +39,11 @@ public sealed class QuestionsController : ControllerBase
         CancellationToken cancellationToken) =>
         (await _questions.GetRandomAsync(filter, cancellationToken)).ToActionResult();
 
-    /// <summary>Records that the question was shown; returns it with the updated view count.</summary>
+    /// <summary>Records that the question was shown to the signed-in login, whose least viewed questions come next.</summary>
     [HttpPost("{id:int}/views")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<QuestionDto>> RecordQuestionView(int id, CancellationToken cancellationToken) =>
+    public async Task<ActionResult> RecordQuestionView(int id, CancellationToken cancellationToken) =>
         (await _questions.RecordViewAsync(id, cancellationToken)).ToActionResult();
 
     [HttpGet("{id:int}", Name = nameof(GetQuestion))]

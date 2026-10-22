@@ -20,6 +20,11 @@ export class PlayersApi {
     return this.http.post<Player>('/api/players', { name });
   }
 
+  /** 409 `Player.NameTaken` when another of the login's players has the name. */
+  rename(id: number, name: string): Observable<void> {
+    return this.http.put<void>(`/api/players/${id}`, { name });
+  }
+
   /** Their finished games keep them as an unknown player; a game still running is cancelled. */
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`/api/players/${id}`);

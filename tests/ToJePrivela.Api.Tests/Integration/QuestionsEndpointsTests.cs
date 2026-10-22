@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ToJePrivela.Application.QuestionCategories.Dtos;
 using ToJePrivela.Application.Questions.Dtos;
+using ToJePrivela.Infrastructure.Persistence;
 
 namespace ToJePrivela.Api.Tests.Integration;
 
@@ -12,12 +15,16 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     private const int SportId = 2;
     private const int HistoryId = 3;
 
+    private readonly ApiFactory _factory;
     private readonly HttpClient _client;
+    private readonly HttpClient _member;
 
     public QuestionsEndpointsTests(ApiFactory factory)
     {
         factory.ReplyWithFreshQuestions();
+        _factory = factory;
         _client = factory.CreateClient();
+        _member = factory.CreateClientAs(factory.Member);
     }
 
     [Fact]
@@ -112,6 +119,15 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
         var response = await _client.PostAsJsonAsync("/api/questions", new { textSk = ValidText, textEn = ValidText, answer = "2022", categoryId = HistoryId, badPoints });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetQuestions_WithoutACategoryAnswers400()
+    {
+        var response = await _client.GetAsync("/api/questions?source=Ai");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Request.Invalid", await ProblemResponse.CodeOf(response));
     }
 
     [Fact]
@@ -239,7 +255,7 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
 
         await GetRandomAsync($"categoryIds={categoryId}");
 
-        Assert.Equal(0, (await _client.GetFromJsonAsync<QuestionDto>($"/api/questions/{question.Id}"))!.ViewCount);
+        Assert.Equal(0, await ViewsOfAsync(question.Id));
     }
 
     [Fact]
@@ -269,17 +285,36 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task PostView_CountsEveryViewAndRemembersTheLastOne()
+    public async Task PostView_CountsEveryViewSoTheLeastViewedQuestionComesNext()
     {
-        var question = await CreateQuestionAsync(ValidText, "2022", HistoryId);
+        var categoryId = await CreateCategoryAsync();
+        var seen = await CreateQuestionAsync("How many sides does a hexagon have?", "6", categoryId);
+        var unseen = await CreateQuestionAsync("How many sides does a pentagon have?", "5", categoryId);
 
-        await _client.PostAsync($"/api/questions/{question.Id}/views", null);
-        var response = await _client.PostAsync($"/api/questions/{question.Id}/views", null);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.PostAsync($"/api/questions/{seen.Id}/views", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.PostAsync($"/api/questions/{seen.Id}/views", null)).StatusCode);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var viewed = await response.Content.ReadFromJsonAsync<QuestionDto>();
-        Assert.Equal(2, viewed!.ViewCount);
-        Assert.NotNull(viewed.LastViewedAt);
+        Assert.Equal(2, await ViewsOfAsync(seen.Id));
+        for (var round = 0; round < 5; round++)
+        {
+            Assert.Equal(unseen.Id, (await GetRandomAsync($"categoryIds={categoryId}")).Id);
+        }
+    }
+
+    [Fact]
+    public async Task PostView_CountsOnlyForTheLoginThatSawTheQuestion()
+    {
+        var categoryId = await CreateCategoryAsync();
+        var first = await CreateQuestionAsync("How many sides does a hexagon have?", "6", categoryId);
+        var second = await CreateQuestionAsync("How many sides does a pentagon have?", "5", categoryId);
+
+        await _client.PostAsync($"/api/questions/{first.Id}/views", null);
+        await _member.PostAsync($"/api/questions/{second.Id}/views", null);
+
+        // Each login gets the question it has not seen, whatever the other one saw.
+        Assert.Equal(second.Id, (await GetRandomAsync($"categoryIds={categoryId}")).Id);
+        var forMember = await _member.GetFromJsonAsync<QuestionDto>($"/api/questions/random?categoryIds={categoryId}");
+        Assert.Equal(first.Id, forMember!.Id);
     }
 
     [Fact]
@@ -290,9 +325,8 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
         var responses = await Task.WhenAll(Enumerable.Range(0, 4)
             .Select(_ => _client.PostAsync($"/api/questions/{question.Id}/views", null)));
 
-        var succeeded = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
-        Assert.All(responses, r => Assert.Contains(r.StatusCode, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
-        Assert.Equal(succeeded, (await _client.GetFromJsonAsync<QuestionDto>($"/api/questions/{question.Id}"))!.ViewCount);
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.NoContent, r.StatusCode));
+        Assert.Equal(4, await ViewsOfAsync(question.Id));
     }
 
     [Fact]
@@ -312,6 +346,18 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     }
 
     /// <summary>A category of its own keeps a test independent of questions other tests add.</summary>
+    /// <summary>How often the signed-in admin's login has been shown the question, read from the database.</summary>
+    private async Task<int> ViewsOfAsync(int questionId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<ToJePrivelaDbContext>();
+
+        return await context.QuestionViews
+            .Where(v => v.QuestionId == questionId && v.AccountId == _factory.Admin.Id)
+            .Select(v => v.Count)
+            .SingleOrDefaultAsync();
+    }
+
     private async Task<int> CreateCategoryAsync()
     {
         var name = $"Test {Guid.NewGuid():N}"[..20];

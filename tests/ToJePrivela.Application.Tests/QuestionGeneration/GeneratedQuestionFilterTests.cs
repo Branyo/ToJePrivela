@@ -61,6 +61,10 @@ public class GeneratedQuestionFilterTests
     [InlineData("How many meters is 3,5 meters rounded to one decimal?", "3.5")]
     [InlineData("How many inhabitants does a town of 1 000 000 people have?", "1000000")]
     [InlineData("How many degrees below zero is -40 degrees Celsius?", "-40")]
+    [InlineData("How many inhabitants does a town of 1,000,000 people have?", "1000000")]
+    [InlineData("How many euros is a price of 1,250.50 euros?", "1250.5")]
+    [InlineData("Koľko obyvateľov má mesto s 1.000.000 ľuďmi?", "1000000")]
+    [InlineData("Koľko eur je cena 1 250,50 eura?", "1250.5")]
     public void IsUsable_RejectsQuestionsThatStateTheirAnswer(string text, string answer)
     {
         Assert.False(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, text, answer)));
@@ -70,6 +74,7 @@ public class GeneratedQuestionFilterTests
     [InlineData("How many players did a Formula 1 team field in 2020?", "2")]
     [InlineData("How many years after 1945 did the Berlin Wall fall?", "44")]
     [InlineData("How many kilometers long is the river Danube?", "2850")]
+    [InlineData("How many millions are 1,000,000?", "1")]
     public void IsUsable_KeepsQuestionsWithOtherNumbers(string text, string answer)
     {
         Assert.True(GeneratedQuestionFilter.IsUsable(new GeneratedQuestion(text, text, answer)));

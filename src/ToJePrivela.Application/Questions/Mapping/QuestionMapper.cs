@@ -20,9 +20,7 @@ public static class QuestionMapper
         question.Category?.NameIn(language) ?? string.Empty,
         question.BadPoints,
         question.Source.ToString(),
-        question.CreatedAt,
-        question.ViewCount,
-        question.LastViewedAt);
+        question.CreatedAt);
 
     public static IReadOnlyList<QuestionDto> ToDtos(IEnumerable<Question> questions, Language language) =>
         questions.Select(question => ToDto(question, language)).ToList();

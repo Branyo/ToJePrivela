@@ -249,9 +249,6 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("LastViewedAt")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -270,14 +267,9 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ViewCount")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId", "Source");
-
-                    b.HasIndex("CategoryId", "ViewCount");
 
                     b.ToTable("Questions");
                 });
@@ -319,6 +311,27 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("QuestionCategories");
+                });
+
+            modelBuilder.Entity("ToJePrivela.Domain.Entities.QuestionView", b =>
+                {
+                    b.Property<int>("AccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastViewedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("AccountId", "QuestionId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.ToTable("QuestionViews");
                 });
 
             modelBuilder.Entity("ToJePrivela.Domain.Entities.Game", b =>
@@ -366,6 +379,21 @@ namespace ToJePrivela.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("ToJePrivela.Domain.Entities.QuestionView", b =>
+                {
+                    b.HasOne("ToJePrivela.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToJePrivela.Domain.Entities.Question", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ToJePrivela.Domain.Entities.Game", b =>

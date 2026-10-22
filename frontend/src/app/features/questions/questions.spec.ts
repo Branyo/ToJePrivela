@@ -26,8 +26,6 @@ const question = (id: number, categoryId: number, extra: Partial<Question> = {})
   badPoints: 3,
   source: 'Ai',
   createdAt: `2026-10-0${id}T10:00:00Z`,
-  viewCount: 0,
-  lastViewedAt: null,
   ...extra,
 });
 

@@ -38,6 +38,10 @@ export class PlayersSection {
   /** The player whose deletion waits for a second tap. */
   protected readonly confirmingId = signal<number | null>(null);
   protected readonly deletingId = signal<number | null>(null);
+  /** The player whose name is being edited, the name typed so far and whether it is being saved. */
+  protected readonly renamingId = signal<number | null>(null);
+  protected readonly renameName = signal('');
+  protected readonly renaming = signal(false);
   protected readonly error = signal<Message | null>(null);
 
   protected readonly sorted = computed(() => {
@@ -84,7 +88,57 @@ export class PlayersSection {
 
   protected askToDelete(id: number): void {
     this.error.set(null);
+    this.renamingId.set(null);
     this.confirmingId.set(id);
+  }
+
+  protected startRename(player: Player): void {
+    this.error.set(null);
+    this.confirmingId.set(null);
+    this.renameName.set(player.name);
+    this.renamingId.set(player.id);
+  }
+
+  protected cancelRename(): void {
+    this.renamingId.set(null);
+  }
+
+  protected async rename(player: Player): Promise<void> {
+    if (this.renaming()) {
+      return;
+    }
+
+    const name = this.renameName().trim();
+    if (name === player.name) {
+      this.renamingId.set(null);
+      return;
+    }
+
+    this.renaming.set(true);
+    this.error.set(null);
+    const rules = this.rulesStore.rules() ?? (await this.rulesStore.ensureLoaded());
+    const problem = rules ? this.nameProblem(rules, name) : { key: 'errors.rulesUnavailable' };
+    if (problem) {
+      this.error.set(problem);
+      this.renaming.set(false);
+      return;
+    }
+
+    this.api.rename(player.id, name).subscribe({
+      next: () => {
+        this.players.update((players) => (players ?? []).map((p) => (p.id === player.id ? { ...p, name } : p)));
+        this.renamingId.set(null);
+        this.renaming.set(false);
+      },
+      error: (error) => {
+        this.error.set(toProblem(error).message);
+        this.renaming.set(false);
+      },
+    });
+  }
+
+  protected onRenameInput(event: Event): void {
+    this.renameName.set((event.target as HTMLInputElement).value);
   }
 
   protected cancelDelete(): void {
@@ -119,12 +173,11 @@ export class PlayersSection {
       return { key: 'players.full', params: { max: rules.maxPlayersPerAccount } };
     }
 
-    const name = this.newName().trim();
-    const { min, max } = rules.playerName;
-    if (name.length < min || name.length > max) {
-      return { key: 'setup.errors.nameLength', params: { min, max } };
-    }
+    return this.nameProblem(rules, this.newName().trim());
+  }
 
-    return null;
+  private nameProblem(rules: GameRules, name: string): Message | null {
+    const { min, max } = rules.playerName;
+    return name.length < min || name.length > max ? { key: 'setup.errors.nameLength', params: { min, max } } : null;
   }
 }

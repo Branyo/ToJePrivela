@@ -23,6 +23,8 @@ public class ToJePrivelaDbContext : DbContext
 
     public DbSet<QuestionCategory> QuestionCategories => Set<QuestionCategory>();
 
+    public DbSet<QuestionView> QuestionViews => Set<QuestionView>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         BumpGameVersions();

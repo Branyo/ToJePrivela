@@ -33,8 +33,6 @@ const question: Question = {
   badPoints: 4,
   source: 'Ai',
   createdAt: '2026-09-25T10:00:00Z',
-  viewCount: 0,
-  lastViewedAt: null,
 };
 
 /** Lets pending promise chains run so the next request is on the wire. */
@@ -61,7 +59,7 @@ describe('PlayStore', () => {
     await flush();
     http.expectOne((req) => req.url === '/api/questions/random').flush(question);
     await flush();
-    http.expectOne('/api/questions/42/views').flush(question);
+    http.expectOne('/api/questions/42/views').flush(null);
     await started;
   }
 
@@ -115,7 +113,7 @@ describe('PlayStore', () => {
     expect(draw.request.params.getAll('categoryIds')).toEqual(['3', '4']);
     draw.flush(question);
     await flush();
-    http.expectOne('/api/questions/42/views').flush(question);
+    http.expectOne('/api/questions/42/views').flush(null);
     await started;
   });
 
@@ -171,7 +169,7 @@ describe('PlayStore', () => {
     await flush();
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
     await flush();
-    http.expectOne('/api/questions/44/views').flush(question);
+    http.expectOne('/api/questions/44/views').flush(null);
     await awarded;
 
     expect(store.phase()).toBe('choosing');
@@ -200,7 +198,7 @@ describe('PlayStore', () => {
     http.expectNone('/api/games/5/bad-cards');
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 43 });
     await flush();
-    http.expectOne('/api/questions/43/views').flush(question);
+    http.expectOne('/api/questions/43/views').flush(null);
     await skipped;
 
     expect(store.question()?.id).toBe(43);
@@ -254,7 +252,7 @@ describe('PlayStore', () => {
     await flush();
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
     await flush();
-    http.expectOne('/api/questions/44/views').flush(question);
+    http.expectOne('/api/questions/44/views').flush(null);
     await awarded;
 
     expect(store.phase()).toBe('asking');
@@ -266,7 +264,7 @@ describe('PlayStore', () => {
     await flush();
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id });
     await flush();
-    http.expectOne(`/api/questions/${id}/views`).flush(question);
+    http.expectOne(`/api/questions/${id}/views`).flush(null);
   }
 
   it('names the starter the server keeps, and the first player until somebody called', async () => {
@@ -454,7 +452,7 @@ describe('PlayStore', () => {
 
     http.expectOne((req) => req.url === '/api/questions/random').flush({ ...question, id: 44 });
     await flush();
-    http.expectOne('/api/questions/44/views').flush(question);
+    http.expectOne('/api/questions/44/views').flush(null);
     await awarded;
 
     expect(store.phase()).toBe('asking');
@@ -803,7 +801,7 @@ describe('PlayStore', () => {
     await flush();
     http.expectOne((req) => req.url === '/api/questions/random').flush(question);
     await flush();
-    http.expectOne('/api/questions/42/views').flush(question);
+    http.expectOne('/api/questions/42/views').flush(null);
     await awarded;
   });
 

@@ -195,7 +195,7 @@ public sealed class QuestionCategoryService : IQuestionCategoryService
             return Result.Failure<DeletedAiQuestionsDto>(QuestionCategoryErrors.NotFound(id));
         }
 
-        var aiQuestions = await _questions.FindAsync(id, QuestionSource.Ai, cancellationToken);
+        var aiQuestions = await _questions.GetAiQuestionsAsync(id, cancellationToken);
 
         _questions.RemoveRange(aiQuestions);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
