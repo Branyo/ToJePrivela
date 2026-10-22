@@ -42,6 +42,28 @@ public sealed class GameService : IGameService
         return Result.Success(GameMapper.ToDtos(games));
     }
 
+    public async Task<Result<GameHistoryDto>> GetHistoryAsync(GameHistoryFilter filter, CancellationToken cancellationToken = default)
+    {
+        if (RequestValidator.Validate(filter) is { } invalid)
+        {
+            return Result.Failure<GameHistoryDto>(invalid);
+        }
+
+        bool? finished = filter.Status switch
+        {
+            GameHistoryStatus.Running => false,
+            GameHistoryStatus.Finished => true,
+            _ => null,
+        };
+
+        // One game past the page tells whether older ones follow, without counting them all.
+        var games = await _games.GetRecentAsync(_currentAccount.Id, finished, filter.Skip, filter.Take + 1, cancellationToken);
+
+        return Result.Success(new GameHistoryDto(
+            games.Take(filter.Take).Select(GameMapper.ToDetailsDto).ToList(),
+            games.Count > filter.Take));
+    }
+
     public async Task<Result<GameDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);

@@ -49,12 +49,12 @@ describe('App', () => {
     expect(page.querySelector('.account')).toBeNull();
   });
 
-  it('shows the signed-in login and links to its settings and statistics', async () => {
+  it('shows the signed-in login and links to its settings, statistics and history', async () => {
     await signedInAs(TestBed.inject(AuthStore), TestBed.inject(HttpTestingController), { name: 'Brano' });
 
     const page = await render();
 
     expect(page.querySelector('.account__name')?.textContent).toContain('Brano');
-    expect([...page.querySelectorAll('.nav__link')].map((a) => a.getAttribute('href'))).toEqual(['/settings', '/statistics']);
+    expect([...page.querySelectorAll('.nav__link')].map((a) => a.getAttribute('href'))).toEqual(['/settings', '/statistics', '/history']);
   });
 });

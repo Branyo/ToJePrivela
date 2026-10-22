@@ -22,6 +22,15 @@ public sealed class GamesController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<GameDto>>> GetGames(CancellationToken cancellationToken) =>
         (await _games.GetAllAsync(cancellationToken)).ToActionResult();
 
+    /// <summary>The signed-in login's games, newest first, a page at a time: <c>?status=All|Running|Finished&amp;skip=&amp;take=</c>.</summary>
+    [HttpGet("history")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<GameHistoryDto>> GetHistory(
+        [FromQuery] GameHistoryFilter filter,
+        CancellationToken cancellationToken) =>
+        (await _games.GetHistoryAsync(filter, cancellationToken)).ToActionResult();
+
     [HttpGet("{id:int}", Name = nameof(GetGame))]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

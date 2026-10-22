@@ -35,6 +35,61 @@ public class GameServiceTests
         Assert.Equal([1, 2], Assert.Single(result.Value).PlayerIds);
     }
 
+    [Theory]
+    [InlineData(GameHistoryStatus.All, null)]
+    [InlineData(GameHistoryStatus.Running, false)]
+    [InlineData(GameHistoryStatus.Finished, true)]
+    public async Task GetHistoryAsync_AsksForOneGameMoreThanThePage(GameHistoryStatus status, bool? finished)
+    {
+        _games.GetRecentAsync(TestAccountId, finished, 10, 3, Arg.Any<CancellationToken>())
+            .Returns([
+                TestEntities.Game(5, [1, 2], Now.UtcDateTime),
+                TestEntities.Game(4, [1, 2], Now.UtcDateTime),
+                TestEntities.Game(3, [1, 2], Now.UtcDateTime),
+            ]);
+
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { Status = status, Skip = 10, Take = 2 });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal([5, 4], result.Value.Games.Select(g => g.Id));
+        Assert.True(result.Value.HasMore);
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_HasNoMoreWhenThePageIsNotFull()
+    {
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 2);
+        _games.GetRecentAsync(TestAccountId, null, 0, GameHistoryFilter.DefaultTake + 1, Arg.Any<CancellationToken>())
+            .Returns([game]);
+
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter());
+
+        Assert.False(result.Value.HasMore);
+        var listed = Assert.Single(result.Value.Games);
+        Assert.Equal([1, 2], listed.Players.Select(p => p.PlayerId));
+        Assert.Equal(1, listed.Players.Single(p => p.PlayerId == 2).BadCards);
+    }
+
+    [Theory]
+    [InlineData(-1, 20)]
+    [InlineData(0, 0)]
+    [InlineData(0, GameHistoryFilter.MaxTake + 1)]
+    public async Task GetHistoryAsync_ValidatesThePage(int skip, int take)
+    {
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { Skip = skip, Take = take });
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _games.DidNotReceiveWithAnyArgs().GetRecentAsync(default, default, default, default, default);
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_RejectsAnUnknownStatus()
+    {
+        var result = await _sut.GetHistoryAsync(new GameHistoryFilter { Status = (GameHistoryStatus)7 });
+
+        Assert.Equal("Request.Invalid", result.Error.Code);
+    }
+
     [Fact]
     public async Task GetByIdAsync_ReturnsNotFoundForUnknownGame()
     {

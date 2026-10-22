@@ -6,7 +6,8 @@
     "menu": "Menu",
     "signOut": "Sign out",
     "settings": "Settings",
-    "statistics": "Statistics"
+    "statistics": "Statistics",
+    "history": "History"
   },
   "languages": {
     "sk": "Slovenčina",
@@ -22,7 +23,8 @@
     "players": "Players",
     "categories": "Categories",
     "password": "Password",
-    "statistics": "Statistics"
+    "statistics": "Statistics",
+    "history": "History"
   },
   "common": {
     "dateTime": "d MMM, HH:mm",
@@ -599,5 +601,31 @@
         "hint": "Most correct calls in one game."
       }
     }
+  },
+  "history": {
+    "title": "🕘 Game history",
+    "filters": "Which games to show",
+    "status": {
+      "All": "All",
+      "Running": "Running",
+      "Finished": "Finished"
+    },
+    "state": {
+      "running": "⏳ Running",
+      "finished": "🏁 Finished",
+      "cancelled": "🚫 Cancelled"
+    },
+    "lost": "lost",
+    "badPoints": "bad points: {{points}}",
+    "continue": "Continue →",
+    "results": "Results →",
+    "loading": "Loading…",
+    "more": "Show older",
+    "empty": {
+      "All": "You have not played any game yet.",
+      "Running": "No game is running.",
+      "Finished": "No finished game yet."
+    },
+    "start": "🎉 New game"
   }
 }

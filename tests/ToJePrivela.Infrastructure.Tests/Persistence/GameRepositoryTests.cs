@@ -163,6 +163,43 @@ public class GameRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRecentAsync_ListsNewestFirstAndFiltersByState()
+    {
+        var oldest = await SeedGameAsync([1, 2], started: Start.AddDays(-2));
+        var finished = await SeedGameAsync([1, 2], started: Start.AddDays(-1));
+        var running = await SeedGameAsync([2, 3]);
+        var sameStartLater = await SeedGameAsync([1, 3]);
+
+        await using (var context = _database.CreateContext())
+        {
+            var game = await context.Games.Include(g => g.GamePlayers).FirstAsync(g => g.Id == finished);
+            WithABadCard(game, 1).Finish(Start);
+            await context.SaveChangesAsync();
+        }
+
+        await using var lookup = _database.CreateContext();
+        var sut = new GameRepository(lookup);
+
+        Assert.Equal([sameStartLater, running, finished, oldest], (await sut.GetRecentAsync(TestAccountId, null, 0, 10)).Select(g => g.Id));
+        Assert.Equal([sameStartLater, running, oldest], (await sut.GetRecentAsync(TestAccountId, false, 0, 10)).Select(g => g.Id));
+        Assert.Equal([finished], (await sut.GetRecentAsync(TestAccountId, true, 0, 10)).Select(g => g.Id));
+        Assert.Equal([running, finished], (await sut.GetRecentAsync(TestAccountId, null, 1, 2)).Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task GetRecentAsync_LoadsWholeGamesUntracked()
+    {
+        await SeedGameAsync([1, 2, 3]);
+
+        await using var lookup = _database.CreateContext();
+        var game = Assert.Single(await new GameRepository(lookup).GetRecentAsync(TestAccountId, null, 0, 10));
+
+        Assert.Equal(3, game.GamePlayers.Count);
+        Assert.All(game.GamePlayers, gp => Assert.NotNull(gp.Player));
+        Assert.Empty(lookup.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task SavingADoubleOnAGameFinishedMeanwhileIsAConcurrencyConflict()
     {
         var gameId = await SeedGameAsync([1, 2]);
@@ -286,6 +323,7 @@ public class GameRepositoryTests : IDisposable
         Assert.Null(await sut.GetByIdAsync(TestAccountId, theirs));
         Assert.Equal([mine], (await sut.GetAllAsync(TestAccountId)).Select(g => g.Id));
         Assert.Equal([mine], (await sut.GetByPlayerAsync(TestAccountId, 1)).Select(g => g.Id));
+        Assert.Equal([mine], (await sut.GetRecentAsync(TestAccountId, null, 0, 10)).Select(g => g.Id));
         Assert.Equal([theirs], (await sut.GetAllAsync(otherAccountId)).Select(g => g.Id));
     }
 
@@ -313,11 +351,11 @@ public class GameRepositoryTests : IDisposable
         return await context.Games.Where(g => g.Id == gameId).Select(g => g.Version).SingleAsync();
     }
 
-    private async Task<int> SeedGameAsync(int[] playerIds, int accountId = TestAccountId)
+    private async Task<int> SeedGameAsync(int[] playerIds, int accountId = TestAccountId, DateTime? started = null)
     {
         await using var context = _database.CreateContext();
 
-        var game = new Game(accountId, playerIds, Start);
+        var game = new Game(accountId, playerIds, started ?? Start);
         context.Games.Add(game);
         await context.SaveChangesAsync();
 

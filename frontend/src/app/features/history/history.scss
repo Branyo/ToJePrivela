@@ -1,0 +1,141 @@
+.history__title {
+  margin: 0 0 16px;
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+
+  .chip {
+    color: inherit;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .chip--on {
+    color: #fff;
+  }
+}
+
+.games {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.game {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'head go'
+    'players players';
+  align-items: center;
+  gap: 10px 14px;
+  padding: 14px 16px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s var(--bounce);
+
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.game--running {
+  background: var(--paper);
+}
+
+.game__head {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.game__state {
+  font-weight: 700;
+}
+
+.game__go {
+  grid-area: go;
+  font-weight: 600;
+  color: var(--grape);
+}
+
+.players {
+  grid-area: players;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player {
+  --avatar-size: 28px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px 3px 3px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.player--loser {
+  background: var(--sun);
+  font-weight: 700;
+}
+
+.player__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player__name--unknown {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.player__points {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgb(43 33 64 / 0.12);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.history__note {
+  text-align: center;
+}
+
+.history__more {
+  display: block;
+  margin: 20px auto 0;
+}
+
+.history__empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+
+  p {
+    margin: 0;
+  }
+}

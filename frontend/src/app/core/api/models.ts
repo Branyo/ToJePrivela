@@ -84,6 +84,16 @@ export interface GameDetails {
   players: GamePlayer[];
 }
 
+/** Which games the history lists; a cancelled game counts as finished. */
+export type GameHistoryStatus = 'All' | 'Running' | 'Finished';
+
+/** One page of the login's games, newest first (by start). */
+export interface GameHistory {
+  games: GameDetails[];
+  /** Older games follow: ask again with `skip` moved past this page. */
+  hasMore: boolean;
+}
+
 export interface QuestionCategory {
   id: number;
   /** In the language the request asked for (`Accept-Language`), ready to show. */

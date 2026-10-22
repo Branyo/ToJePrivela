@@ -369,6 +369,36 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         Assert.Null((await _client.GetFromJsonAsync<GameDto>($"/api/games/{game.Id}"))!.Finished);
     }
 
+    [Fact]
+    public async Task GetHistory_ListsTheNewestGamesFirstWithTheirScores()
+    {
+        var finished = await CreateGameAsync();
+        await GiveABadCardAsync(finished, playerId: 2);
+        (await _client.PostAsync($"/api/games/{finished.Id}/finish", null)).EnsureSuccessStatusCode();
+        var running = await CreateGameAsync();
+
+        var all = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=2");
+        var runningOnly = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?status=Running&take=1");
+        var finishedOnly = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?status=finished&take=1");
+
+        Assert.Equal([running.Id, finished.Id], all!.Games.Select(g => g.Id));
+        Assert.Equal([2], all.Games[1].Players.Where(p => p.IsLoser).Select(p => p.PlayerId));
+        Assert.Equal(running.Id, Assert.Single(runningOnly!.Games).Id);
+        Assert.Equal(finished.Id, Assert.Single(finishedOnly!.Games).Id);
+    }
+
+    [Theory]
+    [InlineData("take=0")]
+    [InlineData("take=51")]
+    [InlineData("skip=-1")]
+    [InlineData("status=Lost")]
+    public async Task GetHistory_RejectsABadPage(string query)
+    {
+        var response = await _client.GetAsync($"/api/games/history?{query}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private async Task GiveABadCardAsync(GameDto game, int playerId)
     {
         var question = await CreateQuestionAsync(badPoints: 2);

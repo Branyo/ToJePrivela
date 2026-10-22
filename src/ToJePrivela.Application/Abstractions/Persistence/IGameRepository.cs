@@ -9,6 +9,17 @@ public interface IGameRepository : IAccountScopedRepository<Game>
     Task<IReadOnlyList<Game>> GetByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// A page of the account's games, newest first (by start, then by id): only running ones when
+    /// <paramref name="finished"/> is false, only finished (cancelled included) when true, all when null.
+    /// </summary>
+    Task<IReadOnlyList<Game>> GetRecentAsync(
+        int accountId,
+        bool? finished,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The account's counted games the player took part in (<c>PlayerStatistics.CountedGame</c>), with every seat's
     /// scores but without the seated <see cref="GamePlayer.Player"/> (statistics never read it), and read only: never
     /// saved.

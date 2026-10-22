@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { BadPointsMode, Game, GameDetails } from './models';
+import { BadPointsMode, Game, GameDetails, GameHistory, GameHistoryStatus } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class GamesApi {
@@ -9,6 +9,11 @@ export class GamesApi {
 
   getAll(): Observable<Game[]> {
     return this.http.get<Game[]>('/api/games');
+  }
+
+  /** The login's games, newest first, `take` (1–50) of them after the first `skip`. */
+  getHistory(status: GameHistoryStatus, skip: number, take: number): Observable<GameHistory> {
+    return this.http.get<GameHistory>('/api/games/history', { params: { status, skip, take } });
   }
 
   getDetails(id: number): Observable<GameDetails> {

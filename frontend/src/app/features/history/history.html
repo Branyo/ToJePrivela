@@ -1,0 +1,72 @@
+<section class="page history">
+  <h1 class="history__title">{{ 'history.title' | translate }}</h1>
+
+  <nav class="filters" [attr.aria-label]="'history.filters' | translate">
+    @for (filter of filters; track filter.status) {
+      <a
+        class="chip"
+        routerLink="/history"
+        [queryParams]="{ status: filter.query }"
+        [class.chip--on]="status() === filter.status"
+        [attr.aria-current]="status() === filter.status ? 'page' : null"
+      >
+        {{ 'history.status.' + filter.status | translate }}
+      </a>
+    }
+  </nav>
+
+  @if (games().length > 0) {
+    <ul class="games">
+      @for (game of games(); track game.id) {
+        <li>
+          <a
+            class="game"
+            [class.game--running]="!game.finished"
+            [routerLink]="game.finished ? ['/games', game.id, 'summary'] : ['/games', game.id]"
+          >
+            <span class="game__head">
+              <span class="game__state">
+                {{ 'history.state.' + (game.cancelled ? 'cancelled' : game.finished ? 'finished' : 'running') | translate }}
+              </span>
+              <span class="muted">{{ game.started | date: ('common.dateTime' | translate) : undefined : i18n.locale() }}</span>
+            </span>
+
+            <ul class="players">
+              @for (player of game.players; track $index) {
+                <li class="player" [class.player--loser]="player.isLoser">
+                  <app-player-avatar [avatar]="player.avatar" />
+                  <span class="player__name" [class.player__name--unknown]="player.playerId === null">{{
+                    player.name ?? ('common.unknownPlayer' | translate)
+                  }}</span>
+                  <span class="player__points" [title]="'history.badPoints' | translate: { points: player.finalBadPoints }">
+                    {{ player.finalBadPoints }}
+                  </span>
+                  @if (player.isLoser) {
+                    <span class="player__donkey" role="img" [attr.aria-label]="'history.lost' | translate">🫏</span>
+                  }
+                </li>
+              }
+            </ul>
+
+            <span class="game__go">{{ (game.finished ? 'history.results' : 'history.continue') | translate }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted history__note" aria-live="polite">{{ 'history.loading' | translate }}</p>
+  } @else if (hasMore()) {
+    <button type="button" class="btn btn--ghost history__more" (click)="loadMore()">{{ 'history.more' | translate }}</button>
+  } @else if (games().length === 0 && !error()) {
+    <div class="panel history__empty">
+      <p>{{ 'history.empty.' + status() | translate }}</p>
+      <a routerLink="/new" class="btn btn--fun">{{ 'history.start' | translate }}</a>
+    </div>
+  }
+</section>

@@ -82,6 +82,10 @@ public class AccountIsolationTests : IClassFixture<ApiFactory>
 
         Assert.Contains(memberGames!, g => g.Id == game!.Id);
         Assert.DoesNotContain(adminGames!, g => g.Id == game!.Id);
+        Assert.Equal(game!.Id, (await _member.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=1"))!.Games[0].Id);
+        Assert.DoesNotContain(
+            (await _admin.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=50"))!.Games,
+            g => g.Id == game.Id);
         Assert.Equal(HttpStatusCode.NotFound, (await _admin.GetAsync($"/api/games/{game!.Id}/details")).StatusCode);
         Assert.Equal(
             HttpStatusCode.NotFound,

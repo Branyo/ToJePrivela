@@ -15,6 +15,29 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
     public async Task<IReadOnlyList<Game>> GetByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
         await ByPlayer(Owned(accountId), playerId).ToListAsync(cancellationToken);
 
+    /// <summary>Read only, like <see cref="GetCountedByPlayerAsync"/>: the history never saves what it lists.</summary>
+    public async Task<IReadOnlyList<Game>> GetRecentAsync(
+        int accountId,
+        bool? finished,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var games = Owned(accountId).AsNoTracking();
+
+        if (finished is bool isFinished)
+        {
+            games = isFinished ? games.Where(g => g.Finished != null) : games.Where(g => g.Finished == null);
+        }
+
+        return await games
+            .OrderByDescending(g => g.Started)
+            .ThenByDescending(g => g.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
     /// <summary>
     /// The scores are all statistics read, so the seats come without their <see cref="GamePlayer.Player"/>: loading
     /// one per seat of every game would grow with the account's history for nothing.
