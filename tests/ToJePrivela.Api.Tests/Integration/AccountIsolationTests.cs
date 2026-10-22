@@ -77,11 +77,6 @@ public class AccountIsolationTests : IClassFixture<ApiFactory>
         var game = await (await _member.PostAsJsonAsync("/api/games", new { playerIds = new[] { first.Id, second.Id } }))
             .Content.ReadFromJsonAsync<GameDto>();
 
-        var memberGames = await _member.GetFromJsonAsync<List<GameDto>>("/api/games");
-        var adminGames = await _admin.GetFromJsonAsync<List<GameDto>>("/api/games");
-
-        Assert.Contains(memberGames!, g => g.Id == game!.Id);
-        Assert.DoesNotContain(adminGames!, g => g.Id == game!.Id);
         Assert.Equal(game!.Id, (await _member.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=1"))!.Games[0].Id);
         Assert.DoesNotContain(
             (await _admin.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=50"))!.Games,

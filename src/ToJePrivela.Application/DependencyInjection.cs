@@ -33,7 +33,6 @@ public static class DependencyInjection
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IBadPointsPicker, RandomBadPointsPicker>();
-        services.AddSingleton<IQuestionPicker, RandomQuestionPicker>();
         services.AddSingleton<IAvatarPicker, RandomAvatarPicker>();
         services.AddSingleton<IGameRulesService, GameRulesService>();
         services.AddScoped<IAccountService, AccountService>();

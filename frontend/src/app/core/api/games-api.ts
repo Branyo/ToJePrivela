@@ -7,10 +7,6 @@ import { BadPointsMode, Game, GameDetails, GameHistory, GameHistoryStatus } from
 export class GamesApi {
   private readonly http = inject(HttpClient);
 
-  getAll(): Observable<Game[]> {
-    return this.http.get<Game[]>('/api/games');
-  }
-
   /**
    * The login's games, newest first, `take` (1–50) of them: the first ones, or those listed after the game `after`
    * (the last one shown), so games started or deleted meanwhile neither repeat nor go missing.

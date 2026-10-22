@@ -461,7 +461,7 @@ public class QuestionCategoryServiceTests
             TestEntities.Question(2, "How long is a marathon in metres?", "42195", category, source: QuestionSource.Ai)
         ];
         _categories.ExistsAsync(2, Arg.Any<CancellationToken>()).Returns(true);
-        _questions.FindAsync(2, QuestionSource.Ai, Arg.Any<CancellationToken>()).Returns(aiQuestions);
+        _questions.GetAiQuestionsAsync(2, Arg.Any<CancellationToken>()).Returns(aiQuestions);
 
         var result = await _sut.DeleteAiQuestionsAsync(2);
 

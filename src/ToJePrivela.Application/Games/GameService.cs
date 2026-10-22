@@ -37,12 +37,6 @@ public sealed class GameService : IGameService
         _currentAccount = currentAccount;
     }
 
-    public async Task<Result<IReadOnlyList<GameDto>>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        var games = await _games.GetAllAsync(_currentAccount.Id, cancellationToken);
-        return Result.Success(GameMapper.ToDtos(games));
-    }
-
     public async Task<Result<GameHistoryDto>> GetHistoryAsync(GameHistoryFilter filter, CancellationToken cancellationToken = default)
     {
         if (RequestValidator.Validate(filter) is { } invalid)
@@ -164,9 +158,13 @@ public sealed class GameService : IGameService
                     return GameErrors.From(violation, id, request.PlayerId, request.CalledByPlayerId);
                 }
 
-                var question = await _questions.GetByIdAsync(request.QuestionId, cancellationToken);
+                // A chooser game takes the card's worth from the request, so a question deleted since it was shown
+                // does not cost the round its card.
+                var question = game.RequiresChosenBadPoints
+                    ? null
+                    : await _questions.GetByIdAsync(request.QuestionId, cancellationToken);
 
-                if (question is null)
+                if (question is null && !game.RequiresChosenBadPoints)
                 {
                     return GameErrors.UnknownQuestion(request.QuestionId);
                 }

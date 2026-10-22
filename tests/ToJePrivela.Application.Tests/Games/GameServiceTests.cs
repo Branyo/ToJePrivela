@@ -23,18 +23,6 @@ public class GameServiceTests
         _sut = new GameService(_games, _players, _questions, _unitOfWork, new FixedTimeProvider(Now), new FixedCurrentAccount(TestAccountId));
     }
 
-    [Fact]
-    public async Task GetAllAsync_MapsPlayerIds()
-    {
-        _games.GetAllAsync(TestAccountId, Arg.Any<CancellationToken>())
-            .Returns([TestEntities.Game(1, [1, 2], Now.UtcDateTime)]);
-
-        var result = await _sut.GetAllAsync();
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal([1, 2], Assert.Single(result.Value).PlayerIds);
-    }
-
     [Theory]
     [InlineData(GameHistoryStatus.All)]
     [InlineData(GameHistoryStatus.Running)]
@@ -193,15 +181,33 @@ public class GameServiceTests
     [Fact]
     public async Task UpdateAsync_ReschedulesTheGame()
     {
-        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime), 1);
+        var game = TestEntities.WithABadCard(TestEntities.Game(1, [1, 2], Now.UtcDateTime.AddHours(-3)), 1);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
 
-        var finished = Now.UtcDateTime.AddHours(2);
-        var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Started = Now.UtcDateTime, Finished = finished });
+        var finished = Now.UtcDateTime.AddHours(-1);
+        var result = await _sut.UpdateAsync(1, new UpdateGameRequest { Started = Now.UtcDateTime.AddHours(-3), Finished = finished });
 
         Assert.True(result.IsSuccess);
         Assert.Equal(finished, game.Finished);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RejectsAnEndLaterThanNow()
+    {
+        var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime.AddHours(-2));
+        var question = TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4);
+        game.AwardBadCard(1, 1, question, null, Now.UtcDateTime.AddHours(-1));
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
+
+        var result = await _sut.UpdateAsync(
+            1,
+            new UpdateGameRequest { Started = Now.UtcDateTime.AddHours(-2), Finished = Now.UtcDateTime.AddSeconds(1) });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Game.FinishesInFuture", result.Error.Code);
+        Assert.Null(game.Finished);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -357,13 +363,13 @@ public class GameServiceTests
     {
         var game = TestEntities.Game(1, [1, 2], Now.UtcDateTime, badPointsMode: BadPointsMode.Chooser);
         _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>()).Returns(game);
-        _questions.GetByIdAsync(10, Arg.Any<CancellationToken>())
-            .Returns(TestEntities.Question(10, "How many wheels?", "4", TestEntities.Category(1, "Cars"), badPoints: 4));
 
         var result = await _sut.AwardBadCardAsync(1, new AwardBadCardRequest { PlayerId = 2, CalledByPlayerId = 2, QuestionId = 10, BadPoints = 1 });
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.Players.Single(p => p.PlayerId == 2).BadPoints);
+        // The question may have been deleted since it was shown; a chooser game does not need it.
+        await _questions.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

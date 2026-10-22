@@ -175,10 +175,11 @@ public class Game
         ?? (FindPlayer(playerId)!.Doubles == 0 ? GameRuleViolation.NoDoubleToRemove : null);
 
     /// <summary>Giving a running game its end is held to the same rule as <see cref="CheckFinish"/>.</summary>
-    /// <param name="now">The current time: a game that has not started yet cannot be on record.</param>
+    /// <param name="now">The current time: a game that has not started or ended yet cannot be on record.</param>
     public GameRuleViolation? CheckReschedule(DateTime started, DateTime? finished, DateTime now) =>
         IsFinished && finished is null ? GameRuleViolation.CannotReopen
         : UtcTime.Normalize(started) > UtcTime.Normalize(now) ? GameRuleViolation.StartsInFuture
+        : UtcTime.Normalize(finished) > UtcTime.Normalize(now) ? GameRuleViolation.FinishesInFuture
         : UtcTime.Normalize(finished) < UtcTime.Normalize(started) ? GameRuleViolation.EndsBeforeStart
         : !IsFinished && finished is not null ? CheckResult()
         : null;
@@ -193,21 +194,24 @@ public class Game
 
     /// <summary>
     /// Gives the player a bad card for <paramref name="question"/>, worth what <see cref="BadPointsMode"/>
-    /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game.
+    /// says: the question's stored bad points, or <paramref name="chosenBadPoints"/> in a chooser game, which needs no
+    /// question (it may have been deleted since it was shown).
     /// The game finishes when that player reaches <see cref="BadCardLimit"/> cards. <paramref name="callerId"/>, who
     /// called "To je priveľa!" in that round, is credited with the call (<see cref="GamePlayer.TooMuchCalls"/>); taking
     /// the card themselves makes it a false alarm (<see cref="GamePlayer.FalseAlarms"/>), otherwise the player before
     /// them, whose bid it was, takes it and was caught overdoing it (<see cref="GamePlayer.Caught"/>). The caller starts
     /// the next round (<see cref="StarterId"/>).
     /// </summary>
-    public GamePlayer AwardBadCard(int playerId, int callerId, Question question, int? chosenBadPoints, DateTime awardedAt)
+    public GamePlayer AwardBadCard(int playerId, int callerId, Question? question, int? chosenBadPoints, DateTime awardedAt)
     {
-        ArgumentNullException.ThrowIfNull(question);
         ThrowIfBroken(CheckAwardBadCard(playerId, callerId, chosenBadPoints));
 
+        var badPoints = chosenBadPoints
+            ?? question?.BadPoints
+            ?? throw new ArgumentNullException(nameof(question), "A game taking bad points from the question needs it.");
         var gamePlayer = FindPlayer(playerId)!;
 
-        gamePlayer.AddBadCard(chosenBadPoints ?? question.BadPoints);
+        gamePlayer.AddBadCard(badPoints);
         FindPlayer(callerId)!.AddTooMuchCall(falseAlarm: callerId == playerId);
         LastCallerId = callerId;
         if (callerId != playerId)
@@ -268,8 +272,8 @@ public class Game
 
     /// <summary>
     /// Corrects when the game started and finished. A running game may be given its end here, but a
-    /// finished game can never be reopened: it may have ended because a player reached the limit. The start can
-    /// never lie after <paramref name="now"/>. Both times are kept in UTC (see <see cref="UtcTime"/>).
+    /// finished game can never be reopened: it may have ended because a player reached the limit. Neither the start
+    /// nor the end can lie after <paramref name="now"/>. Both times are kept in UTC (see <see cref="UtcTime"/>).
     /// </summary>
     public void Reschedule(DateTime started, DateTime? finished, DateTime now)
     {

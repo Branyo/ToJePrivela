@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { CategoriesApi } from '../../core/api/categories-api';
 import { GamesApi } from '../../core/api/games-api';
 import { BadPointsMode, Limit, Player, QuestionCategory } from '../../core/api/models';
@@ -29,7 +31,8 @@ export class Setup {
   private readonly categoriesApi = inject(CategoriesApi);
   private readonly router = inject(Router);
   protected readonly i18n = inject(LanguageService);
-  private readonly rules = inject(GameRulesStore).rules;
+  private readonly rulesStore = inject(GameRulesStore);
+  private readonly rules = this.rulesStore.rules;
   /** Only admins can add questions, so only they are sent to the settings screen when there are none. */
   protected readonly isAdmin = inject(AuthStore).isAdmin;
 
@@ -41,7 +44,8 @@ export class Setup {
   protected readonly players = signal<Player[]>([]);
   protected readonly selectedIds = signal<number[]>([]);
   protected readonly newName = signal('');
-  protected readonly badCardLimit = signal(this.rules()?.defaultBadCardLimit ?? 0);
+  /** The backend's default until changed here; follows the rules should they only arrive once the screen is open. */
+  protected readonly badCardLimit = linkedSignal(() => this.rules()?.defaultBadCardLimit ?? 0);
   protected readonly badPointsMode = signal<BadPointsMode>('Question');
   protected readonly badPointsModes: readonly BadPointsMode[] = ['Question', 'Chooser'];
 
@@ -94,6 +98,9 @@ export class Setup {
   });
 
   protected readonly startBlocker = computed<Message | null>(() => {
+    if (!this.rules()) {
+      return { key: 'errors.rulesUnavailable' };
+    }
     const count = this.selectedIds().length;
     const min = this.playerLimit().min;
     if (count < min) {
@@ -106,12 +113,30 @@ export class Setup {
     return null;
   });
 
+  /** Each load replaces the one still on its way, so a late reply in the previous language never wins. */
+  private readonly categoryLoads = new Subject<void>();
+
   constructor() {
+    // Missing only when the backend could not be reached at startup: try again, so the limits are not stuck at nothing.
+    void this.rulesStore.ensureLoaded();
     this.loadPlayers();
+    this.categoryLoads
+      .pipe(
+        switchMap(() =>
+          this.categoriesApi.getAll().pipe(
+            catchError((error: unknown) => {
+              this.error.set(toProblem(error).message);
+              return EMPTY;
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((categories) => this.categories.set(categories));
     // Category names arrive in the shown language, so they are fetched again after a switch.
     effect(() => {
       this.i18n.language();
-      untracked(() => this.loadCategories());
+      untracked(() => this.categoryLoads.next());
     });
   }
 
@@ -224,13 +249,6 @@ export class Setup {
         this.players.set(players);
         then?.();
       },
-      error: (error) => this.error.set(toProblem(error).message),
-    });
-  }
-
-  private loadCategories(): void {
-    this.categoriesApi.getAll().subscribe({
-      next: (categories) => this.categories.set(categories),
       error: (error) => this.error.set(toProblem(error).message),
     });
   }

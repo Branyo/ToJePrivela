@@ -213,6 +213,18 @@ public class GameTests
     }
 
     [Fact]
+    public void Reschedule_RejectsAnEndLaterThanNow()
+    {
+        var game = new Game(TestAccountId, [1, 2], Start);
+        game.AwardBadCard(1, 1, QuestionWorth(3), null, Start.AddMinutes(5));
+
+        Assert.Equal(GameRuleViolation.FinishesInFuture, game.CheckReschedule(Start, Now.AddMinutes(1), Now));
+        Assert.Throws<DomainException>(() => game.Reschedule(Start, Now.AddMinutes(1), Now));
+        Assert.Null(game.Finished);
+        Assert.Null(game.CheckReschedule(Start, Now, Now));
+    }
+
+    [Fact]
     public void Reschedule_RejectsAStartLaterThanNow()
     {
         var game = new Game(TestAccountId, [1, 2], Start);
@@ -410,6 +422,23 @@ public class GameTests
         var player = game.AwardBadCard(1, 1, QuestionWorth(4), 1, Start.AddMinutes(5));
 
         Assert.Equal(1, player.BadPoints);
+    }
+
+    [Fact]
+    public void AwardBadCard_InAChooserGameNeedsNoQuestion()
+    {
+        var game = new Game(TestAccountId, [1, 2], Start, badPointsMode: BadPointsMode.Chooser);
+
+        Assert.Equal(3, game.AwardBadCard(1, 1, question: null, 3, Start.AddMinutes(5)).BadPoints);
+    }
+
+    [Fact]
+    public void AwardBadCard_InAQuestionGameNeedsTheQuestion()
+    {
+        var game = new Game(TestAccountId, [1, 2], Start);
+
+        Assert.Throws<ArgumentNullException>(() => game.AwardBadCard(1, 1, question: null, null, Start.AddMinutes(5)));
+        Assert.Equal(0, game.GamePlayers.Single(gp => gp.PlayerId == 1).BadCards);
     }
 
     [Fact]

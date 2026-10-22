@@ -50,6 +50,9 @@ public static class GameErrors
     public static Error StartsInFuture(int gameId) =>
         Error.Validation("Game.StartsInFuture", $"Game {gameId} cannot start later than now.");
 
+    public static Error FinishesInFuture(int gameId) =>
+        Error.Validation("Game.FinishesInFuture", $"Game {gameId} cannot finish later than now.");
+
     public static Error NoBadCardsYet(int gameId) =>
         Error.Conflict(
             "Game.NoBadCardsYet",
@@ -69,6 +72,7 @@ public static class GameErrors
             GameRuleViolation.CannotReopen => CannotReopen(gameId),
             GameRuleViolation.EndsBeforeStart => EndsBeforeStart(gameId),
             GameRuleViolation.StartsInFuture => StartsInFuture(gameId),
+            GameRuleViolation.FinishesInFuture => FinishesInFuture(gameId),
             GameRuleViolation.NoBadCardsYet => NoBadCardsYet(gameId),
             _ => throw new ArgumentOutOfRangeException(nameof(violation), violation, null)
         };

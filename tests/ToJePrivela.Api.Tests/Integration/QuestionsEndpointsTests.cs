@@ -115,6 +115,15 @@ public class QuestionsEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task GetQuestions_WithoutACategoryAnswers400()
+    {
+        var response = await _client.GetAsync("/api/questions?source=Ai");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Request.Invalid", await ProblemResponse.CodeOf(response));
+    }
+
+    [Fact]
     public async Task GetQuestions_FiltersByCategoryAndSource()
     {
         await CreateQuestionAsync("How many wheels does a car have?", "4", CarsId);

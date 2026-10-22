@@ -266,6 +266,10 @@
     "delete": "Delete",
     "keep": "Keep",
     "deleteName": "Delete {{name}}",
+    "renameName": "Rename {{name}}",
+    "newName": "New name for {{name}}",
+    "save": "Save",
+    "cancel": "Cancel",
     "count": "{{count}} / {{max}}",
     "full": "You have {{max}} players, the most a login can keep. Delete one to add another."
   },
@@ -425,6 +429,7 @@
         "UnknownQuestion": "This question does not exist.",
         "NoDoubleToRemove": "This player has no Double to take back.",
         "StartsInFuture": "A game cannot start later than now.",
+        "FinishesInFuture": "A game cannot finish later than now.",
         "NoBadCardsYet": "Nobody has a donkey card yet, so the game has no result. Keep playing or delete it."
       },
       "Player": {

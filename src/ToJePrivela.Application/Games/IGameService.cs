@@ -5,8 +5,6 @@ namespace ToJePrivela.Application.Games;
 
 public interface IGameService
 {
-    Task<Result<IReadOnlyList<GameDto>>> GetAllAsync(CancellationToken cancellationToken = default);
-
     /// <summary>A page of the account's games, newest first, with their scores; finished, running or both.</summary>
     Task<Result<GameHistoryDto>> GetHistoryAsync(GameHistoryFilter filter, CancellationToken cancellationToken = default);
 

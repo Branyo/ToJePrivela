@@ -23,7 +23,6 @@ public class QuestionServiceTests
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly IQuestionCategoryRepository _categories = Substitute.For<IQuestionCategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly FixedQuestionPicker _questionPicker = new();
     private readonly QuestionService _sut;
 
     public QuestionServiceTests()
@@ -37,7 +36,6 @@ public class QuestionServiceTests
             _questions,
             _categories,
             new FixedBadPointsPicker(PickedBadPoints),
-            _questionPicker,
             new FixedTimeProvider(Now),
             _language,
             _unitOfWork);
@@ -58,20 +56,17 @@ public class QuestionServiceTests
     }
 
     [Fact]
-    public async Task GetRandomAsync_PicksAmongTheLeastViewedQuestionsOfTheSelectedCategories()
+    public async Task GetRandomAsync_DrawsFromTheSelectedCategoriesEachOnce()
     {
-        _questions.GetLeastViewedIdsAsync(
+        _questions.GetRandomLeastViewedAsync(
                 Arg.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 3, 2 })),
                 Arg.Any<CancellationToken>())
-            .Returns([4, 8]);
-        _questions.GetByIdAsync(8, Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(8, ValidText, "2022", _history));
 
         var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3, 2, 3] });
 
         Assert.True(result.IsSuccess);
         Assert.Equal(8, result.Value.Id);
-        Assert.Equal([4, 8], _questionPicker.Offered);
     }
 
     [Fact]
@@ -87,8 +82,7 @@ public class QuestionServiceTests
     public async Task GetRandomAsync_DoesNotCountAView()
     {
         var question = TestEntities.Question(8, ValidText, "2022", _history);
-        _questions.GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns([8]);
-        _questions.GetByIdAsync(8, Arg.Any<CancellationToken>()).Returns(question);
+        _questions.GetRandomLeastViewedAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns(question);
 
         await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [3] });
 
@@ -99,9 +93,7 @@ public class QuestionServiceTests
     [Fact]
     public async Task GetRandomAsync_WithoutCategoriesChoosesFromAllOfThem()
     {
-        _questions.GetLeastViewedIdsAsync(Arg.Is<IReadOnlyCollection<int>>(ids => ids.Count == 0), Arg.Any<CancellationToken>())
-            .Returns([5]);
-        _questions.GetByIdAsync(5, Arg.Any<CancellationToken>())
+        _questions.GetRandomLeastViewedAsync(Arg.Is<IReadOnlyCollection<int>>(ids => ids.Count == 0), Arg.Any<CancellationToken>())
             .Returns(TestEntities.Question(5, ValidText, "2022", _sport));
 
         var result = await _sut.GetRandomAsync(new RandomQuestionFilter());
@@ -130,13 +122,14 @@ public class QuestionServiceTests
         Assert.Equal("Question.UnknownCategories", result.Error.Code);
         Assert.Contains("99", result.Error.Message);
         Assert.Contains("98", result.Error.Message);
-        await _questions.DidNotReceive().GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
+        await _questions.DidNotReceive().GetRandomLeastViewedAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task GetRandomAsync_ReturnsNotFoundWhenTheCategoriesHaveNoQuestions()
     {
-        _questions.GetLeastViewedIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>()).Returns([]);
+        _questions.GetRandomLeastViewedAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns((Question?)null);
 
         var result = await _sut.GetRandomAsync(new RandomQuestionFilter { CategoryIds = [2] });
 
@@ -215,6 +208,16 @@ public class QuestionServiceTests
     }
 
     private static ConcurrencyConflictException Conflict() => new("A row changed since it was read.", new Exception());
+
+    [Fact]
+    public async Task GetAsync_RequiresACategory()
+    {
+        var result = await _sut.GetAsync(new QuestionFilter { Source = QuestionSource.Ai });
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Request.Invalid", result.Error.Code);
+        await _questions.DidNotReceive().FindAsync(Arg.Any<int>(), Arg.Any<QuestionSource?>(), Arg.Any<CancellationToken>());
+    }
 
     [Fact]
     public async Task GetAsync_PassesTheFilterToTheRepository()

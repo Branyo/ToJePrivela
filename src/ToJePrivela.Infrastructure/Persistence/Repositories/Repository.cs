@@ -17,9 +17,6 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     public virtual async Task<TEntity?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
         await Set.FindAsync([id], cancellationToken);
 
-    public virtual async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        await Set.ToListAsync(cancellationToken);
-
     /// <summary>Asks the database only; no entity (or navigation) is loaded.</summary>
     public virtual async Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default) =>
         await Set.AnyAsync(entity => EF.Property<int>(entity, "Id") == id, cancellationToken);

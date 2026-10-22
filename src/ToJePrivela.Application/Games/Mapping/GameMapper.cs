@@ -14,8 +14,6 @@ public static class GameMapper
         game.IsCancelled,
         game.PlayersInSeatOrder.Select(gp => gp.PlayerId).ToList());
 
-    public static IReadOnlyList<GameDto> ToDtos(IEnumerable<Game> games) => games.Select(ToDto).ToList();
-
     /// <summary>
     /// Players stay in the order of play (<c>Game.PlayersInSeatOrder</c>); each carries the rank the game gives them and
     /// the player before them (<c>Game.PreviousPlayerOf</c>).

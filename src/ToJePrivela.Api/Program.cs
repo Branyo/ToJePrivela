@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using Serilog;
@@ -83,14 +84,21 @@ builder.Services.AddCors(options => options.AddPolicy(CorsOptions.PolicyName, po
     }
 }));
 
-var aiRateLimit = builder.Configuration.GetSection(AiRateLimitOptions.SectionName).Get<AiRateLimitOptions>()
-    ?? new AiRateLimitOptions();
+// Checked on startup: a limit out of range would otherwise only fail the first request it should limit.
+builder.Services.AddOptions<AiRateLimitOptions>()
+    .Bind(builder.Configuration.GetSection(AiRateLimitOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
-var signInRateLimit = builder.Configuration.GetSection(SignInRateLimitOptions.SectionName).Get<SignInRateLimitOptions>()
-    ?? new SignInRateLimitOptions();
+builder.Services.AddOptions<SignInRateLimitOptions>()
+    .Bind(builder.Configuration.GetSection(SignInRateLimitOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
-builder.Services.AddSingleton(_ => new AiRateLimiter(aiRateLimit));
-builder.Services.AddSingleton(_ => new SignInAddressLimiter(signInRateLimit));
+builder.Services.AddSingleton(provider =>
+    new AiRateLimiter(provider.GetRequiredService<IOptions<AiRateLimitOptions>>().Value));
+builder.Services.AddSingleton(provider =>
+    new SignInAddressLimiter(provider.GetRequiredService<IOptions<SignInRateLimitOptions>>().Value));
 
 // Behind a reverse proxy every connection comes from the proxy, so the sign-in limits would lump all clients into one
 // address. X-Forwarded-For is trusted only from loopback and the proxies listed here.
@@ -111,7 +119,9 @@ builder.Services.AddRateLimiter(options =>
         RateLimitRejection.WriteAsync(context.HttpContext, context.Lease, cancellationToken);
     options.AddPolicy(
         SignInRateLimitOptions.PolicyName,
-        httpContext => SignInRateLimiting.Partition(httpContext, signInRateLimit));
+        httpContext => SignInRateLimiting.Partition(
+            httpContext,
+            httpContext.RequestServices.GetRequiredService<IOptions<SignInRateLimitOptions>>().Value));
 });
 
 var app = builder.Build();

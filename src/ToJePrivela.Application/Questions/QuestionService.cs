@@ -14,7 +14,6 @@ public sealed class QuestionService : IQuestionService
     private readonly IQuestionRepository _questions;
     private readonly IQuestionCategoryRepository _categories;
     private readonly IBadPointsPicker _badPoints;
-    private readonly IQuestionPicker _questionPicker;
     private readonly TimeProvider _timeProvider;
     private readonly ICurrentLanguage _language;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,7 +22,6 @@ public sealed class QuestionService : IQuestionService
         IQuestionRepository questions,
         IQuestionCategoryRepository categories,
         IBadPointsPicker badPoints,
-        IQuestionPicker questionPicker,
         TimeProvider timeProvider,
         ICurrentLanguage language,
         IUnitOfWork unitOfWork)
@@ -31,7 +29,6 @@ public sealed class QuestionService : IQuestionService
         _questions = questions;
         _categories = categories;
         _badPoints = badPoints;
-        _questionPicker = questionPicker;
         _timeProvider = timeProvider;
         _language = language;
         _unitOfWork = unitOfWork;
@@ -44,7 +41,7 @@ public sealed class QuestionService : IQuestionService
             return Result.Failure<IReadOnlyList<QuestionDto>>(invalid);
         }
 
-        var questions = await _questions.FindAsync(filter.CategoryId, filter.Source, cancellationToken);
+        var questions = await _questions.FindAsync(filter.CategoryId!.Value, filter.Source, cancellationToken);
         return Result.Success(QuestionMapper.ToDtos(questions, _language.Language));
     }
 
@@ -83,19 +80,10 @@ public sealed class QuestionService : IQuestionService
             }
         }
 
-        var candidateIds = await _questions.GetLeastViewedIdsAsync(categoryIds, cancellationToken);
+        var question = await _questions.GetRandomLeastViewedAsync(categoryIds, cancellationToken);
 
-        if (candidateIds.Count == 0)
-        {
-            return Result.Failure<QuestionDto>(QuestionErrors.NoneAvailable());
-        }
-
-        var id = _questionPicker.Pick(candidateIds);
-        var question = await _questions.GetByIdAsync(id, cancellationToken);
-
-        // Deleted between the two reads: the client simply asks again.
         return question is null
-            ? Result.Failure<QuestionDto>(QuestionErrors.NotFound(id))
+            ? Result.Failure<QuestionDto>(QuestionErrors.NoneAvailable())
             : Result.Success(QuestionMapper.ToDto(question, _language.Language));
     }
 

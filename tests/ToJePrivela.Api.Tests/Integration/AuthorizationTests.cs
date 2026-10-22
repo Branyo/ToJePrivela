@@ -19,8 +19,8 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
     [Theory]
     [InlineData("/api/players")]
-    [InlineData("/api/games")]
-    [InlineData("/api/questions")]
+    [InlineData("/api/games/history")]
+    [InlineData("/api/questions?categoryId=1")]
     [InlineData("/api/question-categories")]
     public async Task ReadingWithoutSigningIn_Answers401(string url)
     {
@@ -40,8 +40,8 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
     [Theory]
     [InlineData("/api/players")]
-    [InlineData("/api/games")]
-    [InlineData("/api/questions")]
+    [InlineData("/api/games/history")]
+    [InlineData("/api/questions?categoryId=1")]
     [InlineData("/api/question-categories")]
     public async Task ReadingAsAMember_Works(string url)
     {

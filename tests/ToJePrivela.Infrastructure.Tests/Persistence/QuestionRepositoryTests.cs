@@ -32,18 +32,6 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task FindAsync_WithoutFilterReturnsEverythingWithItsCategory()
-    {
-        await using var context = _database.CreateContext();
-        var sut = new QuestionRepository(context);
-
-        var questions = await sut.FindAsync(null, null);
-
-        Assert.Equal(3, questions.Count);
-        Assert.All(questions, question => Assert.NotNull(question.Category));
-    }
-
-    [Fact]
     public async Task FindAsync_FiltersByCategory()
     {
         await using var context = _database.CreateContext();
@@ -56,15 +44,15 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task FindAsync_FiltersBySource()
+    public async Task GetAiQuestionsAsync_ReturnsOnlyTheCategorysAiQuestions()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
-        var questions = await sut.FindAsync(null, QuestionSource.Ai);
+        var question = Assert.Single(await sut.GetAiQuestionsAsync(HistoryId));
 
-        Assert.Equal(2, questions.Count);
-        Assert.All(questions, question => Assert.Equal(QuestionSource.Ai, question.Source));
+        Assert.Equal("1989", question.Answer);
+        Assert.Equal(QuestionSource.Ai, question.Source);
     }
 
     [Fact]
@@ -111,20 +99,21 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLeastViewedIdsAsync_ReturnsOnlyTheQuestionsWithTheFewestViews()
+    public async Task GetRandomLeastViewedAsync_TakesOnlyAQuestionWithTheFewestViews()
     {
         await MarkViewedAsync("2022");
 
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
-        var ids = await sut.GetLeastViewedIdsAsync([HistoryId]);
+        var question = await sut.GetRandomLeastViewedAsync([HistoryId]);
 
-        Assert.Equal([await IdOfAsync(context, "1989")], ids);
+        Assert.Equal("1989", question!.Answer);
+        Assert.Equal("History", question.Category!.NameEn);
     }
 
     [Fact]
-    public async Task GetLeastViewedIdsAsync_ConsidersEverySelectedCategory()
+    public async Task GetRandomLeastViewedAsync_ConsidersEverySelectedCategory()
     {
         await MarkViewedAsync("2022");
         await MarkViewedAsync("1989");
@@ -132,27 +121,32 @@ public class QuestionRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
-        var ids = await sut.GetLeastViewedIdsAsync([HistoryId, SportId]);
-
-        Assert.Equal([await IdOfAsync(context, "11")], ids);
+        Assert.Equal("11", (await sut.GetRandomLeastViewedAsync([HistoryId, SportId]))!.Answer);
     }
 
     [Fact]
-    public async Task GetLeastViewedIdsAsync_WithoutCategoriesConsidersAllQuestions()
+    public async Task GetRandomLeastViewedAsync_WithoutCategoriesChoosesAmongAllQuestions()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+        var drawn = new HashSet<string>();
+
+        // Three equally viewed questions: fifty draws all miss one of them with a chance of about 1 in 10^8.
+        for (var draw = 0; draw < 50; draw++)
+        {
+            drawn.Add((await sut.GetRandomLeastViewedAsync([]))!.Answer);
+        }
+
+        Assert.Equal(3, drawn.Count);
+    }
+
+    [Fact]
+    public async Task GetRandomLeastViewedAsync_ReturnsNothingForCategoriesWithoutQuestions()
     {
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
-        Assert.Equal(3, (await sut.GetLeastViewedIdsAsync([])).Count);
-    }
-
-    [Fact]
-    public async Task GetLeastViewedIdsAsync_ReturnsNothingForCategoriesWithoutQuestions()
-    {
-        await using var context = _database.CreateContext();
-        var sut = new QuestionRepository(context);
-
-        Assert.Empty(await sut.GetLeastViewedIdsAsync([CarsId]));
+        Assert.Null(await sut.GetRandomLeastViewedAsync([CarsId]));
     }
 
     [Fact]
@@ -211,10 +205,10 @@ public class QuestionRepositoryTests : IDisposable
         await using var context = _database.CreateContext();
         var sut = new QuestionRepository(context);
 
-        sut.RemoveRange(await sut.FindAsync(null, QuestionSource.Ai));
+        sut.RemoveRange(await context.Questions.Where(q => q.Source == QuestionSource.Ai).ToListAsync());
         await context.SaveChangesAsync();
 
-        Assert.Equal("2022", Assert.Single(await sut.GetAllAsync()).Answer);
+        Assert.Equal("2022", Assert.Single(await context.Questions.ToListAsync()).Answer);
     }
 
     [Fact]

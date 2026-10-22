@@ -62,17 +62,6 @@ public class QuestionCategoryRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAllAsync_ReturnsEveryCategory()
-    {
-        await using var context = _database.CreateContext();
-        var sut = new QuestionCategoryRepository(context);
-
-        var categories = await sut.GetAllAsync();
-
-        Assert.Equal(["Cars", "Sport", "History"], categories.OrderBy(c => c.Id).Select(c => c.NameEn));
-    }
-
-    [Fact]
     public async Task GetAllCountedAsync_CountsEachCategorysQuestionsAndItsAiOnes()
     {
         AddQuestions();

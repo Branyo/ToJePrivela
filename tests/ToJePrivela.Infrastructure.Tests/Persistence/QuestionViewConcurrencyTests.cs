@@ -58,7 +58,6 @@ public class QuestionViewConcurrencyTests : IDisposable
         new QuestionRepository(context),
         new QuestionCategoryRepository(context),
         new RandomBadPointsPicker(),
-        new RandomQuestionPicker(),
         TimeProvider.System,
         Substitute.For<ICurrentLanguage>(),
         new UnitOfWork(context));

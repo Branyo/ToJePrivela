@@ -74,6 +74,68 @@ describe('PlayersSection', () => {
     expect(names()).toEqual(['Duri']);
   });
 
+  it('renames a player', async () => {
+    const { fixture, page, names } = await render();
+
+    page.querySelector<HTMLButtonElement>('.row__rename')!.click();
+    await fixture.whenStable();
+    const input = page.querySelector<HTMLInputElement>('.rename input')!;
+    expect(input.value).toBe('Ana');
+    input.value = ' Anna ';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    page.querySelector<HTMLButtonElement>('.rename .btn--primary')!.click();
+    const request = http.expectOne({ method: 'PUT', url: '/api/players/1' });
+    expect(request.request.body).toEqual({ name: 'Anna' });
+    request.flush(null);
+    await fixture.whenStable();
+
+    expect(page.querySelector('.rename')).toBeNull();
+    expect(names()).toEqual(['Anna', 'Duri']);
+  });
+
+  it('keeps the name being edited when the rename is refused', async () => {
+    const { fixture, page, names } = await render();
+
+    page.querySelector<HTMLButtonElement>('.row__rename')!.click();
+    await fixture.whenStable();
+    const input = page.querySelector<HTMLInputElement>('.rename input')!;
+    input.value = 'Duri';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    page.querySelector<HTMLButtonElement>('.rename .btn--primary')!.click();
+    http
+      .expectOne({ method: 'PUT', url: '/api/players/1' })
+      .flush({ code: 'Player.NameTaken', status: 409 }, { status: 409, statusText: 'Conflict' });
+    await fixture.whenStable();
+
+    expect(page.querySelector('.error-banner')).not.toBeNull();
+    expect(page.querySelector('.rename')).not.toBeNull();
+    expect(names()).toEqual(['Duri']);
+  });
+
+  it('does not send an unchanged or too short name', async () => {
+    const { fixture, page } = await render();
+
+    page.querySelector<HTMLButtonElement>('.row__rename')!.click();
+    await fixture.whenStable();
+    page.querySelector<HTMLButtonElement>('.rename .btn--primary')!.click();
+    await fixture.whenStable();
+    expect(page.querySelector('.rename')).toBeNull();
+
+    page.querySelector<HTMLButtonElement>('.row__rename')!.click();
+    await fixture.whenStable();
+    const input = page.querySelector<HTMLInputElement>('.rename input')!;
+    input.value = 'A';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    page.querySelector<HTMLButtonElement>('.rename .btn--primary')!.click();
+    await fixture.whenStable();
+
+    http.expectNone({ method: 'PUT' });
+    expect(page.querySelector('.error-banner')).not.toBeNull();
+  });
+
   it('can keep a player after all', async () => {
     const { fixture, page } = await render();
 

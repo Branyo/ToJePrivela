@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.Options;
 using ToJePrivela.Api.Common;
 
 namespace ToJePrivela.Api.Tests.Integration;
@@ -67,4 +68,22 @@ public class AiRateLimitSkipTests : IClassFixture<SingleAiPermitApiFactory>
     }
 
     private static string NewName() => $"Cat{Guid.NewGuid():N}"[..12];
+}
+
+public sealed class NoAiPermitApiFactory : ApiFactory
+{
+    protected override int AiGenerationPermitLimit => 0;
+}
+
+public class RateLimitOptionsTests
+{
+    [Fact]
+    public void ALimitOutOfRangeStopsTheStartup()
+    {
+        using var factory = new NoAiPermitApiFactory();
+
+        var exception = Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+
+        Assert.Equal(nameof(AiRateLimitOptions), exception.OptionsType.Name);
+    }
 }

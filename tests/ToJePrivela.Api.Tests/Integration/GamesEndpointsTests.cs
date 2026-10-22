@@ -61,7 +61,7 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     {
         var game = await CreateGameAsync();
         await GiveABadCardAsync(game, playerId: 2);
-        var finished = DateTime.UtcNow.AddHours(1);
+        var finished = DateTime.UtcNow;
 
         var response = await _client.PutAsJsonAsync(
             $"/api/games/{game.Id}",
@@ -126,13 +126,13 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task GetGames_ListsCreatedGames()
+    public async Task GetHistory_ListsACreatedGameFirst()
     {
-        await CreateGameAsync();
+        var game = await CreateGameAsync();
 
-        var games = await _client.GetFromJsonAsync<List<GameDto>>("/api/games");
+        var history = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=1");
 
-        Assert.NotEmpty(games!);
+        Assert.Equal(game.Id, Assert.Single(history!.Games).Id);
     }
 
     [Fact]
@@ -156,8 +156,8 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
 
         Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/games/{game.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/games/{game.Id}/details")).StatusCode);
-        var games = await _client.GetFromJsonAsync<List<GameDto>>("/api/games");
-        Assert.DoesNotContain(games!, g => g.Id == game.Id);
+        var history = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=50");
+        Assert.DoesNotContain(history!.Games, g => g.Id == game.Id);
         Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/players/1")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/players/2")).StatusCode);
     }
