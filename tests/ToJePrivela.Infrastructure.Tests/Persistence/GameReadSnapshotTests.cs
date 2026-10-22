@@ -28,7 +28,7 @@ public sealed class GameReadSnapshotTests : IDisposable
         Assert.Equal("wal", context.Database.SqlQueryRaw<string>("PRAGMA journal_mode").AsEnumerable().Single());
     }
 
-    public static TheoryData<string> Reads => ["GetById", "GetAll", "GetByPlayer", "GetRecent"];
+    public static TheoryData<string> Reads => ["GetById", "GetAll", "GetByPlayer", "GetRecent", "GetRecentAfterUnstarted"];
 
     [Theory]
     [MemberData(nameof(Reads))]
@@ -43,6 +43,12 @@ public sealed class GameReadSnapshotTests : IDisposable
             seeding.Games.Add(seeded);
             await seeding.SaveChangesAsync();
             (gameId, version) = (seeded.Id, seeded.Version);
+
+            if (read == "GetRecentAfterUnstarted")
+            {
+                // A game without a start, as games could be before starts were stored: read from the range of those.
+                await seeding.Database.ExecuteSqlAsync($"UPDATE \"Games\" SET \"Started\" = NULL WHERE \"Id\" = {gameId}");
+            }
         }
 
         // Just before the read's second query, another request saves a double: the seat and the game's version change.
@@ -62,6 +68,7 @@ public sealed class GameReadSnapshotTests : IDisposable
             "GetAll" => await sut.GetAllAsync(TestAccountId),
             "GetByPlayer" => await sut.GetByPlayerAsync(TestAccountId, 1),
             "GetRecent" => await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, 10),
+            "GetRecentAfterUnstarted" => await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(null, gameId + 1), 10),
             _ => throw new ArgumentOutOfRangeException(nameof(read)),
         };
 

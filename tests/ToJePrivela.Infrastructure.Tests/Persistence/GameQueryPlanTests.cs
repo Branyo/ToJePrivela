@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence.Repositories;
@@ -15,13 +16,13 @@ public class GameQueryPlanTests : IDisposable
 
     private readonly SqliteTestDatabase _database = new();
 
-    public static TheoryData<string> Reads => ["GetById", "GetAll", "GetByPlayer", "GetRecent", "GetRecentAfter", "GetCountedByPlayer"];
+    public static TheoryData<string> Reads => ["GetById", "GetAll", "GetByPlayer", "GetRecent", "GetRecentAfter", "GetRecentAfterUnstarted", "GetCountedByPlayer"];
 
     [Theory]
     [MemberData(nameof(Reads))]
     public async Task EveryGameRead_FindsTheSeatsThroughAnIndex(string read)
     {
-        var gameId = await SeedGameAsync();
+        var gameId = await SeedGameAsync(started: read != "GetRecentAfterUnstarted");
         var recorder = new QueryPlanRecorder();
         await using var context = _database.CreateContext(recorder);
         var sut = new GameRepository(context);
@@ -33,6 +34,7 @@ public class GameQueryPlanTests : IDisposable
             "GetByPlayer" => sut.GetByPlayerAsync(TestAccountId, 1),
             "GetRecent" => sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, 10),
             "GetRecentAfter" => sut.GetRecentAsync(TestAccountId, GameHistoryStatus.Running, new GamePosition(Start.AddDays(1), 99), 10),
+            "GetRecentAfterUnstarted" => sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(null, gameId + 1), 10),
             "GetCountedByPlayer" => sut.GetCountedByPlayerAsync(TestAccountId, 1),
             _ => throw new ArgumentOutOfRangeException(nameof(read)),
         });
@@ -54,12 +56,19 @@ public class GameQueryPlanTests : IDisposable
         }
     }
 
-    private async Task<int> SeedGameAsync()
+    /// <param name="started">False for a game without a start, as games could be before starts were stored.</param>
+    private async Task<int> SeedGameAsync(bool started = true)
     {
         await using var context = _database.CreateContext();
         var game = new Game(TestAccountId, [1, 2], Start);
         context.Games.Add(game);
         await context.SaveChangesAsync();
+
+        if (!started)
+        {
+            await context.Database.ExecuteSqlAsync($"UPDATE \"Games\" SET \"Started\" = NULL WHERE \"Id\" = {game.Id}");
+        }
+
         return game.Id;
     }
 
