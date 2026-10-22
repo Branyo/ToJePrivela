@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Domain.Statistics;
 
@@ -15,25 +16,38 @@ public sealed class GameRepository : AccountScopedRepository<Game>, IGameReposit
     public async Task<IReadOnlyList<Game>> GetByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default) =>
         await ByPlayer(Owned(accountId), playerId).ToListAsync(cancellationToken);
 
-    /// <summary>Read only, like <see cref="GetCountedByPlayerAsync"/>: the history never saves what it lists.</summary>
+    /// <summary>
+    /// Read only, like <see cref="GetCountedByPlayerAsync"/>: the history never saves what it lists. A page continues
+    /// after a position, not after a count, so it reads a range of the (AccountId, Started, Id) index.
+    /// </summary>
     public async Task<IReadOnlyList<Game>> GetRecentAsync(
         int accountId,
-        bool? finished,
-        int skip,
+        GameHistoryStatus status,
+        GamePosition? after,
         int take,
         CancellationToken cancellationToken = default)
     {
-        var games = Owned(accountId).AsNoTracking();
-
-        if (finished is bool isFinished)
+        var games = status switch
         {
-            games = isFinished ? games.Where(g => g.Finished != null) : games.Where(g => g.Finished == null);
+            GameHistoryStatus.Running => Owned(accountId).Where(Game.RunningGame),
+            GameHistoryStatus.Finished => Owned(accountId).Where(Game.FinishedGame),
+            _ => Owned(accountId),
+        };
+
+        // Newest first puts a game without a start (SQLite sorts NULL lowest) after every game with one.
+        if (after is { Started: DateTime started, Id: var id })
+        {
+            games = games.Where(g => g.Started < started || g.Started == null || (g.Started == started && g.Id < id));
+        }
+        else if (after is not null)
+        {
+            games = games.Where(g => g.Started == null && g.Id < after.Id);
         }
 
         return await games
+            .AsNoTracking()
             .OrderByDescending(g => g.Started)
             .ThenByDescending(g => g.Id)
-            .Skip(skip)
             .Take(take)
             .ToListAsync(cancellationToken);
     }

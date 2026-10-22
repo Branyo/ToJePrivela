@@ -638,6 +638,7 @@
       "Running": "Žiadna rozohraná hra.",
       "Finished": "Zatiaľ žiadna dohraná hra."
     },
-    "start": "🎉 Nová hra"
+    "start": "🎉 Nová hra",
+    "retry": "Skúsiť znova"
   }
 }

@@ -1,3 +1,4 @@
+using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Abstractions.Persistence;
@@ -9,13 +10,13 @@ public interface IGameRepository : IAccountScopedRepository<Game>
     Task<IReadOnlyList<Game>> GetByPlayerAsync(int accountId, int playerId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// A page of the account's games, newest first (by start, then by id): only running ones when
-    /// <paramref name="finished"/> is false, only finished (cancelled included) when true, all when null.
+    /// Up to <paramref name="take"/> of the account's games with the <paramref name="status"/>, newest first (by start,
+    /// a game without one last, then by id), read only: the first ones, or those after <paramref name="after"/>.
     /// </summary>
     Task<IReadOnlyList<Game>> GetRecentAsync(
         int accountId,
-        bool? finished,
-        int skip,
+        GameHistoryStatus status,
+        GamePosition? after,
         int take,
         CancellationToken cancellationToken = default);
 

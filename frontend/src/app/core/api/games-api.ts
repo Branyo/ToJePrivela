@@ -11,9 +11,23 @@ export class GamesApi {
     return this.http.get<Game[]>('/api/games');
   }
 
-  /** The login's games, newest first, `take` (1–50) of them after the first `skip`. */
-  getHistory(status: GameHistoryStatus, skip: number, take: number): Observable<GameHistory> {
-    return this.http.get<GameHistory>('/api/games/history', { params: { status, skip, take } });
+  /**
+   * The login's games, newest first, `take` (1–50) of them: the first ones, or those listed after the game `after`
+   * (the last one shown), so games started or deleted meanwhile neither repeat nor go missing.
+   */
+  getHistory(
+    status: GameHistoryStatus,
+    after: Pick<GameDetails, 'id' | 'started'> | null,
+    take: number,
+  ): Observable<GameHistory> {
+    const params: Record<string, string | number> = { status, take };
+    if (after) {
+      params['beforeId'] = after.id;
+      if (after.started !== null) {
+        params['before'] = after.started;
+      }
+    }
+    return this.http.get<GameHistory>('/api/games/history', { params });
   }
 
   getDetails(id: number): Observable<GameDetails> {

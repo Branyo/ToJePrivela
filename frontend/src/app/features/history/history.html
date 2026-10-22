@@ -61,9 +61,11 @@
 
   @if (loading()) {
     <p class="muted history__note" aria-live="polite">{{ 'history.loading' | translate }}</p>
+  } @else if (error()) {
+    <button type="button" class="btn btn--ghost history__more" (click)="loadMore()">{{ 'history.retry' | translate }}</button>
   } @else if (hasMore()) {
     <button type="button" class="btn btn--ghost history__more" (click)="loadMore()">{{ 'history.more' | translate }}</button>
-  } @else if (games().length === 0 && !error()) {
+  } @else if (games().length === 0) {
     <div class="panel history__empty">
       <p>{{ 'history.empty.' + status() | translate }}</p>
       <a routerLink="/new" class="btn btn--fun">{{ 'history.start' | translate }}</a>

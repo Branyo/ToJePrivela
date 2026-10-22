@@ -29,6 +29,9 @@ public sealed class GameConfiguration : IEntityTypeConfiguration<Game>
             .IsRequired()
             .IsConcurrencyToken();
 
+        // The history pages through an account's games newest first; this index covers that order.
+        builder.HasIndex(g => new { g.AccountId, g.Started, g.Id });
+
         builder.HasOne<Account>()
             .WithMany()
             .HasForeignKey(g => g.AccountId)

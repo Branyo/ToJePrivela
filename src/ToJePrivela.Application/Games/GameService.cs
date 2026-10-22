@@ -3,6 +3,7 @@ using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Application.Games.Mapping;
+using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Games;
@@ -49,15 +50,10 @@ public sealed class GameService : IGameService
             return Result.Failure<GameHistoryDto>(invalid);
         }
 
-        bool? finished = filter.Status switch
-        {
-            GameHistoryStatus.Running => false,
-            GameHistoryStatus.Finished => true,
-            _ => null,
-        };
+        var after = filter.BeforeId is int beforeId ? new GamePosition(UtcTime.Normalize(filter.Before), beforeId) : null;
 
         // One game past the page tells whether older ones follow, without counting them all.
-        var games = await _games.GetRecentAsync(_currentAccount.Id, finished, filter.Skip, filter.Take + 1, cancellationToken);
+        var games = await _games.GetRecentAsync(_currentAccount.Id, filter.Status, after, filter.Take + 1, cancellationToken);
 
         return Result.Success(new GameHistoryDto(
             games.Take(filter.Take).Select(GameMapper.ToDetailsDto).ToList(),

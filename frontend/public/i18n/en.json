@@ -626,6 +626,7 @@
       "Running": "No game is running.",
       "Finished": "No finished game yet."
     },
-    "start": "🎉 New game"
+    "start": "🎉 New game",
+    "retry": "Try again"
   }
 }

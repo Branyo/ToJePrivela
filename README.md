@@ -155,7 +155,7 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/players` | 409 `Player.NameTaken` when the login already has the name (case-insensitive); 409 `Player.LimitReached` at 100 players per login |
 | GET | `/api/players/{id}/statistics` | The player's record over finished, not cancelled games with a loser (see *Player statistics* below); 404 for another login's player |
 | GET | `/api/games` | |
-| GET | `/api/games/history` | `?status=All\|Running\|Finished&skip=&take=` (take 1–50, default 20): the login's games newest first (by start), each as in `details`, plus `hasMore`; a cancelled game counts as finished. The frontend's `/history` page lists them with a "show older" button |
+| GET | `/api/games/history` | `?status=All\|Running\|Finished&take=` (1–50, default 20), continued after the last listed game with `&before=<its started>&beforeId=<its id>`: the login's games newest first (by start), each as in `details`, plus `hasMore`; a cancelled game counts as finished. The frontend's `/history` page lists them with a "show older" button |
 | GET/PUT/DELETE | `/api/games/{id}` | DELETE removes the game (finished or not) with its scores; players stay. Unlike a player deletion, which marks running games `cancelled`, nothing remains |
 | GET | `/api/games/{id}/details` | Includes player names, bad points, bad cards, doubles and final bad points |
 | POST | `/api/games` | 2–12 known, distinct players in the order of play (stored as `GamePlayer.Seat`; every game screen shows them in it); optional `badCardLimit` (2–10, default 3) |

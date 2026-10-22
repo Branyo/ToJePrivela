@@ -387,10 +387,28 @@ public class GamesEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal(finished.Id, Assert.Single(finishedOnly!.Games).Id);
     }
 
+    [Fact]
+    public async Task GetHistory_ContinuesAfterTheLastListedGame()
+    {
+        var older = await CreateGameAsync();
+        var newer = await CreateGameAsync();
+        var firstPage = await _client.GetFromJsonAsync<GameHistoryDto>("/api/games/history?take=1");
+        await CreateGameAsync(); // started meanwhile on another device
+
+        var last = firstPage!.Games[^1];
+        var before = Uri.EscapeDataString(last.Started!.Value.ToString("O"));
+        var nextPage = await _client.GetFromJsonAsync<GameHistoryDto>($"/api/games/history?take=1&before={before}&beforeId={last.Id}");
+
+        Assert.Equal(newer.Id, last.Id);
+        Assert.True(firstPage.HasMore);
+        Assert.Equal(older.Id, Assert.Single(nextPage!.Games).Id);
+    }
+
     [Theory]
     [InlineData("take=0")]
     [InlineData("take=51")]
-    [InlineData("skip=-1")]
+    [InlineData("beforeId=0")]
+    [InlineData("before=2026-10-01T18:00:00Z")]
     [InlineData("status=Lost")]
     public async Task GetHistory_RejectsABadPage(string query)
     {

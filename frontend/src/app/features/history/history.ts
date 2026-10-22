@@ -49,8 +49,8 @@ export class History {
   private readonly more = new Subject<void>();
 
   constructor() {
-    // Another filter starts over from its newest game (a late page of the previous one is dropped); "show older"
-    // asks for the page after what is listed, ignored while a page is on its way.
+    // Another filter starts over from its newest game (a late page of the previous one is dropped); "show older" (and
+    // "try again") asks for the page after the last listed game, ignored while a page is on its way.
     toObservable(this.status)
       .pipe(
         switchMap((status) => {
@@ -63,7 +63,7 @@ export class History {
             exhaustMap(() => {
               this.loading.set(true);
               this.error.set(null);
-              return this.gamesApi.getHistory(status, this.games().length, PAGE_SIZE).pipe(
+              return this.gamesApi.getHistory(status, this.games().at(-1) ?? null, PAGE_SIZE).pipe(
                 catchError((error) => {
                   this.error.set(toProblem(error).message);
                   this.loading.set(false);
@@ -74,7 +74,11 @@ export class History {
           );
         }),
         tap((page) => {
-          this.games.update((games) => [...games, ...page.games]);
+          // A game whose start was corrected meanwhile may come again; it stays where it was first listed.
+          this.games.update((games) => {
+            const listed = new Set(games.map((game) => game.id));
+            return [...games, ...page.games.filter((game) => !listed.has(game.id))];
+          });
           this.hasMore.set(page.hasMore);
           this.loading.set(false);
         }),
@@ -85,9 +89,5 @@ export class History {
 
   protected loadMore(): void {
     this.more.next();
-  }
-
-  protected losers(game: GameDetails) {
-    return game.players.filter((player) => player.isLoser);
   }
 }

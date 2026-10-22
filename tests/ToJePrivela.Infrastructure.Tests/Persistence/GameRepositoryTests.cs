@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Domain.Entities;
 using ToJePrivela.Infrastructure.Persistence;
 using ToJePrivela.Infrastructure.Persistence.Repositories;
@@ -180,10 +181,61 @@ public class GameRepositoryTests : IDisposable
         await using var lookup = _database.CreateContext();
         var sut = new GameRepository(lookup);
 
-        Assert.Equal([sameStartLater, running, finished, oldest], (await sut.GetRecentAsync(TestAccountId, null, 0, 10)).Select(g => g.Id));
-        Assert.Equal([sameStartLater, running, oldest], (await sut.GetRecentAsync(TestAccountId, false, 0, 10)).Select(g => g.Id));
-        Assert.Equal([finished], (await sut.GetRecentAsync(TestAccountId, true, 0, 10)).Select(g => g.Id));
-        Assert.Equal([running, finished], (await sut.GetRecentAsync(TestAccountId, null, 1, 2)).Select(g => g.Id));
+        async Task<int[]> Ids(GameHistoryStatus status, GamePosition? after = null, int take = 10) =>
+            (await sut.GetRecentAsync(TestAccountId, status, after, take)).Select(g => g.Id).ToArray();
+
+        Assert.Equal([sameStartLater, running, finished, oldest], await Ids(GameHistoryStatus.All));
+        Assert.Equal([sameStartLater, running, oldest], await Ids(GameHistoryStatus.Running));
+        Assert.Equal([finished], await Ids(GameHistoryStatus.Finished));
+        Assert.Equal([sameStartLater, running], await Ids(GameHistoryStatus.All, take: 2));
+        Assert.Equal([running, finished], await Ids(GameHistoryStatus.All, new GamePosition(Start, sameStartLater), take: 2));
+        Assert.Equal([oldest], await Ids(GameHistoryStatus.All, new GamePosition(Start.AddDays(-1), finished)));
+    }
+
+    [Fact]
+    public async Task GetRecentAsync_ContinuesAfterTheLastListedGameWhateverChangedBefore()
+    {
+        var older = await SeedGameAsync([1, 2], started: Start.AddDays(-1));
+        var listed = await SeedGameAsync([1, 2]);
+
+        await using var lookup = _database.CreateContext();
+        var sut = new GameRepository(lookup);
+        var firstPage = await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, 1);
+
+        // A game started on another device before the next page moves every game down one place.
+        await SeedGameAsync([2, 3], started: Start.AddHours(1));
+        var last = firstPage[^1];
+        var nextPage = await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(last.Started, last.Id), 1);
+
+        Assert.Equal([listed], firstPage.Select(g => g.Id));
+        Assert.Equal([older], nextPage.Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task GetRecentAsync_ListsGamesWithoutAStartLast()
+    {
+        var withoutStart = await SeedGameAsync([1, 2]);
+        var withoutStartToo = await SeedGameAsync([1, 2]);
+        var started = await SeedGameAsync([1, 2], started: Start.AddDays(-5));
+
+        await using (var context = _database.CreateContext())
+        {
+            await context.Database.ExecuteSqlAsync(
+                $"UPDATE \"Games\" SET \"Started\" = NULL WHERE \"Id\" IN ({withoutStart}, {withoutStartToo})");
+        }
+
+        await using var lookup = _database.CreateContext();
+        var sut = new GameRepository(lookup);
+
+        Assert.Equal(
+            [started, withoutStartToo, withoutStart],
+            (await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, 10)).Select(g => g.Id));
+        Assert.Equal(
+            [withoutStartToo, withoutStart],
+            (await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(Start.AddDays(-5), started), 10)).Select(g => g.Id));
+        Assert.Equal(
+            [withoutStart],
+            (await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, new GamePosition(null, withoutStartToo), 10)).Select(g => g.Id));
     }
 
     [Fact]
@@ -192,7 +244,7 @@ public class GameRepositoryTests : IDisposable
         await SeedGameAsync([1, 2, 3]);
 
         await using var lookup = _database.CreateContext();
-        var game = Assert.Single(await new GameRepository(lookup).GetRecentAsync(TestAccountId, null, 0, 10));
+        var game = Assert.Single(await new GameRepository(lookup).GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, 10));
 
         Assert.Equal(3, game.GamePlayers.Count);
         Assert.All(game.GamePlayers, gp => Assert.NotNull(gp.Player));
@@ -323,7 +375,7 @@ public class GameRepositoryTests : IDisposable
         Assert.Null(await sut.GetByIdAsync(TestAccountId, theirs));
         Assert.Equal([mine], (await sut.GetAllAsync(TestAccountId)).Select(g => g.Id));
         Assert.Equal([mine], (await sut.GetByPlayerAsync(TestAccountId, 1)).Select(g => g.Id));
-        Assert.Equal([mine], (await sut.GetRecentAsync(TestAccountId, null, 0, 10)).Select(g => g.Id));
+        Assert.Equal([mine], (await sut.GetRecentAsync(TestAccountId, GameHistoryStatus.All, null, 10)).Select(g => g.Id));
         Assert.Equal([theirs], (await sut.GetAllAsync(otherAccountId)).Select(g => g.Id));
     }
 

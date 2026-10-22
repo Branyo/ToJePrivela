@@ -90,7 +90,7 @@ export type GameHistoryStatus = 'All' | 'Running' | 'Finished';
 /** One page of the login's games, newest first (by start). */
 export interface GameHistory {
   games: GameDetails[];
-  /** Older games follow: ask again with `skip` moved past this page. */
+  /** Older games follow: ask again after the last game of this page. */
   hasMore: boolean;
 }
 

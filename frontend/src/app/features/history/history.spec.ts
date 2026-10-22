@@ -60,11 +60,14 @@ describe('History', () => {
 
   afterEach(() => http.verify());
 
-  const expectPage = (status: string, skip: number): TestRequest => {
+  /** A page request: the first one, or the one after the game `after` (by its id and start). */
+  const expectPage = (status: string, after?: GameDetails): TestRequest => {
     const request = http.expectOne((r) => r.url === '/api/games/history');
-    expect(request.request.params.get('status')).toBe(status);
-    expect(request.request.params.get('skip')).toBe(String(skip));
-    expect(request.request.params.get('take')).toBe(String(PAGE_SIZE));
+    const params = request.request.params;
+    expect(params.get('status')).toBe(status);
+    expect(params.get('take')).toBe(String(PAGE_SIZE));
+    expect(params.get('beforeId')).toBe(after ? String(after.id) : null);
+    expect(params.get('before')).toBe(after?.started ?? null);
     return request;
   };
 
@@ -74,7 +77,7 @@ describe('History', () => {
       fixture.componentRef.setInput('status', status);
     }
     fixture.detectChanges();
-    expectPage(status === 'running' ? 'Running' : status === 'finished' ? 'Finished' : 'All', 0).flush(reply);
+    expectPage(status === 'running' ? 'Running' : status === 'finished' ? 'Finished' : 'All').flush(reply);
     await settle(fixture);
     return fixture;
   }
@@ -112,13 +115,14 @@ describe('History', () => {
     expect(page.querySelector('.game__state')?.textContent).toContain('history.state.cancelled');
   });
 
-  it('asks for the page after the listed games when showing older ones', async () => {
-    const fixture = await render({ games: [game(9), game(8)], hasMore: true });
+  it('asks for the page after the last listed game when showing older ones', async () => {
+    const last = game(8, { started: '2026-10-20T17:00:00.1234567Z' });
+    const fixture = await render({ games: [game(9), last], hasMore: true });
     const page = fixture.nativeElement as HTMLElement;
 
     (page.querySelector('.history__more') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expectPage('All', 2).flush({ games: [finished], hasMore: false });
+    expectPage('All', last).flush({ games: [finished], hasMore: false });
     await settle(fixture);
 
     expect(links(page)).toEqual(['/games/9', '/games/8', '/games/4/summary']);
@@ -130,7 +134,7 @@ describe('History', () => {
 
     fixture.componentRef.setInput('status', 'finished');
     fixture.detectChanges();
-    expectPage('Finished', 0).flush({ games: [finished], hasMore: false });
+    expectPage('Finished').flush({ games: [finished], hasMore: false });
     await settle(fixture);
 
     expect(links(fixture.nativeElement)).toEqual(['/games/4/summary']);
@@ -153,11 +157,48 @@ describe('History', () => {
 
     (page.querySelector('.history__more') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expectPage('All', 1).flush({ title: 'Down' }, { status: 503, statusText: 'Unavailable' });
+    expectPage('All', game(9)).flush({ title: 'Down' }, { status: 503, statusText: 'Unavailable' });
     await settle(fixture);
 
     expect(page.querySelector('.error-banner')).not.toBeNull();
     expect(links(page)).toEqual(['/games/9']);
-    expect(page.querySelector('.history__more')).not.toBeNull();
+    expect(page.querySelector('.history__more')?.textContent).toContain('history.retry');
+  });
+
+  it('tries the first page again after it failed', async () => {
+    const fixture = TestBed.createComponent(History);
+    fixture.detectChanges();
+    expectPage('All').flush({ title: 'Down' }, { status: 503, statusText: 'Unavailable' });
+    await settle(fixture);
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('.history__empty')).toBeNull();
+    (page.querySelector('.history__more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expectPage('All').flush({ games: [game(7)], hasMore: false });
+    await settle(fixture);
+
+    expect(page.querySelector('.error-banner')).toBeNull();
+    expect(links(page)).toEqual(['/games/7']);
+  });
+
+  it('continues after a game without a start by its id alone', async () => {
+    const last = game(5, { started: null });
+    const fixture = await render({ games: [last], hasMore: true });
+
+    (fixture.nativeElement.querySelector('.history__more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expectPage('All', last).flush({ games: [], hasMore: false });
+  });
+
+  it('lists a game that comes again on a later page once', async () => {
+    const fixture = await render({ games: [game(9), game(8)], hasMore: true });
+
+    (fixture.nativeElement.querySelector('.history__more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expectPage('All', game(8)).flush({ games: [game(9), finished], hasMore: false });
+    await settle(fixture);
+
+    expect(links(fixture.nativeElement)).toEqual(['/games/9', '/games/8', '/games/4/summary']);
   });
 });
