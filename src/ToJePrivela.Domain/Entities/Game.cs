@@ -87,7 +87,7 @@ public class Game
     /// <summary>
     /// Who starts the next round: whoever called "To je priveľa!" on the question before (<see cref="LastCallerId"/>,
     /// whether a card went out or not), else the first player in the order of play. A question skipped without a call
-    /// keeps the same starter. Null only when that player has been deleted since.
+    /// keeps the same starter. Null only when no caller is known and the first seat's player has been deleted.
     /// </summary>
     public int? StarterId =>
         LastCallerId is int caller && HasPlayer(caller) ? caller : PlayersInSeatOrder.FirstOrDefault()?.PlayerId;

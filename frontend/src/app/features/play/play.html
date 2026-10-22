@@ -71,7 +71,7 @@
         @if (store.question(); as question) {
           <article
             class="question"
-            [class.question--revealed]="store.phase() === 'revealed' || store.phase() === 'awarding'"
+            [class.question--revealed]="store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling'"
             aria-live="polite"
           >
             <header class="question__head">
@@ -95,7 +95,7 @@
               <p class="question__text">{{ question.text }}</p>
             }
 
-            @if (store.phase() === 'revealed' || store.phase() === 'awarding') {
+            @if (store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling') {
               <div class="answer">
                 <span class="answer__label">{{ 'play.answer' | translate }}</span>
                 <span class="answer__value">{{ formatAnswer(question.answer, i18n.locale()) }}</span>
@@ -140,6 +140,9 @@
                 <button type="button" class="btn btn--ghost" (click)="store.skip()">{{ 'play.nobody' | translate }}</button>
                 <p class="muted hint">{{ 'play.cardRule' | translate }}</p>
               }
+              @case ('calling') {
+                <p class="prompt">{{ 'play.loading' | translate }}</p>
+              }
               @case ('awarding') {
                 <p class="prompt">{{ 'play.incoming' | translate }}</p>
               }
@@ -162,7 +165,7 @@
           >
             {{ 'play.call.text' | translate }}
           </button>
-        } @else if (store.callerId() === player.playerId && (store.phase() === 'revealed' || store.phase() === 'awarding')) {
+        } @else if (store.callerId() === player.playerId && (store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling')) {
           <span class="call call--made" aria-hidden="true">
             {{ 'play.call.text' | translate }}
           </span>
@@ -236,7 +239,7 @@
     @if (verdict(); as shown) {
       {{ (shown.kind === 'false-alarm' ? 'play.verdict.falseAlarm' : 'play.verdict.tooMuch') | translate }}
     } @else if (store.caller(); as caller) {
-      @if (store.phase() === 'revealed' || store.phase() === 'awarding') {
+      @if (store.phase() === 'revealed' || store.phase() === 'awarding' || store.phase() === 'calling') {
         {{ 'play.call.made' | translate: { name: caller.name } }}
       }
     }

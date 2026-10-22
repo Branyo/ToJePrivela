@@ -77,7 +77,8 @@ export interface GameDetails {
   hasResult: boolean;
   /**
    * Who starts the next round (`Game.StarterId`): whoever called "To je priveľa!" last, card or not, else the first
-   * player. Stored, so a reloaded screen and every device agree; `null` only for a deleted player.
+   * player. Stored, so a reloaded screen and every device agree; `null` only when no caller is known and the first
+   * seat's player has been deleted.
    */
   starterId: number | null;
   players: GamePlayer[];

@@ -14,7 +14,7 @@ const game = (overrides: Partial<GameDetails> = {}): GameDetails => ({
   badPointsMode: 'Question',
   cancelled: false,
   hasResult: false,
-  starterId: null,
+  starterId: 2, // the first seat, as the server sends it until somebody called
   players: [
     { playerId: 2, name: 'Bo', avatar: '🐼', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 1 },
     { playerId: 1, name: 'Ana', avatar: '🦊', badPoints: 0, badCards: 0, doubles: 0, finalBadPoints: 0, rank: 1, isLoser: false, tooMuchCalls: 0, falseAlarms: 0, correctCalls: 0, caught: 0, previousPlayerId: 2 },
@@ -281,6 +281,13 @@ describe('PlayStore', () => {
     expect(store.starter()?.name).toBe('Bo');
   });
 
+  it('names no starter the server does not name, e.g. a deleted first player', async () => {
+    await startWithQuestion([], game({ starterId: null }));
+
+    expect(store.starter()).toBeNull();
+    expect(store.highlightedStarterId()).toBeNull();
+  });
+
   it('keeps the starter of a reloaded screen, as the server stored it', async () => {
     await startWithQuestion([], game({ starterId: 1 }));
 
@@ -309,6 +316,9 @@ describe('PlayStore', () => {
     store.reveal(1);
 
     const skipped = store.skip();
+    expect(store.phase()).toBe('calling');
+    expect(store.canEnd()).toBe(false); // the game is not ended under a call on its way
+    expect(store.highlightedStarterId()).toBeNull(); // nobody glows until the server says who starts
     const request = http.expectOne('/api/games/5/calls');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ playerId: 1 });

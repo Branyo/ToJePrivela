@@ -13,6 +13,7 @@ export type PlayPhase =
   | 'asking'
   | 'revealed'
   | 'awarding'
+  | 'calling'
   | 'no-questions'
   | 'ending'
   | 'finished'
@@ -63,10 +64,10 @@ export class PlayStore {
   readonly caller = computed(() => this.seatOf(this.callerId()));
   /**
    * Who starts the round: whoever called "To je priveľa!" on the question before, card or not (a question skipped
-   * without a call keeps the same one), else the first player. The server stores it (`starterId`), so a reloaded
-   * screen and every other device name the same player; a call only counts once it was saved.
+   * without a call keeps the same one), else the first player. The server decides and stores it (`starterId`), so a
+   * reloaded screen and every other device name the same player; a call only counts once it was saved.
    */
-  readonly starter = computed(() => this.seatOf(this.game()?.starterId ?? null) ?? this.seats()[0] ?? null);
+  readonly starter = computed(() => this.seatOf(this.game()?.starterId ?? null));
   /** The starter's seat glows while their round is being set up and bid on, and while it is being dealt. */
   readonly highlightedStarterId = computed(() =>
     ['loading', 'choosing', 'asking'].includes(this.phase()) ? (this.starter()?.playerId ?? null) : null,
@@ -93,7 +94,7 @@ export class PlayStore {
    * question still on its way does not hold it up, so a request that never answers cannot trap the players.
    */
   readonly canEnd = computed(
-    () => !!this.game() && !['ending', 'awarding', 'finished', 'deleted'].includes(this.phase()),
+    () => !!this.game() && !['ending', 'awarding', 'calling', 'finished', 'deleted'].includes(this.phase()),
   );
 
   /** The card is being decided and this player is one who may take it. */
@@ -260,19 +261,26 @@ export class PlayStore {
       return;
     }
 
-    this.phase.set('loading');
+    // Like a card on its way, the call holds up ending the game and reloads, and nobody glows as starter until the
+    // server says who it is.
+    this.phase.set('calling');
     if (this.doubles) {
       await this.doubles;
+    }
+    if (this.phase() !== 'calling') {
+      return;
     }
 
     try {
       const game = await firstValueFrom(this.gamesApi.recordCall(this.gameId, callerId));
-      if (this.phase() !== 'loading') {
-        return; // The game is being ended meanwhile; that request decides what comes next.
+      if (this.phase() !== 'calling') {
+        return;
       }
       this.game.set(game);
     } catch (error) {
-      await this.reloadAfterRefusal(error);
+      if (this.phase() === 'calling') {
+        await this.reloadAfterRefusal(error);
+      }
       return;
     }
 
@@ -457,7 +465,7 @@ export class PlayStore {
 
   /** No card, double or end of this device is on its way, so a reloaded game is not older than what it shows. */
   private isRefreshable(): boolean {
-    return !this.doubles && !this.isEnding() && this.phase() !== 'awarding';
+    return !this.doubles && !this.isEnding() && this.phase() !== 'awarding' && this.phase() !== 'calling';
   }
 
   /** The game is being ended or is over, so the round must not go on. */
