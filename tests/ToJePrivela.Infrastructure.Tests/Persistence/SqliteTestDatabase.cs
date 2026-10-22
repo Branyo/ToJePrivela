@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using ToJePrivela.Infrastructure.Persistence;
 
 namespace ToJePrivela.Infrastructure.Tests.Persistence;
@@ -31,8 +32,9 @@ public sealed class SqliteTestDatabase : IDisposable
         }
     }
 
-    public ToJePrivelaDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<ToJePrivelaDbContext>().UseSqlite(_connection).Options);
+    /// <param name="interceptors">Watch what the context sends, e.g. a <see cref="QueryPlanRecorder"/>.</param>
+    public ToJePrivelaDbContext CreateContext(params IInterceptor[] interceptors) =>
+        new(new DbContextOptionsBuilder<ToJePrivelaDbContext>().UseSqlite(_connection).AddInterceptors(interceptors).Options);
 
     public void Dispose() => _connection.Dispose();
 }
