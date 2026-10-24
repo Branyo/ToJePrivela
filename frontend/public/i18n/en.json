@@ -23,6 +23,7 @@
     "players": "Players",
     "categories": "Categories",
     "password": "Password",
+    "accounts": "Users",
     "statistics": "Statistics",
     "history": "History"
   },
@@ -231,6 +232,7 @@
     },
     "rematch": "🔁 Rematch, same players",
     "back": "▶️ Back to the game",
+    "backToHistory": "🕘 Back to the history",
     "home": "🏠 Home",
     "loading": "Counting donkeys… 🫏🫏🫏"
   },
@@ -282,7 +284,35 @@
       "players": "👥 Players",
       "password": "🔑 Password",
       "categories": "🗂️ Categories",
-      "questions": "📚 Questions"
+      "questions": "📚 Questions",
+      "accounts": "👤 Users"
+    }
+  },
+  "accounts": {
+    "title": "👤 Users",
+    "text": "Every login, the most recently signed in first. Open one to see its players, game history and statistics; you cannot change them.",
+    "loading": "Loading users…",
+    "empty": "No logins yet.",
+    "you": "you",
+    "dateTime": "d MMM y, HH:mm",
+    "lastSignedIn": "Last signed in: {{at}}",
+    "neverSignedIn": "Never signed in yet",
+    "created": "Created: {{at}}",
+    "confirm": "Delete the login {{name}} for good, with all its players and games?",
+    "confirmAdmin": "An admin from the server configuration is created again, without players or games, when the server next starts.",
+    "delete": "Delete",
+    "keep": "Keep",
+    "deleteName": "Delete the login {{name}}",
+    "back": "All users",
+    "tabs": {
+      "label": "User sections",
+      "players": "👥 Players",
+      "history": "🕘 History",
+      "statistics": "📊 Statistics"
+    },
+    "players": {
+      "title": "👥 Players",
+      "empty": "This login has no players yet."
     }
   },
   "admin": {
@@ -473,6 +503,10 @@
       },
       "RateLimit": {
         "Exceeded": "Too many attempts in a short time. Try again in {{seconds}} s."
+      },
+      "Account": {
+        "NotFound": "This login does not exist.",
+        "CannotDeleteOwn": "You cannot delete the login you are signed in to."
       }
     }
   },

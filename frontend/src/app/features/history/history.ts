@@ -4,7 +4,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { EMPTY, Subject, catchError, exhaustMap, startWith, switchMap, tap } from 'rxjs';
-import { GamesApi } from '../../core/api/games-api';
+import { AccountData } from '../../core/api/account-data';
 import { GameDetails, GameHistoryStatus } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message } from '../../core/i18n/language';
@@ -19,7 +19,8 @@ const STATUSES: Record<string, GameHistoryStatus> = { running: 'Running', finish
 
 /**
  * The login's games, newest first, a page at a time; running ones open the play screen, the others their summary.
- * The filter lives in the URL, so coming back from a game keeps it.
+ * The filter lives in the URL, so coming back from a game keeps it. An admin looking at another login sees its games
+ * the same way (`AccountData`), each opening its results.
  */
 @Component({
   selector: 'app-history',
@@ -29,7 +30,7 @@ const STATUSES: Record<string, GameHistoryStatus> = { running: 'Running', finish
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class History {
-  private readonly gamesApi = inject(GamesApi);
+  protected readonly data = inject(AccountData);
   protected readonly i18n = inject(LanguageService);
   protected readonly filters: { status: GameHistoryStatus; query: string | null }[] = [
     { status: 'All', query: null },
@@ -66,7 +67,7 @@ export class History {
             exhaustMap(() => {
               this.loading.set(true);
               this.error.set(null);
-              return this.gamesApi.getHistory(status, after, PAGE_SIZE).pipe(
+              return this.data.getHistory(status, after, PAGE_SIZE).pipe(
                 catchError((error) => {
                   this.error.set(toProblem(error).message);
                   this.loading.set(false);

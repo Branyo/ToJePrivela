@@ -1,0 +1,36 @@
+<header class="page account">
+  <a routerLink="/settings/accounts" class="btn btn--ghost account__back">← {{ 'accounts.back' | translate }}</a>
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  @if (account(); as a) {
+    <h1 class="account__name">
+      👤 {{ a.name }}
+      @if (a.isAdmin) {
+        <span class="badge">{{ 'settings.admin' | translate }}</span>
+      }
+    </h1>
+    <app-account-dates class="muted" [account]="a" />
+  } @else if (account() === null) {
+    <p class="error-banner" role="alert">{{ 'errors.api.Account.NotFound' | translate }}</p>
+  }
+
+  @if (account() !== null) {
+    <nav class="tabs" [attr.aria-label]="'accounts.tabs.label' | translate">
+      @for (tab of tabs; track tab.path) {
+        <a class="chip tabs__tab" [routerLink]="tab.path" routerLinkActive="chip--on" ariaCurrentWhenActive="page">{{
+          tab.label | translate
+        }}</a>
+      }
+    </nav>
+  }
+</header>
+
+@if (account() !== null) {
+  <!-- The router reuses this page when only the login in the address changes: a new outlet starts its screen afresh. -->
+  @for (id of [accountId()]; track id) {
+    <router-outlet />
+  }
+}

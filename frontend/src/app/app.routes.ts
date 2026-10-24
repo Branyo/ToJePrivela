@@ -51,6 +51,12 @@ export const routes: Routes = [
             title: 'titles.questions',
           },
           {
+            path: 'accounts',
+            canActivate: [adminGuard],
+            loadComponent: () => import('./features/accounts/accounts').then((m) => m.Accounts),
+            title: 'titles.accounts',
+          },
+          {
             path: 'password',
             canActivate: [notAdminGuard],
             loadComponent: () => import('./features/settings/password-section').then((m) => m.PasswordSection),
@@ -67,6 +73,35 @@ export const routes: Routes = [
         path: 'history',
         loadComponent: () => import('./features/history/history').then((m) => m.History),
         title: 'titles.history',
+      },
+      {
+        // One login as an admin sees it, read only: the login's own screens, reading its data (`AdminAccountData`).
+        path: 'accounts/:accountId',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/accounts/account-view').then((m) => m.AccountView),
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'players' },
+          {
+            path: 'players',
+            loadComponent: () => import('./features/accounts/account-players').then((m) => m.AccountPlayers),
+            title: 'titles.players',
+          },
+          {
+            path: 'history',
+            loadComponent: () => import('./features/history/history').then((m) => m.History),
+            title: 'titles.history',
+          },
+          {
+            matcher: statisticsMatcher,
+            loadComponent: () => import('./features/statistics/statistics').then((m) => m.Statistics),
+            title: 'titles.statistics',
+          },
+          {
+            path: 'games/:id',
+            loadComponent: () => import('./features/summary/summary').then((m) => m.Summary),
+            title: 'titles.summary',
+          },
+        ],
       },
       { path: 'games/:id', loadComponent: () => import('./features/play/play').then((m) => m.Play), title: 'titles.play' },
       {

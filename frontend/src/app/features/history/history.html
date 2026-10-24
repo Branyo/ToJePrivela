@@ -5,7 +5,7 @@
     @for (filter of filters; track filter.status) {
       <a
         class="chip"
-        routerLink="/history"
+        [routerLink]="data.historyLink()"
         [queryParams]="{ status: filter.query }"
         [class.chip--on]="status() === filter.status"
         [attr.aria-current]="status() === filter.status ? 'page' : null"
@@ -22,7 +22,7 @@
           <a
             class="game"
             [class.game--running]="!game.finished"
-            [routerLink]="game.finished ? ['/games', game.id, 'summary'] : ['/games', game.id]"
+            [routerLink]="data.gameLink(game)"
           >
             <span class="game__head">
               <span class="game__state">
@@ -48,7 +48,7 @@
               }
             </ul>
 
-            <span class="game__go">{{ (game.finished ? 'history.results' : 'history.continue') | translate }}</span>
+            <span class="game__go">{{ (game.finished || data.readOnly ? 'history.results' : 'history.continue') | translate }}</span>
           </a>
         </li>
       }
@@ -68,7 +68,9 @@
   } @else if (games().length === 0) {
     <div class="panel history__empty">
       <p>{{ 'history.empty.' + status() | translate }}</p>
-      <a routerLink="/new" class="btn btn--fun">{{ 'history.start' | translate }}</a>
+      @if (!data.readOnly) {
+        <a routerLink="/new" class="btn btn--fun">{{ 'history.start' | translate }}</a>
+      }
     </div>
   }
 </section>

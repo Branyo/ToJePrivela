@@ -184,6 +184,16 @@ export interface Account {
   isAdmin: boolean;
 }
 
+/** A login as an admin sees it in the list of all logins. */
+export interface AccountOverview {
+  id: number;
+  name: string;
+  isAdmin: boolean;
+  createdAt: string;
+  /** `null` for a login nobody has signed in to yet (an admin seeded from the server configuration). */
+  lastSignedInAt: string | null;
+}
+
 export interface SignedIn {
   /** Sent as `Authorization: Bearer …` with every request until `expiresAt`. */
   accessToken: string;

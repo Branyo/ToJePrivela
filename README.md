@@ -174,6 +174,9 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
 | POST | `/api/question-categories/{id}/ai-questions` | Body `{ "count": 1–200 }`; adds AI questions, skipping ones the category has |
 | DELETE | `/api/question-categories/{id}/ai-questions` | Removes the AI questions only; returns `{ "deleted": n }` |
 | POST | `/api/question-categories/{id}/imported-questions` | Body `{ "json": "<text>" }`: a JSON array in the AI generator's format (see below); returns `{ received, imported, rejected: [{ position, reason }], questions }` |
+| GET | `/api/admin/accounts` | Admin only. Every login `{ id, name, isAdmin, createdAt, lastSignedInAt }`, the most recently signed in first, those never signed in last |
+| DELETE | `/api/admin/accounts/{accountId}` | Admin only. Deletes the login with all its players and games (its sign-ins end: 401 `Auth.UnknownAccount`); 409 `Account.CannotDeleteOwn` for the admin's own login. A configured admin is created again, empty, on the next startup |
+| GET | `/api/admin/accounts/{accountId}/players`, `…/players/{playerId}/statistics`, `…/games/history`, `…/games/{gameId}/details` | Admin only, read only. Another login's players, statistics and games, answered exactly like the login's own endpoints; 404 `Account.NotFound` for a login that does not exist |
 
 Players and games belong to the login that created them: `/api/players…` and `/api/games…` only ever see the
 signed-in login's own, another login's id answers 404, and a game can seat only the login's players. A name is
@@ -183,6 +186,9 @@ unique per login, so two logins may each have their own "Brano". A login keeps a
 Without a valid token every other route answers 401 `Auth.Unauthenticated`. Changing questions or categories
 (POST/PUT/DELETE on `/api/questions…` and `/api/question-categories…`, AI generation included) is admin-only and
 answers 403 `Auth.Forbidden` to everyone else; reading questions and recording views is open to every login.
+Everything under `/api/admin` is admin-only too: the *Users* settings tab lists every login, opens one at
+`/accounts/:accountId` (its players, history, game results and statistics on the login's own screens, read only) and
+deletes one after a second tap.
 
 Categories are immutable — there is no PUT; delete the category and create a new one instead. The two
 AI-generating POSTs share one rate limit; creating a category counts towards it only when it translates a name or

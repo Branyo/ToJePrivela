@@ -4,8 +4,8 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { EMPTY, catchError, switchMap, tap } from 'rxjs';
+import { AccountData } from '../../core/api/account-data';
 import { Player, PlayerStatistics } from '../../core/api/models';
-import { PlayersApi } from '../../core/api/players-api';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
 import { MessagePipe } from '../../core/i18n/message.pipe';
@@ -41,7 +41,10 @@ interface GameRecord {
 /** Shown for an average (or the loss index) with nothing to average. */
 export const NONE = '—';
 
-/** Players alphabetically; picking one (`/statistics/:playerId`) shows their record over finished games. */
+/**
+ * Players alphabetically; picking one (`/statistics/:playerId`) shows their record over finished games. An admin looking
+ * at another login sees its players the same way (`AccountData`).
+ */
 @Component({
   selector: 'app-statistics',
   imports: [RouterLink, RouterLinkActive, DatePipe, PlayerAvatar, TranslatePipe, MessagePipe],
@@ -50,7 +53,7 @@ export const NONE = '—';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Statistics {
-  private readonly playersApi = inject(PlayersApi);
+  protected readonly data = inject(AccountData);
   protected readonly i18n = inject(LanguageService);
   protected readonly none = NONE;
 
@@ -169,7 +172,7 @@ export class Statistics {
   });
 
   constructor() {
-    this.playersApi.getAll().subscribe({
+    this.data.getPlayers().subscribe({
       next: (players) => this.players.set(players),
       error: (error) => this.playersError.set(toProblem(error).message),
     });
@@ -188,7 +191,7 @@ export class Statistics {
 
           return id === undefined || Number.isNaN(id)
             ? EMPTY
-            : this.playersApi.getStatistics(id).pipe(
+            : this.data.getStatistics(id).pipe(
                 catchError((error) => {
                   this.statisticsError.set(toProblem(error).message);
                   return EMPTY;

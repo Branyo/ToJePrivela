@@ -1,0 +1,32 @@
+.account {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 0;
+}
+
+.account__back {
+  justify-self: start;
+}
+
+.account__name {
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  overflow-wrap: anywhere;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: var(--border);
+}
+
+.tabs__tab {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.tabs__tab.chip--on {
+  color: #fff;
+}

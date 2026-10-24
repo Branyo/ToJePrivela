@@ -1,0 +1,66 @@
+<section class="accounts" aria-labelledby="accounts-title">
+  <h2 id="accounts-title">{{ 'accounts.title' | translate }}</h2>
+  <p class="muted">{{ 'accounts.text' | translate }}</p>
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  <section class="panel">
+    @if (accounts(); as list) {
+      @if (list.length === 0) {
+        <p class="muted">{{ 'accounts.empty' | translate }}</p>
+      } @else {
+        <ul class="list">
+          @for (account of list; track account.id) {
+            <li class="row" [class.row--confirming]="confirmingId() === account.id">
+              <a class="row__open" [routerLink]="['/accounts', account.id]">
+                <span class="row__name">
+                  {{ account.name }}
+                  @if (account.isAdmin) {
+                    <span class="badge">{{ 'settings.admin' | translate }}</span>
+                  }
+                  @if (account.id === auth.account()?.id) {
+                    <span class="badge badge--quiet">{{ 'accounts.you' | translate }}</span>
+                  }
+                </span>
+                <app-account-dates class="row__dates muted" [account]="account" />
+              </a>
+
+              @if (confirmingId() === account.id) {
+                <span class="row__question">
+                  {{ 'accounts.confirm' | translate: { name: account.name } }}
+                  @if (account.isAdmin) {
+                    {{ 'accounts.confirmAdmin' | translate }}
+                  }
+                </span>
+                <button
+                  type="button"
+                  class="btn btn--danger row__action"
+                  [disabled]="deletingId() === account.id"
+                  (click)="delete(account.id)"
+                >
+                  {{ 'accounts.delete' | translate }}
+                </button>
+                <button type="button" class="btn btn--ghost row__action" (click)="cancelDelete()">
+                  {{ 'accounts.keep' | translate }}
+                </button>
+              } @else if (account.id !== auth.account()?.id) {
+                <button
+                  type="button"
+                  class="icon-btn row__remove"
+                  [attr.aria-label]="'accounts.deleteName' | translate: { name: account.name }"
+                  (click)="askToDelete(account.id)"
+                >
+                  🗑️
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    } @else if (!error()) {
+      <p class="muted">{{ 'accounts.loading' | translate }}</p>
+    }
+  </section>
+</section>

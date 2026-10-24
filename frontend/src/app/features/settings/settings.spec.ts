@@ -98,12 +98,12 @@ describe('Settings', () => {
     expect(TestBed.inject(Router).url).toBe('/settings/players');
   });
 
-  it('gives an admin tabs for players, categories and questions, marking the open one', async () => {
+  it('gives an admin tabs for players, categories, questions and users, marking the open one', async () => {
     const { harness, page } = await open('/settings/categories', true);
     flushCategories();
     await harness.fixture.whenStable();
 
-    expect(tabs(page)).toEqual(['/settings/players', '/settings/categories', '/settings/questions']);
+    expect(tabs(page)).toEqual(['/settings/players', '/settings/categories', '/settings/questions', '/settings/accounts']);
     expect(page.querySelector('.tab--on')?.getAttribute('href')).toBe('/settings/categories');
     expect(page.querySelector('.tab--on')?.getAttribute('aria-current')).toBe('page');
     expect(page.querySelector('app-ai-questions-section')).not.toBeNull();

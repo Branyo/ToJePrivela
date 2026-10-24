@@ -23,6 +23,7 @@
     "players": "Hráči",
     "categories": "Kategórie",
     "password": "Heslo",
+    "accounts": "Používatelia",
     "statistics": "Štatistiky",
     "history": "História"
   },
@@ -241,6 +242,7 @@
     },
     "rematch": "🔁 Odveta s rovnakými hráčmi",
     "back": "▶️ Späť do hry",
+    "backToHistory": "🕘 Späť na históriu",
     "home": "🏠 Domov",
     "loading": "Počítam somáre… 🫏🫏🫏"
   },
@@ -292,7 +294,35 @@
       "players": "👥 Hráči",
       "password": "🔑 Heslo",
       "categories": "🗂️ Kategórie",
-      "questions": "📚 Otázky"
+      "questions": "📚 Otázky",
+      "accounts": "👤 Používatelia"
+    }
+  },
+  "accounts": {
+    "title": "👤 Používatelia",
+    "text": "Všetky prihlásenia, naposledy prihlásené navrchu. Otvor jedno a uvidíš jeho hráčov, históriu hier a štatistiky; meniť ich nemôžeš.",
+    "loading": "Načítavam používateľov…",
+    "empty": "Zatiaľ žiadne prihlásenia.",
+    "you": "ty",
+    "dateTime": "d. M. y HH:mm",
+    "lastSignedIn": "Naposledy prihlásený: {{at}}",
+    "neverSignedIn": "Ešte sa neprihlásil",
+    "created": "Vytvorený: {{at}}",
+    "confirm": "Natrvalo vymazať prihlásenie {{name}} so všetkými jeho hráčmi a hrami?",
+    "confirmAdmin": "Správcu zo serverovej konfigurácie server pri ďalšom štarte vytvorí znova, bez hráčov a hier.",
+    "delete": "Vymazať",
+    "keep": "Ponechať",
+    "deleteName": "Vymazať prihlásenie {{name}}",
+    "back": "Všetci používatelia",
+    "tabs": {
+      "label": "Časti používateľa",
+      "players": "👥 Hráči",
+      "history": "🕘 História",
+      "statistics": "📊 Štatistiky"
+    },
+    "players": {
+      "title": "👥 Hráči",
+      "empty": "Toto prihlásenie zatiaľ nemá žiadnych hráčov."
     }
   },
   "admin": {
@@ -483,6 +513,10 @@
       },
       "RateLimit": {
         "Exceeded": "Príliš veľa pokusov za krátky čas. Skús to znova o {{seconds}} s."
+      },
+      "Account": {
+        "NotFound": "Toto prihlásenie neexistuje.",
+        "CannotDeleteOwn": "Prihlásenie, pod ktorým si prihlásený, vymazať nemôžeš."
       }
     }
   },
