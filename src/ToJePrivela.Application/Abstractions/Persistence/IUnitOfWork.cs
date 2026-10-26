@@ -4,6 +4,7 @@ public interface IUnitOfWork
 {
     /// <exception cref="UniqueConstraintException">A unique index rejected the changes.</exception>
     /// <exception cref="ConcurrencyConflictException">A row changed since it was read.</exception>
+    /// <exception cref="MissingReferenceException">A row the changes refer to was deleted since it was read.</exception>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

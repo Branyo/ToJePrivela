@@ -2,9 +2,11 @@ import { registerLocaleData } from '@angular/common';
 import localeSk from '@angular/common/locales/sk';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
+import { inject } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
+import { AccountData, OwnAccountData } from '../../core/api/account-data';
 import { GameDetails, GamePlayer, GameHistory } from '../../core/api/models';
 import { History, PAGE_SIZE } from './history';
 
@@ -49,11 +51,26 @@ registerLocaleData(localeSk, 'sk-SK');
 
 describe('History', () => {
   let http: HttpTestingController;
+  /** Whether the screen shows another login's data, as an admin's view of it does: read the same way, only read only. */
+  let readOnly: boolean;
 
   beforeEach(() => {
+    readOnly = false;
     TestBed.configureTestingModule({
       imports: [History],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideTranslateService()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideTranslateService(),
+        {
+          provide: AccountData,
+          useFactory: () => {
+            const own = inject(OwnAccountData);
+            return readOnly ? Object.assign(Object.create(own), { readOnly: true }) : own;
+          },
+        },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -149,6 +166,15 @@ describe('History', () => {
 
     expect(page.querySelector('.history__empty')?.textContent).toContain('history.empty.Running');
     expect(page.querySelector('.history__empty a')?.getAttribute('href')).toBe('/new');
+  });
+
+  it("tells an admin looking at another login that it is that login's history, with no new game", async () => {
+    readOnly = true;
+
+    const page = (await render({ games: [], hasMore: false }, 'running')).nativeElement as HTMLElement;
+
+    expect(page.querySelector('.history__empty')?.textContent).toContain('history.emptyOther.Running');
+    expect(page.querySelector('.history__empty a')).toBeNull();
   });
 
   it('shows the error and keeps the listed games when an older page fails', async () => {

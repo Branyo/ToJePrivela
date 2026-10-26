@@ -1,0 +1,29 @@
+@use '../../shared/styles/row-list';
+
+@include row-list.styles;
+
+.accounts {
+  display: grid;
+  gap: 16px;
+}
+
+.accounts h2 {
+  font-size: clamp(1.4rem, 4vw, 1.9rem);
+}
+
+.row__open {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 12ch;
+  color: inherit;
+  text-decoration: none;
+}
+
+.row__open:hover .row__name {
+  text-decoration: underline;
+}
+
+.row__dates {
+  font-size: 0.9rem;
+}

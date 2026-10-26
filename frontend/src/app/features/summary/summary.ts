@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { AccountData } from '../../core/api/account-data';
 import { GamesApi } from '../../core/api/games-api';
 import { GameDetails } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
@@ -10,6 +11,10 @@ import { Confetti } from '../../shared/confetti';
 import { PlayerAvatar } from '../../shared/player-avatar';
 import { rankPlayers } from '../../shared/ranking';
 
+/**
+ * A game's results (or the score so far). An admin looking at another login sees them read only (`AccountData`): no
+ * rematch, no new game, just the way back to that login's history.
+ */
 @Component({
   selector: 'app-summary',
   imports: [RouterLink, PlayerAvatar, Confetti, TranslatePipe, MessagePipe],
@@ -19,6 +24,8 @@ import { rankPlayers } from '../../shared/ranking';
 })
 export class Summary implements OnInit {
   private readonly gamesApi = inject(GamesApi);
+  protected readonly data = inject(AccountData);
+  protected readonly historyLink = this.data.historyLink();
   private readonly router = inject(Router);
   protected readonly i18n = inject(LanguageService);
 
@@ -47,7 +54,7 @@ export class Summary implements OnInit {
   protected readonly hasCalls = computed(() => this.ranking().some((p) => p.tooMuchCalls > 0));
 
   ngOnInit(): void {
-    this.gamesApi.getDetails(this.id()).subscribe({
+    this.data.getDetails(this.id()).subscribe({
       next: (game) => this.game.set(game),
       error: (error) => this.error.set(toProblem(error).message),
     });
@@ -60,7 +67,7 @@ export class Summary implements OnInit {
 
   protected rematch(): void {
     const game = this.game();
-    if (!game || this.rematching() || !this.canRematch()) {
+    if (!game || this.data.readOnly || this.rematching() || !this.canRematch()) {
       return;
     }
 

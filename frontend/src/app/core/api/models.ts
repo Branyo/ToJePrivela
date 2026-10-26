@@ -184,6 +184,18 @@ export interface Account {
   isAdmin: boolean;
 }
 
+/** A login as an admin sees it in the list of all logins. */
+export interface AccountOverview {
+  id: number;
+  name: string;
+  isAdmin: boolean;
+  createdAt: string;
+  /** `null` for a login nobody has signed in to yet (an admin seeded from the server configuration). */
+  lastSignedInAt: string | null;
+  /** False for your own login and for the first one, which holds the game's original data. */
+  canDelete: boolean;
+}
+
 export interface SignedIn {
   /** Sent as `Authorization: Bearer …` with every request until `expiresAt`. */
   accessToken: string;

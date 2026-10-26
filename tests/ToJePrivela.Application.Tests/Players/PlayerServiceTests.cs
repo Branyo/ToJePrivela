@@ -1,5 +1,6 @@
 using NSubstitute;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Tests.Common;
 using ToJePrivela.Application.Players;
@@ -16,11 +17,13 @@ public class PlayerServiceTests
     private readonly IGameRepository _games = Substitute.For<IGameRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly FixedAvatarPicker _avatarPicker = new("🐙");
+    private readonly IAccountRepository _accounts = Substitute.For<IAccountRepository>();
     private readonly PlayerService _sut;
 
     public PlayerServiceTests()
     {
-        _sut = new PlayerService(_players, _games, _unitOfWork, _avatarPicker, new FixedTimeProvider(Now), new FixedCurrentAccount(TestAccountId));
+        _accounts.LoginExistsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns(true);
+        _sut = new PlayerService(_players, _games, _unitOfWork, _avatarPicker, new FixedTimeProvider(Now), new FixedCurrentAccount(TestAccountId), _accounts);
     }
 
     [Fact]
@@ -248,6 +251,17 @@ public class PlayerServiceTests
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
         _players.DidNotReceive().Remove(Arg.Any<Player>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_OfAPlayerGoneWithItsDeletedLoginSignsTheLoginOut()
+    {
+        _players.GetByIdAsync(TestAccountId, 7, Arg.Any<CancellationToken>()).Returns((Player?)null);
+        _accounts.LoginExistsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await _sut.DeleteAsync(7);
+
+        Assert.Equal(AccountErrors.UnknownAccount, result.Error);
     }
 
     [Fact]

@@ -1,0 +1,50 @@
+// A list of bordered rows, each deleted after a second tap: the row turns red and asks, with the question and its
+// buttons wrapping below the row's own content. Used by the players and the logins in the settings.
+@mixin styles {
+  .list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border: var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+
+  .row--confirming {
+    background: #ffe1e1;
+    border-color: var(--tomato);
+  }
+
+  .row__name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    overflow-wrap: anywhere;
+  }
+
+  .row__question {
+    flex-basis: 100%;
+    order: 3;
+    font-size: 0.95rem;
+  }
+
+  .row__action {
+    order: 4;
+    padding: 8px 16px;
+  }
+
+  .row__remove {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+}

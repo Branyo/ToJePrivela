@@ -248,6 +248,21 @@ input {
 
 .chip--on .chip__count { background: rgb(255 255 255 / 0.25); }
 
+/* A short label beside a name, e.g. that a login is an admin. */
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 10px;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--sun);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.badge--quiet { background: var(--paper); }
+
 /* Marks a text's language (SK / EN) in front of it. */
 .lang {
   display: inline-block;

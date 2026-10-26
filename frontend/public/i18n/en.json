@@ -23,6 +23,7 @@
     "players": "Players",
     "categories": "Categories",
     "password": "Password",
+    "accounts": "Users",
     "statistics": "Statistics",
     "history": "History"
   },
@@ -231,6 +232,7 @@
     },
     "rematch": "🔁 Rematch, same players",
     "back": "▶️ Back to the game",
+    "backToHistory": "🕘 Back to the history",
     "home": "🏠 Home",
     "loading": "Counting donkeys… 🫏🫏🫏"
   },
@@ -276,13 +278,42 @@
   "settings": {
     "title": "⚙️ Settings",
     "signedInAs": "Signed in as {{name}}",
+    "version": "Version {{version}}",
     "admin": "admin",
     "tabs": {
       "label": "Settings sections",
       "players": "👥 Players",
       "password": "🔑 Password",
       "categories": "🗂️ Categories",
-      "questions": "📚 Questions"
+      "questions": "📚 Questions",
+      "accounts": "👤 Users"
+    }
+  },
+  "accounts": {
+    "title": "👤 Users",
+    "text": "Every login, the most recently signed in first. Open one to see its players, game history and statistics; you cannot change them.",
+    "loading": "Loading users…",
+    "empty": "No logins yet.",
+    "you": "you",
+    "dateTime": "d MMM y, HH:mm",
+    "lastSignedIn": "Last signed in: {{at}}",
+    "neverSignedIn": "Never signed in yet",
+    "created": "Created: {{at}}",
+    "confirm": "Delete the login {{name}} for good, with all its players and games?",
+    "confirmAdmin": "An admin from the server configuration is created again, without players or games, when the server next starts.",
+    "delete": "Delete",
+    "keep": "Keep",
+    "deleteName": "Delete the login {{name}}",
+    "back": "All users",
+    "tabs": {
+      "label": "User sections",
+      "players": "👥 Players",
+      "history": "🕘 History",
+      "statistics": "📊 Statistics"
+    },
+    "players": {
+      "title": "👥 Players",
+      "empty": "This login has no players yet."
     }
   },
   "admin": {
@@ -419,7 +450,8 @@
     "rateLimited": "Too many attempts in a short time. Wait a moment and try again.",
     "api": {
       "Concurrency": {
-        "Conflict": "Someone else changed this in the meantime. Reload and try again."
+        "Conflict": "Someone else changed this in the meantime. Reload and try again.",
+        "MissingReference": "Something this change refers to was deleted in the meantime. Reload and try again."
       },
       "Game": {
         "NotFound": "This game does not exist.",
@@ -473,6 +505,11 @@
       },
       "RateLimit": {
         "Exceeded": "Too many attempts in a short time. Try again in {{seconds}} s."
+      },
+      "Account": {
+        "NotFound": "This login does not exist.",
+        "CannotDeleteOwn": "You cannot delete the login you are signed in to.",
+        "CannotDeleteReserved": "The first login holds the game's original data and cannot be deleted."
       }
     }
   },
@@ -490,6 +527,7 @@
     "title": "Player statistics",
     "players": "Players",
     "noPlayers": "No players yet. Add some in the settings.",
+    "noPlayersOther": "This login has no players yet.",
     "loading": "Loading…",
     "pick": "Pick a player to see their statistics.",
     "back": "All players",
@@ -629,6 +667,11 @@
       "All": "You have not played any game yet.",
       "Running": "No game is running.",
       "Finished": "No finished game yet."
+    },
+    "emptyOther": {
+      "All": "This login has not played any game yet.",
+      "Running": "This login has no game running.",
+      "Finished": "This login has no finished game yet."
     },
     "start": "🎉 New game",
     "retry": "Try again"

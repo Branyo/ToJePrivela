@@ -3,6 +3,25 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BadPointsMode, Game, GameDetails, GameHistory, GameHistoryStatus } from './models';
 
+/**
+ * The query of one history page, the login's own or an admin's look at another login: `take` games, the first ones or
+ * those listed after the game `after` (the last one shown).
+ */
+export function historyParams(
+  status: GameHistoryStatus,
+  after: Pick<GameDetails, 'id' | 'started'> | null,
+  take: number,
+): Record<string, string | number> {
+  const params: Record<string, string | number> = { status, take };
+  if (after) {
+    params['beforeId'] = after.id;
+    if (after.started !== null) {
+      params['before'] = after.started;
+    }
+  }
+  return params;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GamesApi {
   private readonly http = inject(HttpClient);
@@ -16,14 +35,7 @@ export class GamesApi {
     after: Pick<GameDetails, 'id' | 'started'> | null,
     take: number,
   ): Observable<GameHistory> {
-    const params: Record<string, string | number> = { status, take };
-    if (after) {
-      params['beforeId'] = after.id;
-      if (after.started !== null) {
-        params['before'] = after.started;
-      }
-    }
-    return this.http.get<GameHistory>('/api/games/history', { params });
+    return this.http.get<GameHistory>('/api/games/history', { params: historyParams(status, after, take) });
   }
 
   getDetails(id: number): Observable<GameDetails> {

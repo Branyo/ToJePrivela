@@ -1,10 +1,7 @@
 using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Common;
-using ToJePrivela.Application.Players;
 using ToJePrivela.Application.Statistics.Dtos;
-using ToJePrivela.Application.Statistics.Mapping;
-using ToJePrivela.Domain.Statistics;
 
 namespace ToJePrivela.Application.Statistics;
 
@@ -22,17 +19,6 @@ public sealed class PlayerStatisticsService : IPlayerStatisticsService
         _currentAccount = currentAccount;
     }
 
-    public async Task<Result<PlayerStatisticsDto>> GetAsync(int playerId, CancellationToken cancellationToken = default)
-    {
-        var player = await _players.GetByIdAsync(_currentAccount.Id, playerId, cancellationToken);
-
-        if (player is null)
-        {
-            return Result.Failure<PlayerStatisticsDto>(PlayerErrors.NotFound(playerId));
-        }
-
-        var games = await _games.GetCountedByPlayerAsync(_currentAccount.Id, playerId, cancellationToken);
-
-        return Result.Success(PlayerStatisticsMapper.ToDto(player, PlayerStatistics.For(playerId, games)));
-    }
+    public Task<Result<PlayerStatisticsDto>> GetAsync(int playerId, CancellationToken cancellationToken = default) =>
+        PlayerStatisticsReads.GetAsync(_players, _games, _currentAccount.Id, playerId, cancellationToken);
 }

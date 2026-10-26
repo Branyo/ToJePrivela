@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthStore } from '../../core/auth/auth-store';
+import { APP_VERSION } from '../../core/version';
 
 interface SettingsTab {
   path: string;
@@ -13,13 +14,15 @@ const PASSWORD: SettingsTab = { path: 'password', label: 'settings.tabs.password
 const ADMIN_TABS: SettingsTab[] = [
   { path: 'categories', label: 'settings.tabs.categories' },
   { path: 'questions', label: 'settings.tabs.questions' },
+  { path: 'accounts', label: 'settings.tabs.accounts' },
 ];
 
 /**
- * The login's settings, one tab per child route: its players for everyone, the shared categories and questions for
- * admins only, and last the login's password for everyone but admins, whose password the server configuration sets
- * (the server refuses to change it). Once the session is checked, a tab the account turns out not to get (admin
- * rights gained or lost) is left for the players tab, which the route guards alone cannot do.
+ * The login's settings, one tab per child route: its players for everyone, the shared categories and questions and
+ * every login (with its players, games and statistics) for admins only, and last the login's password for everyone
+ * but admins, whose password the server configuration sets (the server refuses to change it). Once the session is
+ * checked, a tab the account turns out not to get (admin rights gained or lost) is left for the players tab, which the
+ * route guards alone cannot do.
  */
 @Component({
   selector: 'app-settings',
@@ -30,6 +33,7 @@ const ADMIN_TABS: SettingsTab[] = [
 })
 export class Settings {
   protected readonly auth = inject(AuthStore);
+  protected readonly version = APP_VERSION;
 
   protected readonly tabs = computed(() => (this.auth.isAdmin() ? [PLAYERS, ...ADMIN_TABS] : [PLAYERS, PASSWORD]));
 

@@ -1,5 +1,6 @@
 using NSubstitute;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Questions;
 using ToJePrivela.Application.Questions.Dtos;
@@ -24,10 +25,12 @@ public class QuestionServiceTests
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly IQuestionCategoryRepository _categories = Substitute.For<IQuestionCategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IAccountRepository _accounts = Substitute.For<IAccountRepository>();
     private readonly QuestionService _sut;
 
     public QuestionServiceTests()
     {
+        _accounts.LoginExistsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns(true);
         _categories.GetByIdAsync(3, Arg.Any<CancellationToken>()).Returns(_history);
         _categories.GetByIdAsync(2, Arg.Any<CancellationToken>()).Returns(_sport);
         _categories.GetMissingIdsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
@@ -40,7 +43,8 @@ public class QuestionServiceTests
             new FixedTimeProvider(Now),
             _language,
             new FixedCurrentAccount(TestAccountId),
-            _unitOfWork);
+            _unitOfWork,
+            _accounts);
     }
 
     [Theory]
@@ -164,6 +168,17 @@ public class QuestionServiceTests
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
         Assert.Equal("Question.NotFound", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RecordViewAsync_ForADeletedLoginSignsTheLoginOut()
+    {
+        _questions.RecordViewAsync(TestAccountId, 7, Arg.Any<DateTime>(), Arg.Any<CancellationToken>()).Returns(false);
+        _accounts.LoginExistsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await _sut.RecordViewAsync(7);
+
+        Assert.Equal(AccountErrors.UnknownAccount, result.Error);
     }
 
     [Fact]

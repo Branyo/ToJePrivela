@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ToJePrivela.Api.Common;
+using ToJePrivela.Api.Tests.Common;
 using ToJePrivela.Infrastructure.Persistence;
 
 namespace ToJePrivela.Api.Tests.Integration;
@@ -84,10 +85,7 @@ public class InfoEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var info = (await response.Content.ReadFromJsonAsync<ApiInfo>())!;
         Assert.Equal(ApiInfo.ApiTitle, info.Title);
-        Assert.Equal(ApiInfo.FromAssembly(typeof(Program).Assembly).Version, info.Version);
-        // The SDK stamps "1.0.0" on any build not given a version; the API project must not let that through.
-        Assert.NotEqual("1.0.0", info.Version);
-        Assert.DoesNotContain('+', info.Version);
+        Assert.Equal(GameVersion.Read(), info.Version);
     }
 
     [Fact]

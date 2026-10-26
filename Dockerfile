@@ -10,6 +10,8 @@ COPY src/ToJePrivela.Infrastructure/ToJePrivela.Infrastructure.csproj src/ToJePr
 COPY src/ToJePrivela.Ai/ToJePrivela.Ai.csproj src/ToJePrivela.Ai/
 COPY src/ToJePrivela.Identity/ToJePrivela.Identity.csproj src/ToJePrivela.Identity/
 COPY src/ToJePrivela.Api/ToJePrivela.Api.csproj src/ToJePrivela.Api/
+# The game's version (VERSION), stamped on the assemblies by Directory.Build.props and reported by GET /api/info.
+COPY Directory.Build.props VERSION ./
 RUN dotnet restore src/ToJePrivela.Api/ToJePrivela.Api.csproj
 
 COPY src/ src/

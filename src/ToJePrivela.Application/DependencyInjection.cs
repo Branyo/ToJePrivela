@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ToJePrivela.Application.Accounts;
+using ToJePrivela.Application.Administration;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Games;
 using ToJePrivela.Application.Players;
@@ -40,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<IPlayerService, PlayerService>();
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IPlayerStatisticsService, PlayerStatisticsService>();
+        services.AddScoped<IAccountAdministrationService, AccountAdministrationService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IQuestionCategoryService, QuestionCategoryService>();
         services.AddScoped<IQuestionGenerationService, QuestionGenerationService>();

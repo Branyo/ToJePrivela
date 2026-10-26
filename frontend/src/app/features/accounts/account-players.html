@@ -1,0 +1,32 @@
+<section class="page players" aria-labelledby="account-players-title">
+  <h2 id="account-players-title">
+    {{ 'accounts.players.title' | translate }}
+    @if (sorted(); as players) {
+      <span class="muted">({{ players.length }})</span>
+    }
+  </h2>
+
+  @if (error(); as message) {
+    <p class="error-banner" role="alert">{{ message | message }}</p>
+  }
+
+  @if (sorted(); as players) {
+    @if (players.length === 0) {
+      <p class="panel muted">{{ 'accounts.players.empty' | translate }}</p>
+    } @else {
+      <ul class="players__list">
+        @for (player of players; track player.id) {
+          <li>
+            <a class="player" [routerLink]="player.id | statisticsLink">
+              <app-player-avatar [avatar]="player.avatar" />
+              <span class="player__name">{{ player.name }}</span>
+              <span class="player__go">📊 →</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  } @else if (!error()) {
+    <p class="muted">{{ 'players.loading' | translate }}</p>
+  }
+</section>

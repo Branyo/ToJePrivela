@@ -9,14 +9,14 @@
     <nav class="panel roster" [attr.aria-label]="'statistics.players' | translate">
       @if (sortedPlayers(); as players) {
         @if (players.length === 0) {
-          <p class="muted">{{ 'statistics.noPlayers' | translate }}</p>
+          <p class="muted">{{ (data.readOnly ? 'statistics.noPlayersOther' : 'statistics.noPlayers') | translate }}</p>
         } @else {
           <ul class="roster__list">
             @for (player of players; track player.id) {
               <li>
                 <a
                   class="roster__item"
-                  [routerLink]="['/statistics', player.id]"
+                  [routerLink]="player.id | statisticsLink"
                   routerLinkActive="roster__item--on"
                   ariaCurrentWhenActive="page"
                 >
@@ -36,7 +36,7 @@
       @if (playerId() === undefined) {
         <p class="panel detail__hint muted">{{ 'statistics.pick' | translate }}</p>
       } @else {
-        <a routerLink="/statistics" class="btn btn--ghost detail__back">← {{ 'statistics.back' | translate }}</a>
+        <a [routerLink]="statisticsLink" class="btn btn--ghost detail__back">← {{ 'statistics.back' | translate }}</a>
 
         @if (statisticsError(); as message) {
           <p class="error-banner" role="alert">{{ message | message }}</p>
@@ -77,7 +77,7 @@
                   <span class="tile__label">{{ 'statistics.metrics.' + record.key + '.label' | translate }}</span>
                   @if (record.game; as game) {
                     <strong class="tile__value">{{ format(game.value, 0) }}</strong>
-                    <a class="tile__link" [routerLink]="['/games', game.gameId, 'summary']">
+                    <a class="tile__link" [routerLink]="{ id: game.gameId, finished: game.finished } | gameLink">
                       {{ game.finished | date: ('common.dateTime' | translate) : undefined : i18n.locale() }} →
                     </a>
                   } @else {

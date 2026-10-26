@@ -43,6 +43,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOutputCache();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<ConcurrencyConflictExceptionHandler>();
+builder.Services.AddExceptionHandler<MissingReferenceExceptionHandler>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

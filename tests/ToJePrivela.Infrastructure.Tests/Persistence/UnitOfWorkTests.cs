@@ -61,7 +61,7 @@ public class UnitOfWorkTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveChangesAsync_LeavesOtherFailuresAlone()
+    public async Task SaveChangesAsync_ReportsAReferenceToADeletedRow()
     {
         await using var context = _database.CreateContext();
         var sut = new UnitOfWork(context);
@@ -73,7 +73,19 @@ public class UnitOfWorkTests : IDisposable
         context.Questions.Add(new Question(
             "Koľko kolies má auto?", "How many wheels does a car have?", "4", missingCategory, 1, QuestionSource.Manual, DateTime.UtcNow));
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => sut.SaveChangesAsync());
+        var exception = await Assert.ThrowsAsync<MissingReferenceException>(() => sut.SaveChangesAsync());
+        Assert.IsType<DbUpdateException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_ReportsAPlayerOfADeletedLogin()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new UnitOfWork(context);
+
+        await new PlayerRepository(context).AddAsync(new Player(999, "Jozo", "🦊"));
+
+        await Assert.ThrowsAsync<MissingReferenceException>(() => sut.SaveChangesAsync());
     }
 
     public void Dispose() => _database.Dispose();

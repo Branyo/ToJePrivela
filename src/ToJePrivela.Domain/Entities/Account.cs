@@ -5,7 +5,7 @@ namespace ToJePrivela.Domain.Entities;
 
 /// <summary>
 /// A login: a name unique among all logins and the hash of its password (the domain never sees the password itself).
-/// Logins are never deleted.
+/// Only an admin deletes a login, and everything it owns goes with it.
 /// </summary>
 public class Account
 {

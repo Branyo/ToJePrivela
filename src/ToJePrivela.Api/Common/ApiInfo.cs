@@ -12,9 +12,10 @@ public sealed record ApiInfo(string Title, string Version)
     public const string UnknownVersion = "unknown";
 
     /// <summary>
-    /// Reads the informational version of <paramref name="assembly"/>. The API project only stamps one when the build
-    /// passes a version (<c>-p:Version=…</c>), so an unversioned build reports <see cref="UnknownVersion"/> instead of
-    /// the SDK's plausible but wrong "1.0.0".
+    /// Reads the informational version of <paramref name="assembly"/>: the game's version from the repository's
+    /// <c>VERSION</c> file (<c>Directory.Build.props</c>) with any pre-release suffix the build added
+    /// (<c>-p:VersionSuffix=…</c>), unless the build overrode it (<c>-p:Version=…</c>). An assembly carrying none reports
+    /// <see cref="UnknownVersion"/>.
     /// </summary>
     public static ApiInfo FromAssembly(Assembly assembly) =>
         new(ApiTitle, StripBuildMetadata(

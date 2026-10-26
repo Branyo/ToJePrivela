@@ -111,17 +111,21 @@
     }
 
     <div class="actions">
-      @if (g.finished) {
-        @if (canRematch()) {
-          <button type="button" class="btn btn--fun btn--big" [disabled]="rematching()" (click)="rematch()">
-            {{ 'summary.rematch' | translate }}
-          </button>
-        }
+      @if (data.readOnly) {
+        <a class="btn btn--primary btn--big" [routerLink]="historyLink">{{ 'summary.backToHistory' | translate }}</a>
       } @else {
-        <a class="btn btn--primary btn--big" [routerLink]="['/games', g.id]">{{ 'summary.back' | translate }}</a>
+        @if (g.finished) {
+          @if (canRematch()) {
+            <button type="button" class="btn btn--fun btn--big" [disabled]="rematching()" (click)="rematch()">
+              {{ 'summary.rematch' | translate }}
+            </button>
+          }
+        } @else {
+          <a class="btn btn--primary btn--big" [routerLink]="['/games', g.id]">{{ 'summary.back' | translate }}</a>
+        }
+        <a routerLink="/new" class="btn btn--sky btn--big">{{ 'common.newGame' | translate }}</a>
+        <a routerLink="/" class="btn btn--big">{{ 'summary.home' | translate }}</a>
       }
-      <a routerLink="/new" class="btn btn--sky btn--big">{{ 'common.newGame' | translate }}</a>
-      <a routerLink="/" class="btn btn--big">{{ 'summary.home' | translate }}</a>
     </div>
   } @else if (!error()) {
     <p class="loading">{{ 'summary.loading' | translate }}</p>

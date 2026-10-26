@@ -9,6 +9,9 @@ public sealed class UnitOfWork : IUnitOfWork
     /// <summary>SQLITE_CONSTRAINT_UNIQUE, the extended result code of a unique index violation.</summary>
     private const int SqliteUniqueConstraintViolation = 2067;
 
+    /// <summary>SQLITE_CONSTRAINT_FOREIGNKEY, the extended result code of a foreign key violation.</summary>
+    private const int SqliteForeignKeyViolation = 787;
+
     private readonly ToJePrivelaDbContext _context;
 
     public UnitOfWork(ToJePrivelaDbContext context)
@@ -30,6 +33,11 @@ public sealed class UnitOfWork : IUnitOfWork
             exception.InnerException is SqliteException { SqliteExtendedErrorCode: SqliteUniqueConstraintViolation })
         {
             throw new UniqueConstraintException("A unique index rejected the changes.", exception);
+        }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is SqliteException { SqliteExtendedErrorCode: SqliteForeignKeyViolation })
+        {
+            throw new MissingReferenceException("The changes refer to a row that no longer exists.", exception);
         }
     }
 

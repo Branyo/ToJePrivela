@@ -1,9 +1,9 @@
 using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Application.Games.Mapping;
-using ToJePrivela.Domain.Common;
 using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Games;
@@ -20,6 +20,7 @@ public sealed class GameService : IGameService
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly ICurrentAccount _currentAccount;
+    private readonly IAccountRepository _accounts;
 
     public GameService(
         IGameRepository games,
@@ -27,7 +28,8 @@ public sealed class GameService : IGameService
         IQuestionRepository questions,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
-        ICurrentAccount currentAccount)
+        ICurrentAccount currentAccount,
+        IAccountRepository accounts)
     {
         _games = games;
         _players = players;
@@ -35,29 +37,11 @@ public sealed class GameService : IGameService
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
         _currentAccount = currentAccount;
+        _accounts = accounts;
     }
 
-    public async Task<Result<GameHistoryDto>> GetHistoryAsync(GameHistoryFilter filter, CancellationToken cancellationToken = default)
-    {
-        if (RequestValidator.Validate(filter) is { } invalid)
-        {
-            return Result.Failure<GameHistoryDto>(invalid);
-        }
-
-        var after = filter.BeforeId is not int beforeId ? null
-            // The start the client listed the game at, so a game moved meanwhile neither skips nor repeats the others.
-            : filter.Before is DateTime before ? new GamePosition(UtcTime.Normalize(before), beforeId)
-            // Without one, where the game stands now. A game deleted meanwhile is taken to have had no start: the client
-            // sends "before" whenever the game it listed had one.
-            : await _games.GetPositionAsync(_currentAccount.Id, beforeId, cancellationToken) ?? new GamePosition(null, beforeId);
-
-        // One game past the page tells whether older ones follow, without counting them all.
-        var games = await _games.GetRecentAsync(_currentAccount.Id, filter.Status, after, filter.Take + 1, cancellationToken);
-
-        return Result.Success(new GameHistoryDto(
-            games.Take(filter.Take).Select(GameMapper.ToDetailsDto).ToList(),
-            games.Count > filter.Take));
-    }
+    public Task<Result<GameHistoryDto>> GetHistoryAsync(GameHistoryFilter filter, CancellationToken cancellationToken = default) =>
+        GameReads.GetHistoryAsync(_games, _currentAccount.Id, filter, cancellationToken);
 
     public async Task<Result<GameDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
@@ -68,14 +52,8 @@ public sealed class GameService : IGameService
             : Result.Success(GameMapper.ToDto(game));
     }
 
-    public async Task<Result<GameDetailsDto>> GetDetailsAsync(int id, CancellationToken cancellationToken = default)
-    {
-        var game = await _games.GetByIdAsync(_currentAccount.Id, id, cancellationToken);
-
-        return game is null
-            ? Result.Failure<GameDetailsDto>(GameErrors.NotFound(id))
-            : Result.Success(GameMapper.ToDetailsDto(game));
-    }
+    public Task<Result<GameDetailsDto>> GetDetailsAsync(int id, CancellationToken cancellationToken = default) =>
+        GameReads.GetDetailsAsync(_games, _currentAccount.Id, id, cancellationToken);
 
     public async Task<Result<GameDto>> CreateAsync(CreateGameRequest request, CancellationToken cancellationToken = default)
     {
@@ -262,7 +240,8 @@ public sealed class GameService : IGameService
     /// <summary>
     /// Loads the game, lets <paramref name="change"/> check and change it (or return why it may not) and saves,
     /// through <see cref="ConcurrencyRetry"/>: a change racing another request is made again on the game as it is now,
-    /// so a game finished meanwhile gives <c>Game.AlreadyFinished</c> and two independent changes both stand.
+    /// so a game finished meanwhile gives <c>Game.AlreadyFinished</c> and two independent changes both stand. A game gone
+    /// because an admin deleted the whole login is <see cref="AccountErrors.UnknownAccount"/>, not <c>Game.NotFound</c>.
     /// </summary>
     private Task<Result<Game>> SaveChangeAsync(
         int id,
@@ -276,7 +255,11 @@ public sealed class GameService : IGameService
 
                 if (game is null)
                 {
-                    return Result.Failure<Game>(GameErrors.NotFound(id));
+                    return Result.Failure<Game>(await SignedInLogin.GoneOrAsync(
+                        _accounts,
+                        _currentAccount.Id,
+                        GameErrors.NotFound(id),
+                        cancellationToken));
                 }
 
                 return await change(game) is { } error

@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- The game's one version (Semantic Versioning, https://semver.org), kept in VERSION beside this file: every
+       assembly carries it and GET /api/info reports it. frontend/package.json carries the same number (VersionTests
+       checks they agree). It is the version prefix, so a build may still add a pre-release suffix
+       (dotnet publish -p:VersionSuffix=rc.1 gives 1.0.0-rc.1) or override it whole (dotnet publish -p:Version=1.1.0). -->
+  <PropertyGroup>
+    <VersionPrefix>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</VersionPrefix>
+  </PropertyGroup>
+
+</Project>
