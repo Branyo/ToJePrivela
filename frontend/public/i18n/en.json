@@ -527,6 +527,7 @@
     "title": "Player statistics",
     "players": "Players",
     "noPlayers": "No players yet. Add some in the settings.",
+    "noPlayersOther": "This login has no players yet.",
     "loading": "Loading…",
     "pick": "Pick a player to see their statistics.",
     "back": "All players",
@@ -666,6 +667,11 @@
       "All": "You have not played any game yet.",
       "Running": "No game is running.",
       "Finished": "No finished game yet."
+    },
+    "emptyOther": {
+      "All": "This login has not played any game yet.",
+      "Running": "This login has no game running.",
+      "Finished": "This login has no finished game yet."
     },
     "start": "🎉 New game",
     "retry": "Try again"

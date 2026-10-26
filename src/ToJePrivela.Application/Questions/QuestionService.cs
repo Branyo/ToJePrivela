@@ -1,6 +1,7 @@
 using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Abstractions.Localization;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Questions.Dtos;
 using ToJePrivela.Application.Questions.Mapping;
@@ -16,6 +17,7 @@ public sealed class QuestionService : IQuestionService
     private readonly ICurrentLanguage _language;
     private readonly ICurrentAccount _currentAccount;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAccountRepository _accounts;
 
     public QuestionService(
         IQuestionRepository questions,
@@ -24,7 +26,8 @@ public sealed class QuestionService : IQuestionService
         TimeProvider timeProvider,
         ICurrentLanguage language,
         ICurrentAccount currentAccount,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAccountRepository accounts)
     {
         _questions = questions;
         _categories = categories;
@@ -33,6 +36,7 @@ public sealed class QuestionService : IQuestionService
         _language = language;
         _currentAccount = currentAccount;
         _unitOfWork = unitOfWork;
+        _accounts = accounts;
     }
 
     public async Task<Result<IReadOnlyList<QuestionDto>>> GetAsync(QuestionFilter filter, CancellationToken cancellationToken = default)
@@ -88,10 +92,18 @@ public sealed class QuestionService : IQuestionService
             : Result.Success(QuestionMapper.ToDto(question, _language.Language));
     }
 
+    /// <summary>
+    /// Nothing is saved when the question or the login is gone; a login an admin deleted meanwhile gets
+    /// <see cref="AccountErrors.UnknownAccount"/> rather than <c>Question.NotFound</c> for a question that is there.
+    /// </summary>
     public async Task<Result> RecordViewAsync(int id, CancellationToken cancellationToken = default) =>
         await _questions.RecordViewAsync(_currentAccount.Id, id, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken)
             ? Result.Success()
-            : Result.Failure(QuestionErrors.NotFound(id));
+            : Result.Failure(await SignedInLogin.GoneOrAsync(
+                _accounts,
+                _currentAccount.Id,
+                QuestionErrors.NotFound(id),
+                cancellationToken));
 
     public async Task<Result<QuestionDto>> CreateAsync(CreateQuestionRequest request, CancellationToken cancellationToken = default)
     {

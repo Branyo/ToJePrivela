@@ -13,8 +13,9 @@ public sealed record ApiInfo(string Title, string Version)
 
     /// <summary>
     /// Reads the informational version of <paramref name="assembly"/>: the game's version from the repository's
-    /// <c>VERSION</c> file (<c>Directory.Build.props</c>), unless the build overrode it (<c>-p:Version=…</c>). An assembly
-    /// carrying none reports <see cref="UnknownVersion"/>.
+    /// <c>VERSION</c> file (<c>Directory.Build.props</c>) with any pre-release suffix the build added
+    /// (<c>-p:VersionSuffix=…</c>), unless the build overrode it (<c>-p:Version=…</c>). An assembly carrying none reports
+    /// <see cref="UnknownVersion"/>.
     /// </summary>
     public static ApiInfo FromAssembly(Assembly assembly) =>
         new(ApiTitle, StripBuildMetadata(

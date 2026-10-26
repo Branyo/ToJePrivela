@@ -63,7 +63,8 @@ public class QuestionViewConcurrencyTests : IDisposable
             TimeProvider.System,
             Substitute.For<ICurrentLanguage>(),
             currentAccount,
-            new UnitOfWork(context));
+            new UnitOfWork(context),
+            new AccountRepository(context));
     }
 
     public void Dispose() => _database.Dispose();

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Domain.Common;
@@ -26,16 +27,16 @@ public sealed class AccountRepository : Repository<Account>, IAccountRepository
         await Set.Where(a => a.IsAdmin).ToListAsync(cancellationToken);
 
     /// <summary>Newest first puts the logins never signed in last: SQLite sorts NULL lowest.</summary>
-    public async Task<IReadOnlyList<Account>> GetLoginsAsync(CancellationToken cancellationToken = default) =>
+    public async Task<IReadOnlyList<LoginSummary>> GetLoginsAsync(CancellationToken cancellationToken = default) =>
         await Logins()
-            .AsNoTracking()
             .OrderByDescending(a => a.LastSignedInAt)
             .ThenByDescending(a => a.CreatedAt)
             .ThenByDescending(a => a.Id)
+            .Select(ToSummary)
             .ToListAsync(cancellationToken);
 
-    public async Task<Account?> GetLoginAsync(int id, CancellationToken cancellationToken = default) =>
-        await Logins().AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+    public async Task<LoginSummary?> GetLoginAsync(int id, CancellationToken cancellationToken = default) =>
+        await Logins().Where(a => a.Id == id).Select(ToSummary).FirstOrDefaultAsync(cancellationToken);
 
     public async Task<bool> LoginExistsAsync(int id, CancellationToken cancellationToken = default) =>
         await Logins().AnyAsync(a => a.Id == id, cancellationToken);
@@ -66,4 +67,8 @@ public sealed class AccountRepository : Repository<Account>, IAccountRepository
 
     /// <summary>The accounts somebody can sign in to: all but the reserved one while it is not taken over.</summary>
     private IQueryable<Account> Logins() => Set.Where(a => a.PasswordHash != null);
+
+    /// <summary>Selects only the listed columns, so the password hash and the security stamp are never read.</summary>
+    private static readonly Expression<Func<Account, LoginSummary>> ToSummary =
+        a => new LoginSummary(a.Id, a.Name, a.IsAdmin, a.CreatedAt, a.LastSignedInAt);
 }

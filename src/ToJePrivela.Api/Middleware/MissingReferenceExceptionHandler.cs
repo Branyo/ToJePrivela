@@ -1,6 +1,4 @@
-using ToJePrivela.Api.Common;
 using ToJePrivela.Application.Abstractions.Persistence;
-using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 
 namespace ToJePrivela.Api.Middleware;
@@ -23,18 +21,9 @@ public sealed class MissingReferenceExceptionHandler : ErrorExceptionHandler<Mis
     protected override Error ToError(MissingReferenceException exception) =>
         Error.Conflict(Code, "Something the change refers to was deleted meanwhile. Reload and try again.");
 
-    protected override async ValueTask<Error> ToErrorAsync(
+    protected override ValueTask<Error> ToErrorAsync(
         MissingReferenceException exception,
         HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        if (HttpCurrentAccount.IdOf(httpContext.User) is { } accountId
-            && !await httpContext.RequestServices.GetRequiredService<IAccountRepository>()
-                .LoginExistsAsync(accountId, cancellationToken))
-        {
-            return AccountErrors.UnknownAccount;
-        }
-
-        return ToError(exception);
-    }
+        CancellationToken cancellationToken) =>
+        UnknownAccountOrAsync(ToError(exception), httpContext, cancellationToken);
 }

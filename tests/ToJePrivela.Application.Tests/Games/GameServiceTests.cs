@@ -1,5 +1,6 @@
 using NSubstitute;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Games;
 using ToJePrivela.Application.Games.Dtos;
@@ -16,11 +17,13 @@ public class GameServiceTests
     private readonly IPlayerRepository _players = Substitute.For<IPlayerRepository>();
     private readonly IQuestionRepository _questions = Substitute.For<IQuestionRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IAccountRepository _accounts = Substitute.For<IAccountRepository>();
     private readonly GameService _sut;
 
     public GameServiceTests()
     {
-        _sut = new GameService(_games, _players, _questions, _unitOfWork, new FixedTimeProvider(Now), new FixedCurrentAccount(TestAccountId));
+        _accounts.LoginExistsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns(true);
+        _sut = new GameService(_games, _players, _questions, _unitOfWork, new FixedTimeProvider(Now), new FixedCurrentAccount(TestAccountId), _accounts);
     }
 
     [Theory]
@@ -745,6 +748,31 @@ public class GameServiceTests
 
         await Assert.ThrowsAsync<ConcurrencyConflictException>(() => _sut.FinishAsync(1));
         await _unitOfWork.Received(ConcurrencyRetry.MaxAttempts).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AwardDoubleAsync_OnAGameGoneWithItsDeletedLoginSignsTheLoginOut()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime), (Game?)null);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+        _accounts.LoginExistsAsync(TestAccountId, Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 1 });
+
+        Assert.Equal(AccountErrors.UnknownAccount, result.Error);
+    }
+
+    [Fact]
+    public async Task AwardDoubleAsync_OnAGameDeletedMeanwhileIsNotFoundWhileTheLoginExists()
+    {
+        _games.GetByIdAsync(TestAccountId, 1, Arg.Any<CancellationToken>())
+            .Returns(TestEntities.Game(1, [1, 2], Now.UtcDateTime), (Game?)null);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<int>(_ => throw Conflict());
+
+        var result = await _sut.AwardDoubleAsync(1, new AwardDoubleRequest { PlayerId = 1 });
+
+        Assert.Equal("Game.NotFound", result.Error.Code);
     }
 
     private static ConcurrencyConflictException Conflict() => new("A row changed since it was read.", new Exception());

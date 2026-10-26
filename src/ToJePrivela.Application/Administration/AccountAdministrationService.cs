@@ -9,7 +9,6 @@ using ToJePrivela.Application.Players;
 using ToJePrivela.Application.Players.Dtos;
 using ToJePrivela.Application.Statistics;
 using ToJePrivela.Application.Statistics.Dtos;
-using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Administration;
 
@@ -41,8 +40,8 @@ public sealed class AccountAdministrationService : IAccountAdministrationService
         Result.Success(AccountOverviewMapper.ToDtos(await _accounts.GetLoginsAsync(cancellationToken), _currentAccount.Id));
 
     public async Task<Result<AccountOverviewDto>> GetAccountAsync(int accountId, CancellationToken cancellationToken = default) =>
-        await _accounts.GetLoginAsync(accountId, cancellationToken) is { } account
-            ? Result.Success(AccountOverviewMapper.ToDto(account, _currentAccount.Id))
+        await _accounts.GetLoginAsync(accountId, cancellationToken) is { } login
+            ? Result.Success(AccountOverviewMapper.ToDto(login, _currentAccount.Id))
             : Result.Failure<AccountOverviewDto>(AdministrationErrors.AccountNotFound(accountId));
 
     public Task<Result<IReadOnlyList<PlayerDto>>> GetPlayersAsync(int accountId, CancellationToken cancellationToken = default) =>
@@ -62,22 +61,19 @@ public sealed class AccountAdministrationService : IAccountAdministrationService
             _ => false,
             cancellationToken);
 
-    public async Task<Result<GameHistoryDto>> GetGameHistoryAsync(
+    /// <remarks>
+    /// <see cref="GameReads.GetHistoryAsync"/> validates the filter before reading anything; an invalid one is a
+    /// validation failure, which <see cref="OfLoginAsync{T}"/> passes on without asking for the login.
+    /// </remarks>
+    public Task<Result<GameHistoryDto>> GetGameHistoryAsync(
         int accountId,
         GameHistoryFilter filter,
-        CancellationToken cancellationToken = default)
-    {
-        if (RequestValidator.Validate(filter) is { } invalid)
-        {
-            return Result.Failure<GameHistoryDto>(invalid);
-        }
-
-        return await OfLoginAsync(
+        CancellationToken cancellationToken = default) =>
+        OfLoginAsync(
             accountId,
             () => GameReads.GetHistoryAsync(_games, accountId, filter, cancellationToken),
             history => history.Games.Count == 0,
             cancellationToken);
-    }
 
     public Task<Result<GameDetailsDto>> GetGameDetailsAsync(int accountId, int gameId, CancellationToken cancellationToken = default) =>
         OfLoginAsync(
@@ -88,14 +84,9 @@ public sealed class AccountAdministrationService : IAccountAdministrationService
 
     public async Task<Result> DeleteAccountAsync(int accountId, CancellationToken cancellationToken = default)
     {
-        if (accountId == _currentAccount.Id)
+        if (AccountDeletion.Refusal(accountId, _currentAccount.Id) is { } refusal)
         {
-            return Result.Failure(AdministrationErrors.CannotDeleteOwnAccount);
-        }
-
-        if (accountId == Account.ReservedId)
-        {
-            return Result.Failure(AdministrationErrors.CannotDeleteReservedAccount);
+            return Result.Failure(refusal);
         }
 
         return await _accounts.DeleteLoginAsync(accountId, cancellationToken)

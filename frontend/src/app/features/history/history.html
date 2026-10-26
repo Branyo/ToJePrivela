@@ -67,7 +67,7 @@
     <button type="button" class="btn btn--ghost history__more" (click)="loadMore()">{{ 'history.more' | translate }}</button>
   } @else if (games().length === 0) {
     <div class="panel history__empty">
-      <p>{{ 'history.empty.' + status() | translate }}</p>
+      <p>{{ (data.readOnly ? 'history.emptyOther.' : 'history.empty.') + status() | translate }}</p>
       @if (!data.readOnly) {
         <a routerLink="/new" class="btn btn--fun">{{ 'history.start' | translate }}</a>
       }

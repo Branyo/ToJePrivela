@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using ToJePrivela.Api.Common;
+using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 
 namespace ToJePrivela.Api.Middleware;
@@ -24,6 +26,37 @@ public abstract class ErrorExceptionHandler<TException> : IExceptionHandler wher
         HttpContext httpContext,
         CancellationToken cancellationToken) =>
         ValueTask.FromResult(ToError(exception));
+
+    /// <summary>
+    /// <see cref="AccountErrors.UnknownAccount"/> when the signed-in login was deleted during the request (an admin
+    /// deleted it), so the client signs out at once; otherwise <paramref name="error"/>. A lookup that fails (the
+    /// deletion still holding SQLite's write lock) answers <paramref name="error"/> too: this handler is there to keep
+    /// the request from ending in a 500.
+    /// </summary>
+    protected async ValueTask<Error> UnknownAccountOrAsync(
+        Error error,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        if (HttpCurrentAccount.IdOf(httpContext.User) is not { } accountId)
+        {
+            return error;
+        }
+
+        try
+        {
+            return await SignedInLogin.GoneOrAsync(
+                httpContext.RequestServices.GetRequiredService<IAccountRepository>(),
+                accountId,
+                error,
+                cancellationToken);
+        }
+        catch (Exception lookupFailure) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(lookupFailure, "Could not check whether the signed-in login still exists.");
+            return error;
+        }
+    }
 
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,

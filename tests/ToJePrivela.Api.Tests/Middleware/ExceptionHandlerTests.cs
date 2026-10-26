@@ -80,6 +80,36 @@ public class ExceptionHandlerTests
     }
 
     [Fact]
+    public async Task MissingReference_StaysAConflictWhenTheLoginCannotBeLookedUp()
+    {
+        var accounts = Substitute.For<IAccountRepository>();
+        accounts.LoginExistsAsync(5, Arg.Any<CancellationToken>())
+            .Returns<bool>(_ => throw new InvalidOperationException("database is locked"));
+
+        var (handled, status, problem) = await HandleMissingReferenceAsync(accounts, signedInAccountId: 5);
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.Equal(MissingReferenceExceptionHandler.Code, problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task ConcurrencyConflict_SignsOutALoginDeletedDuringTheRequest()
+    {
+        var accounts = Substitute.For<IAccountRepository>();
+        accounts.LoginExistsAsync(5, Arg.Any<CancellationToken>()).Returns(false);
+
+        var (handled, status, problem) = await HandleAsync(
+            new ConcurrencyConflictExceptionHandler(NullLogger<ConcurrencyConflictExceptionHandler>.Instance),
+            new ConcurrencyConflictException("changed", new InvalidOperationException()),
+            SignedInContext(accounts, signedInAccountId: 5));
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status401Unauthorized, status);
+        Assert.Equal(AccountErrors.UnknownAccount.Code, problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task OtherExceptions_AreLeftToTheNextHandler()
     {
         var sut = new DomainExceptionHandler(NullLogger<DomainExceptionHandler>.Instance);
@@ -89,7 +119,13 @@ public class ExceptionHandlerTests
 
     private static Task<(bool Handled, int Status, JsonElement Problem)> HandleMissingReferenceAsync(
         IAccountRepository accounts,
-        int? signedInAccountId)
+        int? signedInAccountId) =>
+        HandleAsync(
+            new MissingReferenceExceptionHandler(NullLogger<MissingReferenceExceptionHandler>.Instance),
+            new MissingReferenceException("gone", new InvalidOperationException()),
+            SignedInContext(accounts, signedInAccountId));
+
+    private static DefaultHttpContext SignedInContext(IAccountRepository accounts, int? signedInAccountId)
     {
         var context = new DefaultHttpContext
         {
@@ -103,10 +139,7 @@ public class ExceptionHandlerTests
                 authenticationType: "Test"));
         }
 
-        return HandleAsync(
-            new MissingReferenceExceptionHandler(NullLogger<MissingReferenceExceptionHandler>.Instance),
-            new MissingReferenceException("gone", new InvalidOperationException()),
-            context);
+        return context;
     }
 
     private static async Task<(bool Handled, int Status, JsonElement Problem)> HandleAsync(

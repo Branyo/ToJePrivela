@@ -1,5 +1,6 @@
 using ToJePrivela.Application.Abstractions.Identity;
 using ToJePrivela.Application.Abstractions.Persistence;
+using ToJePrivela.Application.Accounts;
 using ToJePrivela.Application.Common;
 using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Application.Games.Mapping;
@@ -19,6 +20,7 @@ public sealed class GameService : IGameService
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly ICurrentAccount _currentAccount;
+    private readonly IAccountRepository _accounts;
 
     public GameService(
         IGameRepository games,
@@ -26,7 +28,8 @@ public sealed class GameService : IGameService
         IQuestionRepository questions,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
-        ICurrentAccount currentAccount)
+        ICurrentAccount currentAccount,
+        IAccountRepository accounts)
     {
         _games = games;
         _players = players;
@@ -34,6 +37,7 @@ public sealed class GameService : IGameService
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
         _currentAccount = currentAccount;
+        _accounts = accounts;
     }
 
     public Task<Result<GameHistoryDto>> GetHistoryAsync(GameHistoryFilter filter, CancellationToken cancellationToken = default) =>
@@ -236,7 +240,8 @@ public sealed class GameService : IGameService
     /// <summary>
     /// Loads the game, lets <paramref name="change"/> check and change it (or return why it may not) and saves,
     /// through <see cref="ConcurrencyRetry"/>: a change racing another request is made again on the game as it is now,
-    /// so a game finished meanwhile gives <c>Game.AlreadyFinished</c> and two independent changes both stand.
+    /// so a game finished meanwhile gives <c>Game.AlreadyFinished</c> and two independent changes both stand. A game gone
+    /// because an admin deleted the whole login is <see cref="AccountErrors.UnknownAccount"/>, not <c>Game.NotFound</c>.
     /// </summary>
     private Task<Result<Game>> SaveChangeAsync(
         int id,
@@ -250,7 +255,11 @@ public sealed class GameService : IGameService
 
                 if (game is null)
                 {
-                    return Result.Failure<Game>(GameErrors.NotFound(id));
+                    return Result.Failure<Game>(await SignedInLogin.GoneOrAsync(
+                        _accounts,
+                        _currentAccount.Id,
+                        GameErrors.NotFound(id),
+                        cancellationToken));
                 }
 
                 return await change(game) is { } error

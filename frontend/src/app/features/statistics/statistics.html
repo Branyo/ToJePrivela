@@ -9,7 +9,7 @@
     <nav class="panel roster" [attr.aria-label]="'statistics.players' | translate">
       @if (sortedPlayers(); as players) {
         @if (players.length === 0) {
-          <p class="muted">{{ 'statistics.noPlayers' | translate }}</p>
+          <p class="muted">{{ (data.readOnly ? 'statistics.noPlayersOther' : 'statistics.noPlayers') | translate }}</p>
         } @else {
           <ul class="roster__list">
             @for (player of players; track player.id) {

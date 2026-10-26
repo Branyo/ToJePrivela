@@ -537,6 +537,7 @@
     "title": "Štatistiky hráčov",
     "players": "Hráči",
     "noPlayers": "Zatiaľ tu nie sú žiadni hráči. Pridaj ich v nastaveniach.",
+    "noPlayersOther": "Toto prihlásenie zatiaľ nemá žiadnych hráčov.",
     "loading": "Načítava sa…",
     "pick": "Vyber hráča a uvidíš jeho štatistiky.",
     "back": "Všetci hráči",
@@ -678,6 +679,11 @@
       "All": "Zatiaľ ste nehrali žiadnu hru.",
       "Running": "Žiadna rozohraná hra.",
       "Finished": "Zatiaľ žiadna dohraná hra."
+    },
+    "emptyOther": {
+      "All": "Toto prihlásenie zatiaľ neodohralo žiadnu hru.",
+      "Running": "Toto prihlásenie nemá rozohranú hru.",
+      "Finished": "Toto prihlásenie zatiaľ nemá dohranú hru."
     },
     "start": "🎉 Nová hra",
     "retry": "Skúsiť znova"

@@ -16,10 +16,10 @@ public interface IAccountRepository : IRepository<Account>
     /// Every login (the reserved account is none), read only: the most recently signed in first, those never signed in
     /// last, newest first.
     /// </summary>
-    Task<IReadOnlyList<Account>> GetLoginsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LoginSummary>> GetLoginsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>The login with the id, read only; null for the reserved account while nobody took it over.</summary>
-    Task<Account?> GetLoginAsync(int id, CancellationToken cancellationToken = default);
+    Task<LoginSummary?> GetLoginAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>Whether a login (not the reserved account) has the id; asks the database only.</summary>
     Task<bool> LoginExistsAsync(int id, CancellationToken cancellationToken = default);

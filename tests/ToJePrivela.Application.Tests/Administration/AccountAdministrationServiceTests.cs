@@ -30,9 +30,11 @@ public class AccountAdministrationServiceTests
     [Fact]
     public async Task GetAccountsAsync_MapsTheLoginsInTheRepositorysOrder()
     {
-        var signedIn = Account.Register("Duri", "hash", Now);
-        signedIn.RecordSignIn(Now.AddHours(1));
-        _accounts.GetLoginsAsync(Arg.Any<CancellationToken>()).Returns([signedIn, Account.CreateAdmin("Brano", "hash", Now)]);
+        _accounts.GetLoginsAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            new LoginSummary(LoginId, "Duri", false, Now, Now.AddHours(1)),
+            new LoginSummary(OtherAdminId, "Brano", true, Now, null)
+        ]);
 
         var result = await _sut.GetAccountsAsync();
 
@@ -47,7 +49,7 @@ public class AccountAdministrationServiceTests
     [InlineData(Account.ReservedId, false)]
     public async Task GetAccountsAsync_OffersToDeleteAllButTheAdminsOwnAndTheReservedLogin(int id, bool canDelete)
     {
-        _accounts.GetLoginsAsync(Arg.Any<CancellationToken>()).Returns([TestEntities.Account(id, "Duri")]);
+        _accounts.GetLoginsAsync(Arg.Any<CancellationToken>()).Returns([Login(id, "Duri")]);
 
         var result = await new AccountAdministrationService(_accounts, _players, _games, new FixedCurrentAccount(OtherAdminId))
             .GetAccountsAsync();
@@ -58,7 +60,7 @@ public class AccountAdministrationServiceTests
     [Fact]
     public async Task GetAccountAsync_ReadsOneLoginOrSaysItIsNotFound()
     {
-        _accounts.GetLoginAsync(LoginId, Arg.Any<CancellationToken>()).Returns(TestEntities.Account(LoginId, "Duri"));
+        _accounts.GetLoginAsync(LoginId, Arg.Any<CancellationToken>()).Returns(Login(LoginId, "Duri"));
 
         var found = await _sut.GetAccountAsync(LoginId);
         var missing = await _sut.GetAccountAsync(9);
@@ -155,4 +157,6 @@ public class AccountAdministrationServiceTests
         Assert.Equal(deleted, result.IsSuccess);
         Assert.Equal(deleted ? Error.None : AdministrationErrors.AccountNotFound(LoginId), result.Error);
     }
+
+    private static LoginSummary Login(int id, string name) => new(id, name, false, Now, null);
 }

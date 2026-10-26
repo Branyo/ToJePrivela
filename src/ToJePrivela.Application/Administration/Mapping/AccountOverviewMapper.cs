@@ -1,20 +1,20 @@
+using ToJePrivela.Application.Abstractions.Persistence;
 using ToJePrivela.Application.Administration.Dtos;
-using ToJePrivela.Domain.Entities;
 
 namespace ToJePrivela.Application.Administration.Mapping;
 
 public static class AccountOverviewMapper
 {
     /// <param name="adminId">The admin looking, whose own login cannot be deleted.</param>
-    public static AccountOverviewDto ToDto(Account account, int adminId) =>
+    public static AccountOverviewDto ToDto(LoginSummary login, int adminId) =>
         new(
-            account.Id,
-            account.Name,
-            account.IsAdmin,
-            account.CreatedAt,
-            account.LastSignedInAt,
-            CanDelete: account.Id != adminId && account.Id != Account.ReservedId);
+            login.Id,
+            login.Name,
+            login.IsAdmin,
+            login.CreatedAt,
+            login.LastSignedInAt,
+            CanDelete: AccountDeletion.Refusal(login.Id, adminId) is null);
 
-    public static IReadOnlyList<AccountOverviewDto> ToDtos(IEnumerable<Account> accounts, int adminId) =>
-        accounts.Select(account => ToDto(account, adminId)).ToList();
+    public static IReadOnlyList<AccountOverviewDto> ToDtos(IEnumerable<LoginSummary> logins, int adminId) =>
+        logins.Select(login => ToDto(login, adminId)).ToList();
 }
