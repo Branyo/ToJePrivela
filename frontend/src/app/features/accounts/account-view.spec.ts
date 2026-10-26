@@ -17,8 +17,8 @@ import { TEST_RULES } from '../../core/rules/testing';
 registerLocaleData(localeSk, 'sk-SK');
 
 const accounts: AccountOverview[] = [
-  { id: 5, name: 'Rodina', isAdmin: false, createdAt: '2026-09-01T10:00:00Z', lastSignedInAt: '2026-10-20T18:00:00Z' },
-  { id: 6, name: 'Susedia', isAdmin: false, createdAt: '2026-09-02T10:00:00Z', lastSignedInAt: null },
+  { id: 5, name: 'Rodina', isAdmin: false, createdAt: '2026-09-01T10:00:00Z', lastSignedInAt: '2026-10-20T18:00:00Z', canDelete: true },
+  { id: 6, name: 'Susedia', isAdmin: false, createdAt: '2026-09-02T10:00:00Z', lastSignedInAt: null, canDelete: true },
 ];
 
 const seat = (playerId: number, name: string, finalBadPoints: number, isLoser = false): GamePlayer => ({
@@ -105,9 +105,21 @@ describe('AccountView', () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(url);
     if (isAdmin) {
-      http.expectOne('/api/admin/accounts').flush(accounts);
+      await answerLogin(harness, Number(url.split('/')[2]));
     }
     return { harness, page: harness.routeNativeElement! };
+  }
+
+  /** Answers the view's read of the login, as the server would; its screens start once it is there. */
+  async function answerLogin(harness: RouterTestingHarness, id: number) {
+    const account = accounts.find((a) => a.id === id);
+    const request = http.expectOne(`/api/admin/accounts/${id}`);
+    if (account) {
+      request.flush(account);
+    } else {
+      request.flush({ code: 'Account.NotFound' }, { status: 404, statusText: 'Not Found' });
+    }
+    await harness.fixture.whenStable();
   }
 
   const hrefs = (page: HTMLElement, selector: string) =>
@@ -177,19 +189,17 @@ describe('AccountView', () => {
     await harness.fixture.whenStable();
 
     await harness.navigateByUrl('/accounts/6/history');
-    await harness.fixture.whenStable();
+    await answerLogin(harness, 6);
 
+    expect(harness.routeNativeElement!.querySelector('.account__name')?.textContent).toContain('Susedia');
     http.expectOne((r) => r.url === '/api/admin/accounts/6/games/history').flush({ games: [], hasMore: false });
   });
 
-  it('says so for a login that does not exist, and shows none of its screens', async () => {
-    const { harness, page } = await open('/accounts/99/history');
-    http.expectOne((r) => r.url === '/api/admin/accounts/99/games/history').flush(
-      { code: 'Account.NotFound' },
-      { status: 404, statusText: 'Not Found' },
-    );
-    await harness.fixture.whenStable();
+  it('says so once for a login that does not exist, and neither shows nor loads any of its screens', async () => {
+    const { page } = await open('/accounts/99/history');
 
+    // http.verify() in afterEach: the history screen asked the server for nothing.
+    expect(page.querySelectorAll('.error-banner').length).toBe(1);
     expect(page.querySelector('.error-banner')?.textContent).toContain('errors.api.Account.NotFound');
     expect(page.querySelector('.tabs')).toBeNull();
     expect(page.querySelector('app-history')).toBeNull();

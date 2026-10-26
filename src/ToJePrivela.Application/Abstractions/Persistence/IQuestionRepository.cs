@@ -27,7 +27,7 @@ public interface IQuestionRepository : IRepository<Question>
     /// Counts one view of the question by the account (<see cref="QuestionView"/>) at once, in one atomic statement
     /// outside the unit of work, so concurrent views never conflict with each other or with edits of the question.
     /// </summary>
-    /// <returns>False when there is no such question.</returns>
+    /// <returns>False when there is no such question, or no such account any more.</returns>
     Task<bool> RecordViewAsync(int accountId, int questionId, DateTime viewedAt, CancellationToken cancellationToken = default);
 
     Task AddRangeAsync(IEnumerable<Question> questions, CancellationToken cancellationToken = default);

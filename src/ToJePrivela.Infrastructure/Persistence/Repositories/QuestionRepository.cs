@@ -63,7 +63,8 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
 
     /// <summary>
     /// SQLite's upsert: the first view inserts the row, every later one adds to it, in one statement either way. The
-    /// insert reads nothing when the question does not exist, so no row changes and no foreign key is broken.
+    /// insert reads nothing when the question or the account does not exist (a login an admin deleted while it was
+    /// playing), so no row changes and no foreign key is broken.
     /// </summary>
     public async Task<bool> RecordViewAsync(
         int accountId,
@@ -78,6 +79,7 @@ public sealed class QuestionRepository : Repository<Question>, IQuestionReposito
             INSERT INTO "QuestionViews" ("AccountId", "QuestionId", "Count", "LastViewedAt")
             SELECT {accountId}, {questionId}, 1, {at}
             WHERE EXISTS (SELECT 1 FROM "Questions" WHERE "Id" = {questionId})
+              AND EXISTS (SELECT 1 FROM "Accounts" WHERE "Id" = {accountId})
             ON CONFLICT ("AccountId", "QuestionId")
             DO UPDATE SET "Count" = "Count" + 1, "LastViewedAt" = excluded."LastViewedAt"
             """,

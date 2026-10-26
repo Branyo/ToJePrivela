@@ -5,6 +5,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { EMPTY, catchError, switchMap, tap } from 'rxjs';
 import { AccountData } from '../../core/api/account-data';
+import { GameLinkPipe, StatisticsLinkPipe } from '../../core/api/account-links';
 import { Player, PlayerStatistics } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
@@ -47,13 +48,14 @@ export const NONE = '—';
  */
 @Component({
   selector: 'app-statistics',
-  imports: [RouterLink, RouterLinkActive, DatePipe, PlayerAvatar, TranslatePipe, MessagePipe],
+  imports: [RouterLink, RouterLinkActive, GameLinkPipe, StatisticsLinkPipe, DatePipe, PlayerAvatar, TranslatePipe, MessagePipe],
   templateUrl: './statistics.html',
   styleUrl: './statistics.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Statistics {
   protected readonly data = inject(AccountData);
+  protected readonly statisticsLink = this.data.statisticsLink();
   protected readonly i18n = inject(LanguageService);
   protected readonly none = NONE;
 

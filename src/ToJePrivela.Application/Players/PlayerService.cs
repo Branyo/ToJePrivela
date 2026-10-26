@@ -36,11 +36,8 @@ public sealed class PlayerService : IPlayerService
         _currentAccount = currentAccount;
     }
 
-    public async Task<Result<IReadOnlyList<PlayerDto>>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        var players = await _players.GetAllAsync(_currentAccount.Id, cancellationToken);
-        return Result.Success(PlayerMapper.ToDtos(players));
-    }
+    public Task<Result<IReadOnlyList<PlayerDto>>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        PlayerReads.GetAllAsync(_players, _currentAccount.Id, cancellationToken);
 
     public async Task<Result<PlayerDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {

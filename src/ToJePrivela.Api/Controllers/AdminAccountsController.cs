@@ -33,7 +33,16 @@ public sealed class AdminAccountsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<AccountOverviewDto>>> GetAccounts(CancellationToken cancellationToken) =>
         (await _administration.GetAccountsAsync(cancellationToken)).ToActionResult();
 
-    /// <summary>Deletes the login with all its players and games; 409 <c>Account.CannotDeleteOwn</c> for the admin's own.</summary>
+    [HttpGet("{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AccountOverviewDto>> GetAccount(int accountId, CancellationToken cancellationToken) =>
+        (await _administration.GetAccountAsync(accountId, cancellationToken)).ToActionResult();
+
+    /// <summary>
+    /// Deletes the login with all its players and games; 409 <c>Account.CannotDeleteOwn</c> for the admin's own and
+    /// <c>Account.CannotDeleteReserved</c> for the reserved first login.
+    /// </summary>
     [HttpDelete("{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

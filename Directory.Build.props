@@ -1,0 +1,10 @@
+<Project>
+
+  <!-- The game's one version (Semantic Versioning, https://semver.org), kept in VERSION beside this file: every
+       assembly carries it and GET /api/info reports it. frontend/package.json carries the same number (VersionTests
+       checks they agree). A build may still override it: dotnet publish -p:Version=1.1.0-rc.1. -->
+  <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
+  </PropertyGroup>
+
+</Project>

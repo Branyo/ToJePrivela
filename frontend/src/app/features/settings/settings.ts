@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthStore } from '../../core/auth/auth-store';
+import { APP_VERSION } from '../../core/version';
 
 interface SettingsTab {
   path: string;
@@ -32,6 +33,7 @@ const ADMIN_TABS: SettingsTab[] = [
 })
 export class Settings {
   protected readonly auth = inject(AuthStore);
+  protected readonly version = APP_VERSION;
 
   protected readonly tabs = computed(() => (this.auth.isAdmin() ? [PLAYERS, ...ADMIN_TABS] : [PLAYERS, PASSWORD]));
 

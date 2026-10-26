@@ -6,7 +6,10 @@ import { GamesApi } from './games-api';
 import { GameDetails, GameHistory, GameHistoryStatus, Player, PlayerStatistics } from './models';
 import { PlayersApi } from './players-api';
 
-/** Router commands for `[routerLink]`. */
+/**
+ * Router commands for `[routerLink]`. Every call makes a new array, so a template binds a link once (a field) or through
+ * a pure pipe (`account-links.ts`), never by calling a link method on every check.
+ */
 export type Link = readonly (string | number)[];
 
 /**
@@ -16,9 +19,6 @@ export type Link = readonly (string | number)[];
  */
 @Injectable({ providedIn: 'root', useExisting: forwardRef(() => OwnAccountData) })
 export abstract class AccountData {
-  /** Every link handed out so far, so the same link is the same array (see `link`). */
-  private readonly links = new Map<string, Link>();
-
   /** Another login's data, shown but never changed: no new game, no rematch, no going back into a running game. */
   abstract readonly readOnly: boolean;
 
@@ -41,20 +41,6 @@ export abstract class AccountData {
 
   /** Where a listed game opens. */
   abstract gameLink(game: Pick<GameDetails, 'id' | 'finished'>): Link;
-
-  /**
-   * The link with these commands, the same array every time: templates bind the link methods, and a `[routerLink]`
-   * given a new array works its URL out again on every check, as many times as a history page lists games.
-   */
-  protected link(...commands: (string | number)[]): Link {
-    const key = commands.join('/');
-    let link = this.links.get(key);
-    if (!link) {
-      link = commands;
-      this.links.set(key, link);
-    }
-    return link;
-  }
 }
 
 /** The signed-in login's own data; its running games open the play screen. */
@@ -86,15 +72,15 @@ export class OwnAccountData extends AccountData {
   }
 
   historyLink(): Link {
-    return this.link('/history');
+    return ['/history'];
   }
 
   statisticsLink(playerId?: number): Link {
-    return playerId === undefined ? this.link('/statistics') : this.link('/statistics', playerId);
+    return playerId === undefined ? ['/statistics'] : ['/statistics', playerId];
   }
 
   gameLink(game: Pick<GameDetails, 'id' | 'finished'>): Link {
-    return game.finished ? this.link('/games', game.id, 'summary') : this.link('/games', game.id);
+    return game.finished ? ['/games', game.id, 'summary'] : ['/games', game.id];
   }
 }
 
@@ -131,17 +117,17 @@ export class AdminAccountData extends AccountData {
   }
 
   historyLink(): Link {
-    return this.link('/accounts', this.accountId, 'history');
+    return ['/accounts', this.accountId, 'history'];
   }
 
   statisticsLink(playerId?: number): Link {
     return playerId === undefined
-      ? this.link('/accounts', this.accountId, 'statistics')
-      : this.link('/accounts', this.accountId, 'statistics', playerId);
+      ? ['/accounts', this.accountId, 'statistics']
+      : ['/accounts', this.accountId, 'statistics', playerId];
   }
 
   gameLink(game: Pick<GameDetails, 'id' | 'finished'>): Link {
-    return this.link('/accounts', this.accountId, 'games', game.id);
+    return ['/accounts', this.accountId, 'games', game.id];
   }
 
   private get accountId(): number {

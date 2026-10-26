@@ -17,7 +17,7 @@
     <p class="error-banner" role="alert">{{ 'errors.api.Account.NotFound' | translate }}</p>
   }
 
-  @if (account() !== null) {
+  @if (account()) {
     <nav class="tabs" [attr.aria-label]="'accounts.tabs.label' | translate">
       @for (tab of tabs; track tab.path) {
         <a class="chip tabs__tab" [routerLink]="tab.path" routerLinkActive="chip--on" ariaCurrentWhenActive="page">{{
@@ -28,7 +28,7 @@
   }
 </header>
 
-@if (account() !== null) {
+@if (account()) {
   <!-- The router reuses this page when only the login in the address changes: a new outlet starts its screen afresh. -->
   @for (id of [accountId()]; track id) {
     <router-outlet />

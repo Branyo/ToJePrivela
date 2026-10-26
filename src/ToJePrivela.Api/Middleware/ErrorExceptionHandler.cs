@@ -18,6 +18,13 @@ public abstract class ErrorExceptionHandler<TException> : IExceptionHandler wher
 
     protected abstract Error ToError(TException exception);
 
+    /// <summary>The error to answer with; a handler that has to look something up first overrides this.</summary>
+    protected virtual ValueTask<Error> ToErrorAsync(
+        TException exception,
+        HttpContext httpContext,
+        CancellationToken cancellationToken) =>
+        ValueTask.FromResult(ToError(exception));
+
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
         Exception exception,
@@ -30,7 +37,7 @@ public abstract class ErrorExceptionHandler<TException> : IExceptionHandler wher
 
         _logger.LogWarning(handled, "{Reason}", LogMessage);
 
-        var problem = ResultExtensions.ToProblemDetails(ToError(handled));
+        var problem = ResultExtensions.ToProblemDetails(await ToErrorAsync(handled, httpContext, cancellationToken));
 
         httpContext.Response.StatusCode = problem.Status!.Value;
         await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);

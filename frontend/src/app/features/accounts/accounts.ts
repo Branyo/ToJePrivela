@@ -11,8 +11,8 @@ import { AccountDates } from './account-dates';
 
 /**
  * Every login, for admins: the most recently signed in first, in the server's order. Opening one shows its players,
- * games and statistics read only; deleting one (never your own) takes all its players and games along, after a second
- * tap.
+ * games and statistics read only; deleting one (never your own, nor the first one) takes all its players and games
+ * along, after a second tap. One deletion runs at a time: the delete buttons wait while one does.
  */
 @Component({
   selector: 'app-accounts',
@@ -68,9 +68,10 @@ export class Accounts {
     });
   }
 
+  /** Drops the deleted login; a confirmation another row may have opened meanwhile stays. */
   private forget(id: number): void {
     this.accounts.update((accounts) => (accounts ?? []).filter((account) => account.id !== id));
-    this.confirmingId.set(null);
+    this.confirmingId.update((confirming) => (confirming === id ? null : confirming));
     this.deletingId.set(null);
   }
 }

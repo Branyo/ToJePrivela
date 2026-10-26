@@ -9,6 +9,7 @@ import { AuthStore } from '../../core/auth/auth-store';
 import { signedInAs } from '../../core/auth/testing';
 import { GameRulesStore } from '../../core/rules/game-rules-store';
 import { TEST_RULES } from '../../core/rules/testing';
+import { APP_VERSION } from '../../core/version';
 
 describe('Settings', () => {
   let http: HttpTestingController;
@@ -49,6 +50,15 @@ describe('Settings', () => {
     expect(page.querySelector('app-players-section')).not.toBeNull();
     expect(tabs(page)).toEqual(['/settings/players', '/settings/password']);
     expect(page.querySelector('.badge')).toBeNull();
+  });
+
+  it("shows the game's version", async () => {
+    const { harness, page } = await open('/settings/password', false);
+    await harness.fixture.whenStable();
+
+    // provideTranslateService has no texts loaded, so the key stands in for the sentence the version goes into.
+    expect(page.querySelector('.settings__version')?.textContent?.trim()).toBe('settings.version');
+    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/);
   });
 
   it('opens the password tab for a login that is not an admin', async () => {

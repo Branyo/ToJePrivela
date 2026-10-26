@@ -17,7 +17,7 @@
       <ul class="players__list">
         @for (player of players; track player.id) {
           <li>
-            <a class="player" [routerLink]="data.statisticsLink(player.id)">
+            <a class="player" [routerLink]="player.id | statisticsLink">
               <app-player-avatar [avatar]="player.avatar" />
               <span class="player__name">{{ player.name }}</span>
               <span class="player__go">📊 →</span>

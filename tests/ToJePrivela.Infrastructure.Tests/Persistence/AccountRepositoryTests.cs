@@ -131,13 +131,27 @@ public class AccountRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLoginsAsync_AndLoginExistsAsync_LeaveOutTheReservedAccount()
+    public async Task GetLoginsAsync_GetLoginAsync_AndLoginExistsAsync_LeaveOutTheReservedAccount()
     {
         await using var context = _database.CreateContext();
         var repository = new AccountRepository(context);
 
         Assert.Empty(await repository.GetLoginsAsync());
+        Assert.Null(await repository.GetLoginAsync(Account.ReservedId));
         Assert.False(await repository.LoginExistsAsync(Account.ReservedId));
+    }
+
+    [Fact]
+    public async Task GetLoginAsync_ReadsTheLoginWithoutTrackingIt()
+    {
+        var login = Account.Register("Duri", "hash", Now);
+        await StoreAsync(login);
+
+        await using var context = _database.CreateContext();
+        var read = await new AccountRepository(context).GetLoginAsync(login.Id);
+
+        Assert.Equal("Duri", read?.Name);
+        Assert.Empty(context.ChangeTracker.Entries());
     }
 
     [Fact]

@@ -25,6 +25,7 @@ import { rankPlayers } from '../../shared/ranking';
 export class Summary implements OnInit {
   private readonly gamesApi = inject(GamesApi);
   protected readonly data = inject(AccountData);
+  protected readonly historyLink = this.data.historyLink();
   private readonly router = inject(Router);
   protected readonly i18n = inject(LanguageService);
 

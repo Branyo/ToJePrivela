@@ -16,9 +16,10 @@ registerLocaleData(localeSk, 'sk-SK');
 
 /** The signed-in admin is login 7 (`testSession`). */
 const accounts: AccountOverview[] = [
-  { id: 5, name: 'Rodina', isAdmin: false, createdAt: '2026-09-01T10:00:00Z', lastSignedInAt: '2026-10-20T18:00:00Z' },
-  { id: 7, name: 'Brano', isAdmin: true, createdAt: '2026-08-01T10:00:00Z', lastSignedInAt: '2026-10-19T18:00:00Z' },
-  { id: 9, name: 'Šéf', isAdmin: true, createdAt: '2026-08-01T10:00:00Z', lastSignedInAt: null },
+  { id: 5, name: 'Rodina', isAdmin: false, createdAt: '2026-09-01T10:00:00Z', lastSignedInAt: '2026-10-20T18:00:00Z', canDelete: true },
+  { id: 7, name: 'Brano', isAdmin: true, createdAt: '2026-08-01T10:00:00Z', lastSignedInAt: '2026-10-19T18:00:00Z', canDelete: false },
+  { id: 9, name: 'Šéf', isAdmin: true, createdAt: '2026-08-01T10:00:00Z', lastSignedInAt: null, canDelete: true },
+  { id: 1, name: 'Prvý', isAdmin: true, createdAt: '2026-07-01T10:00:00Z', lastSignedInAt: null, canDelete: false },
 ];
 
 describe('Accounts', () => {
@@ -55,11 +56,13 @@ describe('Accounts', () => {
       'Rodina',
       'Brano',
       'Šéf',
+      'Prvý',
     ]);
     expect(rows(page).map((row) => row.querySelector('.row__open')!.getAttribute('href'))).toEqual([
       '/accounts/5',
       '/accounts/7',
       '/accounts/9',
+      '/accounts/1',
     ]);
     expect(rows(page)[2].querySelector('.badge')).not.toBeNull();
     expect(rows(page)[0].querySelector('.badge')).toBeNull();
@@ -74,6 +77,35 @@ describe('Accounts', () => {
     expect(rows(page)[0].querySelector('.row__remove')).not.toBeNull();
   });
 
+  it('offers no deletion of a login the server says cannot be deleted', async () => {
+    const { page } = await open();
+
+    expect(rows(page)[3].querySelector('.badge--quiet')).toBeNull();
+    expect(rows(page)[3].querySelector('.row__remove')).toBeNull();
+  });
+
+  it('runs one deletion at a time: no other can be asked for until it is done', async () => {
+    const { harness, page } = await open();
+
+    rows(page)[0].querySelector<HTMLButtonElement>('.row__remove')!.click();
+    await harness.fixture.whenStable();
+    rows(page)[0].querySelector<HTMLButtonElement>('.btn--danger')!.click();
+    await harness.fixture.whenStable();
+    const request = http.expectOne('/api/admin/accounts/5');
+
+    expect(rows(page)[0].querySelector<HTMLButtonElement>('.btn--danger')!.disabled).toBe(true);
+    expect(rows(page)[2].querySelector<HTMLButtonElement>('.row__remove')!.disabled).toBe(true);
+    rows(page)[2].querySelector<HTMLButtonElement>('.row__remove')!.click();
+    await harness.fixture.whenStable();
+    expect(page.querySelectorAll('.row--confirming').length).toBe(1);
+
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await harness.fixture.whenStable();
+
+    expect(page.querySelector('.row--confirming')).toBeNull();
+    expect(rows(page)[1].querySelector<HTMLButtonElement>('.row__remove')!.disabled).toBe(false);
+  });
+
   it('deletes a login after a second tap', async () => {
     const { harness, page } = await open();
 
@@ -86,7 +118,7 @@ describe('Accounts', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     await harness.fixture.whenStable();
 
-    expect(rows(page).length).toBe(2);
+    expect(rows(page).length).toBe(3);
     expect(page.querySelector('.row--confirming')).toBeNull();
   });
 
@@ -109,7 +141,7 @@ describe('Accounts', () => {
       .expectOne('/api/admin/accounts/5')
       .flush({ code: 'Account.NotFound' }, { status: 404, statusText: 'Not Found' });
     await harness.fixture.whenStable();
-    expect(rows(page).length).toBe(2);
+    expect(rows(page).length).toBe(3);
 
     rows(page)[1].querySelector<HTMLButtonElement>('.row__remove')!.click();
     await harness.fixture.whenStable();
@@ -117,7 +149,7 @@ describe('Accounts', () => {
     http.expectOne('/api/admin/accounts/9').flush({ code: 'Concurrency.Conflict' }, { status: 409, statusText: 'Conflict' });
     await harness.fixture.whenStable();
 
-    expect(rows(page).length).toBe(2);
+    expect(rows(page).length).toBe(3);
     expect(page.querySelector('.error-banner')).not.toBeNull();
     expect(rows(page)[1].querySelector<HTMLButtonElement>('.btn--danger')!.disabled).toBe(false);
   });

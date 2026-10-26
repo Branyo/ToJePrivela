@@ -1,11 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using ToJePrivela.Application.Accounts.Dtos;
 using ToJePrivela.Application.Administration.Dtos;
 using ToJePrivela.Application.Games.Dtos;
 using ToJePrivela.Application.Players.Dtos;
 using ToJePrivela.Application.Statistics.Dtos;
+using ToJePrivela.Domain.Entities;
+using ToJePrivela.Infrastructure.Persistence;
 
 namespace ToJePrivela.Api.Tests.Integration;
 
@@ -23,6 +26,7 @@ public class AdminAccountsEndpointsTests : IClassFixture<ApiFactory>
 
     [Theory]
     [InlineData("GET", "/api/admin/accounts")]
+    [InlineData("GET", "/api/admin/accounts/1")]
     [InlineData("GET", "/api/admin/accounts/1/players")]
     [InlineData("GET", "/api/admin/accounts/1/players/1/statistics")]
     [InlineData("GET", "/api/admin/accounts/1/games/history")]
@@ -51,6 +55,31 @@ public class AdminAccountsEndpointsTests : IClassFixture<ApiFactory>
         var signedIn = accounts.Where(a => a.LastSignedInAt is not null).Select(a => a.LastSignedInAt).ToList();
         Assert.Equal(signedIn.OrderByDescending(at => at), signedIn);
         Assert.NotNull(accounts[0].LastSignedInAt);
+    }
+
+    [Fact]
+    public async Task GetAccounts_OffersToDeleteAllButTheAdminsOwnAndTheReservedLogin()
+    {
+        var otherAdmin = _factory.CreateClientAs(await AddAdminAsync());
+
+        var accounts = (await otherAdmin.GetFromJsonAsync<List<AccountOverviewDto>>("/api/admin/accounts"))!;
+
+        Assert.False(accounts.Single(a => a.Id == _factory.Admin.Id).CanDelete);
+        Assert.True(accounts.Single(a => a.Id == _factory.Member.Id).CanDelete);
+        Assert.Equal(2, accounts.Count(a => !a.CanDelete));
+    }
+
+    [Fact]
+    public async Task GetAccount_ReadsOneLogin()
+    {
+        var login = await CreateLoginAsync();
+
+        var account = await _admin.GetFromJsonAsync<AccountOverviewDto>($"/api/admin/accounts/{login.Account.Id}");
+        var missing = await _admin.GetAsync($"/api/admin/accounts/{int.MaxValue}");
+
+        Assert.Equal((login.Account.Name, false, true), (account!.Name, account.IsAdmin, account.CanDelete));
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        Assert.Equal("Account.NotFound", await ProblemResponse.CodeOf(missing));
     }
 
     [Fact]
@@ -140,6 +169,29 @@ public class AdminAccountsEndpointsTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("Account.CannotDeleteOwn", await ProblemResponse.CodeOf(response));
         Assert.Equal(HttpStatusCode.OK, (await _admin.GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteAccount_RefusesTheReservedLoginEvenToAnotherAdmin()
+    {
+        var otherAdmin = _factory.CreateClientAs(await AddAdminAsync());
+
+        var response = await otherAdmin.DeleteAsync($"/api/admin/accounts/{_factory.Admin.Id}");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("Account.CannotDeleteReserved", await ProblemResponse.CodeOf(response));
+        Assert.Equal(HttpStatusCode.OK, (await _admin.GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    /// <summary>A second admin, as one more name in <c>Authentication:Admins</c> would add.</summary>
+    private async Task<Account> AddAdminAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ToJePrivelaDbContext>();
+        var admin = Account.CreateAdmin($"A-{Guid.NewGuid():N}"[..12], "hash", DateTime.UtcNow);
+        context.Accounts.Add(admin);
+        await context.SaveChangesAsync();
+        return admin;
     }
 
     /// <summary>A new login, signed in: it becomes the most recently signed in.</summary>

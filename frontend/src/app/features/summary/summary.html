@@ -112,7 +112,7 @@
 
     <div class="actions">
       @if (data.readOnly) {
-        <a class="btn btn--primary btn--big" [routerLink]="data.historyLink()">{{ 'summary.backToHistory' | translate }}</a>
+        <a class="btn btn--primary btn--big" [routerLink]="historyLink">{{ 'summary.backToHistory' | translate }}</a>
       } @else {
         @if (g.finished) {
           @if (canRematch()) {

@@ -192,6 +192,18 @@ public class QuestionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordViewAsync_ChangesNothingForADeletedLogin()
+    {
+        await using var context = _database.CreateContext();
+        var sut = new QuestionRepository(context);
+        var id = await IdOfAsync(context, "11");
+
+        // A login an admin deleted while it was playing: its view must not break the foreign key to the account.
+        Assert.False(await sut.RecordViewAsync(999, id, CreatedAt));
+        Assert.Empty(await context.QuestionViews.ToListAsync());
+    }
+
+    [Fact]
     public async Task RecordViewAsync_LeavesTheQuestionsVersionAlone()
     {
         await using var stale = _database.CreateContext();

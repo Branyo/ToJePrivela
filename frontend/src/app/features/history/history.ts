@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { EMPTY, Subject, catchError, exhaustMap, startWith, switchMap, tap } from 'rxjs';
 import { AccountData } from '../../core/api/account-data';
+import { GameLinkPipe } from '../../core/api/account-links';
 import { GameDetails, GameHistoryStatus } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message } from '../../core/i18n/language';
@@ -24,13 +25,14 @@ const STATUSES: Record<string, GameHistoryStatus> = { running: 'Running', finish
  */
 @Component({
   selector: 'app-history',
-  imports: [RouterLink, DatePipe, PlayerAvatar, TranslatePipe, MessagePipe],
+  imports: [RouterLink, GameLinkPipe, DatePipe, PlayerAvatar, TranslatePipe, MessagePipe],
   templateUrl: './history.html',
   styleUrl: './history.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class History {
   protected readonly data = inject(AccountData);
+  protected readonly historyLink = this.data.historyLink();
   protected readonly i18n = inject(LanguageService);
   protected readonly filters: { status: GameHistoryStatus; query: string | null }[] = [
     { status: 'All', query: null },

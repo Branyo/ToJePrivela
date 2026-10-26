@@ -34,6 +34,9 @@ public sealed class AccountRepository : Repository<Account>, IAccountRepository
             .ThenByDescending(a => a.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<Account?> GetLoginAsync(int id, CancellationToken cancellationToken = default) =>
+        await Logins().AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
     public async Task<bool> LoginExistsAsync(int id, CancellationToken cancellationToken = default) =>
         await Logins().AnyAsync(a => a.Id == id, cancellationToken);
 

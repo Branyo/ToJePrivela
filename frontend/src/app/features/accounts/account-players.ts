@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AccountData } from '../../core/api/account-data';
+import { StatisticsLinkPipe } from '../../core/api/account-links';
 import { Player } from '../../core/api/models';
 import { toProblem } from '../../core/api/problem';
 import { LanguageService, Message, compareNames } from '../../core/i18n/language';
@@ -11,7 +12,7 @@ import { PlayerAvatar } from '../../shared/player-avatar';
 /** A login's players alphabetically, read only; each opens their statistics. */
 @Component({
   selector: 'app-account-players',
-  imports: [RouterLink, PlayerAvatar, TranslatePipe, MessagePipe],
+  imports: [RouterLink, StatisticsLinkPipe, PlayerAvatar, TranslatePipe, MessagePipe],
   templateUrl: './account-players.html',
   styleUrl: './account-players.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

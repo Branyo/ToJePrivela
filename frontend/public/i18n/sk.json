@@ -288,6 +288,7 @@
   "settings": {
     "title": "⚙️ Nastavenia",
     "signedInAs": "Prihlásený ako {{name}}",
+    "version": "Verzia {{version}}",
     "admin": "správca",
     "tabs": {
       "label": "Časti nastavení",
@@ -459,7 +460,8 @@
     "rateLimited": "Príliš veľa pokusov za krátky čas. Chvíľu počkaj a skús to znova.",
     "api": {
       "Concurrency": {
-        "Conflict": "Medzitým to zmenil niekto iný. Načítaj stránku znova a skús to ešte raz."
+        "Conflict": "Medzitým to zmenil niekto iný. Načítaj stránku znova a skús to ešte raz.",
+        "MissingReference": "Niečo, čoho sa táto zmena týka, medzitým niekto vymazal. Načítaj stránku znova a skús to ešte raz."
       },
       "Game": {
         "NotFound": "Táto hra neexistuje.",
@@ -516,7 +518,8 @@
       },
       "Account": {
         "NotFound": "Toto prihlásenie neexistuje.",
-        "CannotDeleteOwn": "Prihlásenie, pod ktorým si prihlásený, vymazať nemôžeš."
+        "CannotDeleteOwn": "Prihlásenie, pod ktorým si prihlásený, vymazať nemôžeš.",
+        "CannotDeleteReserved": "Prvé prihlásenie obsahuje pôvodné údaje hry, preto ho vymazať nemôžeš."
       }
     }
   },

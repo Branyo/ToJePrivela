@@ -37,7 +37,7 @@
                 <button
                   type="button"
                   class="btn btn--danger row__action"
-                  [disabled]="deletingId() === account.id"
+                  [disabled]="deletingId() !== null"
                   (click)="delete(account.id)"
                 >
                   {{ 'accounts.delete' | translate }}
@@ -45,10 +45,11 @@
                 <button type="button" class="btn btn--ghost row__action" (click)="cancelDelete()">
                   {{ 'accounts.keep' | translate }}
                 </button>
-              } @else if (account.id !== auth.account()?.id) {
+              } @else if (account.canDelete) {
                 <button
                   type="button"
                   class="icon-btn row__remove"
+                  [disabled]="deletingId() !== null"
                   [attr.aria-label]="'accounts.deleteName' | translate: { name: account.name }"
                   (click)="askToDelete(account.id)"
                 >

@@ -278,6 +278,7 @@
   "settings": {
     "title": "⚙️ Settings",
     "signedInAs": "Signed in as {{name}}",
+    "version": "Version {{version}}",
     "admin": "admin",
     "tabs": {
       "label": "Settings sections",
@@ -449,7 +450,8 @@
     "rateLimited": "Too many attempts in a short time. Wait a moment and try again.",
     "api": {
       "Concurrency": {
-        "Conflict": "Someone else changed this in the meantime. Reload and try again."
+        "Conflict": "Someone else changed this in the meantime. Reload and try again.",
+        "MissingReference": "Something this change refers to was deleted in the meantime. Reload and try again."
       },
       "Game": {
         "NotFound": "This game does not exist.",
@@ -506,7 +508,8 @@
       },
       "Account": {
         "NotFound": "This login does not exist.",
-        "CannotDeleteOwn": "You cannot delete the login you are signed in to."
+        "CannotDeleteOwn": "You cannot delete the login you are signed in to.",
+        "CannotDeleteReserved": "The first login holds the game's original data and cannot be deleted."
       }
     }
   },

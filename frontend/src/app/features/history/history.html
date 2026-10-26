@@ -5,7 +5,7 @@
     @for (filter of filters; track filter.status) {
       <a
         class="chip"
-        [routerLink]="data.historyLink()"
+        [routerLink]="historyLink"
         [queryParams]="{ status: filter.query }"
         [class.chip--on]="status() === filter.status"
         [attr.aria-current]="status() === filter.status ? 'page' : null"
@@ -22,7 +22,7 @@
           <a
             class="game"
             [class.game--running]="!game.finished"
-            [routerLink]="data.gameLink(game)"
+            [routerLink]="game | gameLink"
           >
             <span class="game__head">
               <span class="game__state">

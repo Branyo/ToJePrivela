@@ -17,7 +17,15 @@ export class AdminApi {
     return this.http.get<AccountOverview[]>('/api/admin/accounts');
   }
 
-  /** Deletes the login with all its players and games; 409 `Account.CannotDeleteOwn` for the admin's own. */
+  /** One login, as the list shows it. */
+  getAccount(accountId: number): Observable<AccountOverview> {
+    return this.http.get<AccountOverview>(`/api/admin/accounts/${accountId}`);
+  }
+
+  /**
+   * Deletes the login with all its players and games; 409 `Account.CannotDeleteOwn` for the admin's own and
+   * `Account.CannotDeleteReserved` for the first login (neither has `canDelete`).
+   */
   deleteAccount(accountId: number): Observable<void> {
     return this.http.delete<void>(`/api/admin/accounts/${accountId}`);
   }

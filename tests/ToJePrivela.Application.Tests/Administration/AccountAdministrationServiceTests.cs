@@ -12,6 +12,7 @@ public class AccountAdministrationServiceTests
 {
     private const int AdminId = 1;
     private const int LoginId = 5;
+    private const int OtherAdminId = 7;
 
     private static readonly DateTime Now = new(2026, 10, 24, 18, 0, 0, DateTimeKind.Utc);
 
@@ -40,6 +41,32 @@ public class AccountAdministrationServiceTests
         Assert.Equal((true, (DateTime?)null), (result.Value[1].IsAdmin, result.Value[1].LastSignedInAt));
     }
 
+    [Theory]
+    [InlineData(LoginId, true)]
+    [InlineData(OtherAdminId, false)]
+    [InlineData(Account.ReservedId, false)]
+    public async Task GetAccountsAsync_OffersToDeleteAllButTheAdminsOwnAndTheReservedLogin(int id, bool canDelete)
+    {
+        _accounts.GetLoginsAsync(Arg.Any<CancellationToken>()).Returns([TestEntities.Account(id, "Duri")]);
+
+        var result = await new AccountAdministrationService(_accounts, _players, _games, new FixedCurrentAccount(OtherAdminId))
+            .GetAccountsAsync();
+
+        Assert.Equal(canDelete, Assert.Single(result.Value).CanDelete);
+    }
+
+    [Fact]
+    public async Task GetAccountAsync_ReadsOneLoginOrSaysItIsNotFound()
+    {
+        _accounts.GetLoginAsync(LoginId, Arg.Any<CancellationToken>()).Returns(TestEntities.Account(LoginId, "Duri"));
+
+        var found = await _sut.GetAccountAsync(LoginId);
+        var missing = await _sut.GetAccountAsync(9);
+
+        Assert.Equal(("Duri", true), (found.Value.Name, found.Value.CanDelete));
+        Assert.Equal(AdministrationErrors.AccountNotFound(9), missing.Error);
+    }
+
     [Fact]
     public async Task GetPlayersAsync_ReadsThePlayersOfTheNamedLogin()
     {
@@ -48,10 +75,22 @@ public class AccountAdministrationServiceTests
         var result = await _sut.GetPlayersAsync(LoginId);
 
         Assert.Equal("Anna", Assert.Single(result.Value).Name);
+        // Found players prove the login was there; only an empty read asks again.
+        await _accounts.DidNotReceiveWithAnyArgs().LoginExistsAsync(default, default);
     }
 
     [Fact]
-    public async Task Reads_OfAnUnknownLogin_AreNotFoundAndReadNothingElse()
+    public async Task Reads_OfAnExistingLoginWithoutData_AreEmptyNotNotFound()
+    {
+        var players = await _sut.GetPlayersAsync(LoginId);
+        var history = await _sut.GetGameHistoryAsync(LoginId, new GameHistoryFilter());
+
+        Assert.Empty(players.Value);
+        Assert.Empty(history.Value.Games);
+    }
+
+    [Fact]
+    public async Task Reads_OfAnUnknownLogin_AreNotFound()
     {
         var players = await _sut.GetPlayersAsync(9);
         var statistics = await _sut.GetPlayerStatisticsAsync(9, 1);
@@ -61,7 +100,15 @@ public class AccountAdministrationServiceTests
         Assert.All(
             new Result[] { players, statistics, history, details },
             result => Assert.Equal(AdministrationErrors.AccountNotFound(9), result.Error));
-        Assert.Empty(_players.ReceivedCalls());
+    }
+
+    [Fact]
+    public async Task GetGameHistoryAsync_ValidatesTheFilterBeforeAnythingIsRead()
+    {
+        var result = await _sut.GetGameHistoryAsync(9, new GameHistoryFilter { Take = 0 });
+
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Empty(_accounts.ReceivedCalls());
         Assert.Empty(_games.ReceivedCalls());
     }
 
@@ -80,6 +127,18 @@ public class AccountAdministrationServiceTests
         var result = await _sut.DeleteAccountAsync(AdminId);
 
         Assert.Equal(AdministrationErrors.CannotDeleteOwnAccount, result.Error);
+        Assert.Equal(ErrorType.Conflict, result.Error.Type);
+        await _accounts.DidNotReceiveWithAnyArgs().DeleteLoginAsync(default, default);
+    }
+
+    [Fact]
+    public async Task DeleteAccountAsync_RefusesTheReservedLogin()
+    {
+        var sut = new AccountAdministrationService(_accounts, _players, _games, new FixedCurrentAccount(OtherAdminId));
+
+        var result = await sut.DeleteAccountAsync(Account.ReservedId);
+
+        Assert.Equal(AdministrationErrors.CannotDeleteReservedAccount, result.Error);
         Assert.Equal(ErrorType.Conflict, result.Error.Type);
         await _accounts.DidNotReceiveWithAnyArgs().DeleteLoginAsync(default, default);
     }

@@ -18,6 +18,9 @@ public interface IAccountRepository : IRepository<Account>
     /// </summary>
     Task<IReadOnlyList<Account>> GetLoginsAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>The login with the id, read only; null for the reserved account while nobody took it over.</summary>
+    Task<Account?> GetLoginAsync(int id, CancellationToken cancellationToken = default);
+
     /// <summary>Whether a login (not the reserved account) has the id; asks the database only.</summary>
     Task<bool> LoginExistsAsync(int id, CancellationToken cancellationToken = default);
 
