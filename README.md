@@ -155,6 +155,13 @@ dotnet ef migrations add <Name> --project src/ToJePrivela.Infrastructure \
   --startup-project src/ToJePrivela.Infrastructure --output-dir Persistence/Migrations
 ```
 
+### Deployment
+
+`docker compose up -d --build` runs the game as two containers: Caddy serving the frontend, passing `/api` on and
+handling HTTPS, and the API with its SQLite database in a volume. Settings and secrets come from `.env` (see
+`.env.example`). [`deploy/README.md`](deploy/README.md) covers setting up a server and the scripts for updating it,
+backing up the database and restoring a backup.
+
 ## API
 
 | Method | Route | Notes |
